@@ -1,9 +1,9 @@
 {
-  "when": "2026-11-27T13:29:52.026Z",
+  "when": "2026-11-27T13:42:42.746Z",
   "server": "http://localhost:2567",
-  "durationMs": 58087,
-  "passed": 18,
-  "total": 18,
+  "durationMs": 60319,
+  "passed": 19,
+  "total": 19,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwz0p59b17o2s, ch_mwz0p59nblf9w"
+      "detail": "ch_mwz15m6p1amvk, ch_mwz15m75b6yle"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -86,14 +86,19 @@
       "detail": "map whisperwood"
     },
     {
+      "name": "arena mode queue: Lantern Siege 1v1 matches two real players",
+      "ok": true,
+      "detail": "siege match created for both"
+    },
+    {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwz0p59b17o2s\":16,\"ch_mwz0p59nblf9w\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwz15m6p1amvk\":16,\"ch_mwz15m75b6yle\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
       "ok": true,
-      "detail": "online=2 p95 tick=0.92ms ledger ok=true"
+      "detail": "online=2 p95 tick=0.54ms ledger ok=true"
     }
   ]
 }

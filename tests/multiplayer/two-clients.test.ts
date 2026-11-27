@@ -116,6 +116,10 @@ await step('disconnect → reconnect restores persisted state', async () => {
   const inv = A.state.inventory.length; const gold = A.gold(); A.ws.close(); await sleep(800);
   const A2 = new Client(); await A2.connect(tokA, charA); assert(A2.state.inventory.length === inv, `inv ${inv} vs ${A2.state.inventory.length}`); assert(A2.gold() === gold, `gold ${gold} vs ${A2.gold()}`); (A as any).__c = A2; return `map ${A2.mapId}`;
 });
+await step('arena mode queue: Lantern Siege 1v1 matches two real players', async () => {
+  const A2: Client = (A as any).__c; assert((await A2.cmd('arenaJoin', { mode: '1v1', type: 'siege' })).ok, 'A queued'); const q = await B.cmd('arenaJoin', { mode: '1v1', type: 'siege' }); assert(q.ok, JSON.stringify(q)); await sleep(700);
+  assert(A2.mapId === 'arena' && B.mapId === 'arena', `maps ${A2.mapId}/${B.mapId}`); await A2.cmd('leaveInstance'); await B.cmd('leaveInstance'); await sleep(500); return 'siege match created for both';
+});
 await step('ranked arena 1v1 between the two real players', async () => {
   const A2: Client = (A as any).__c; await B.cmd('moveTo', { x: 30 * 32 + 16, y: 17 * 32 + 16 }); await sleep(100);
   assert((await A2.cmd('arenaJoin')).ok, 'A queued'); assert((await B.cmd('arenaJoin')).ok, 'B queued'); await sleep(600); assert(A2.mapId === 'arena' && B.mapId === 'arena', `maps ${A2.mapId} ${B.mapId}`);

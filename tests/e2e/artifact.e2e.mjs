@@ -65,6 +65,7 @@ await step('12 gathering + crafting', async () => {
   await cmd('dev', { op: 'map', id: 'emberglen' }); await cmd('dev', { op: 'teleport', x: 24 * 32 + 16, y: 31 * 32 + 16 }); const c = await cmd('craft', { recipe: 'rc_potion', times: 1 }); assert(c.ok, JSON.stringify(c)); return 'gathered herb, crafted potion';
 });
 await step('13 marketplace list + buy + buy order + auction bid + exchange', async () => {
+  await page.evaluate(() => { const p = window.__hb.a.p; while (p.inventory.length > p.invSlots - 10) { const i = p.inventory.findIndex((x) => !x.locked && x.defId !== 'slime_gel'); if (i < 0) break; p.inventory.splice(i, 1); } }); // keep room for purchases
   await page.keyboard.press('g'); await page.waitForSelector('.win:has-text("Marketplace")'); await page.waitForTimeout(4500); await shot('13_market');
   const l = await st('(a)=>a.market().listings.filter(l=>l.status==="active"&&l.simulated).map(l=>({id:l.id,t:Number(l.price)*l.item.qty})).sort((x,y)=>x.t-y.t)[0]'); assert(l, 'sim listing exists'); const b = await cmd('marketBuy', { id: l.id }); assert(b.ok, JSON.stringify(b));
   const it = await st('(a,p)=>p.inventory.find(i=>!i.bound&&!i.locked&&i.defId==="slime_gel")?.uid || p.inventory.find(i=>!i.bound&&!i.locked&&i.qty>0&&i.defId!=="wood_staff")?.uid'); const li = await cmd('marketList', { uid: it, price: '1' }); assert(li.ok, JSON.stringify(li));
@@ -130,6 +131,17 @@ await step('30 gem refine, cosmetic aura, focused craft, regional food & runes, 
   const pet = await st('(a,p)=>p.pets[0].uid'); const fd = await cmd('feed', { pet, food: 'food_forest' }); assert(fd.ok, JSON.stringify(fd)); assert((await cmd('petRune', { pet, rune: 'rune_fang' })).ok, 'rune');
   const fr = await st('(a,p)=>p.friends[0].name'); const v = await cmd('visitFarm', { name: fr }); assert(v.ok, JSON.stringify(v)); const vv = await st('(a)=>a.visitView()'); assert(vv && vv.owner === fr && vv.pets.length > 0, JSON.stringify(vv)); const lk = await cmd('likeFarm'); assert(lk.ok, JSON.stringify(lk)); assert(!(await cmd('likeFarm')).ok, 'one like per day');
   await page.waitForTimeout(400); await shot('30_farm_visit'); await cmd('leaveInstance'); return `gem +${gr.data.level}, aura ✦3, focused craft, regional food bonus=${fd.data.bonus}, visited ${fr}'s farm`;
+});
+await step('31 arena modes: Lantern Siege 2v2 via UI, Ember Rush, MVP, season', async () => {
+  await page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click())); await cmd('dev', { op: 'map', id: 'emberglen' }); await cmd('partyLeave');
+  await cmd('dev', { op: 'teleport', x: 46 * 32 + 16, y: 29 * 32 + 16 }); await page.click('.mbtn[aria-label="Arena"]'); await page.waitForSelector('.win:has-text("Lantern Siege")');
+  await page.click('.win button:has-text("2v2")'); await page.click('.win .li:has-text("Lantern Siege") button:has-text("Queue")'); await page.waitForTimeout(1500);
+  const ar = await st('(a)=>{const x=a.arenaInfo();return x&&{mode:x.mode,a:x.teams[0].length,b:x.teams[1].length,pts:x.points.length}}'); assert(ar && ar.mode === 'siege' && ar.a === 2 && ar.b === 2 && ar.pts === 3, JSON.stringify(ar));
+  await page.waitForTimeout(2500); await shot('31_siege'); const banner = await page.textContent('.banner'); assert(/Lantern Siege/.test(banner), banner);
+  await page.evaluate(() => { const w = window.__hb.a.world; w.arena.score = [100, 40]; }); await page.waitForTimeout(400);
+  const s = await cmd('arenaSettle'); assert(s.ok && s.data.mode === 'siege' && s.data.win, JSON.stringify(s)); await cmd('leaveInstance');
+  await cmd('dev', { op: 'teleport', x: 46 * 32 + 16, y: 29 * 32 + 16 }); assert((await cmd('arenaJoin', { mode: '1v1', type: 'rush' })).ok, 'rush'); await page.waitForTimeout(4000); const crys = await st('(a)=>{const x=a.arenaInfo();return x.crystals.length+x.carriers.length+x.score[0]+x.score[1]}'); assert(crys >= 1, 'crystal spawned (on ground, carried or scored)'); await shot('31_rush'); await cmd('leaveInstance');
+  const se = await cmd('dev', { op: 'season' }); assert(se.ok && se.data.pvp, JSON.stringify(se)); return `siege 2v2 won (MVP=${s.data.mvp}, ${s.data.mvpName}); rush crystals=${crys}; season rollover ${JSON.stringify(se.data)}`;
 });
 await step('22 developer System Registry view', async () => { await page.keyboard.press('`'); await page.click('.win button.tab:has-text("System Registry")'); await page.waitForTimeout(200); await shot('22_registry'); const n = await page.$$eval('.reg .li', (x) => x.length); assert(n > 100, `rows ${n}`); await page.keyboard.press('Escape'); return `${n} registry rows`; });
 await step('23 save → reload → continue keeps progress', async () => { const lv = await st('(a,p)=>p.level'); const name = await st('(a,p)=>p.name'); const ok = await st('(a)=>a.save()'); assert(ok, 'saved'); await page.reload(); await page.click('text=Continue'); await page.click('.slot-card:has-text("' + name + '") button:has-text("Play")'); await page.waitForTimeout(800); const lv2 = await st('(a,p)=>p.level'); assert(lv2 === lv, `${lv} vs ${lv2}`); return `level ${lv} restored`; });

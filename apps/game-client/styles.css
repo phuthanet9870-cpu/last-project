@@ -119,3 +119,4 @@ pre { background: #1a1420; padding: 8px; border-radius: 6px; white-space: pre-wr
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .hb-notice { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 10000; background: #3a1a1a; border: 2px solid var(--err); color: var(--text); padding: 8px 14px; border-radius: 8px; max-width: 90vw; }
 textarea { background: #1a1420; color: var(--text); border: 2px solid var(--edge2); border-radius: 6px; font: 12px monospace; }
+.banner { display: none; background: #1a1420dd; border: 2px solid var(--accent); border-radius: 8px; padding: 4px 14px; font-weight: bold; color: var(--accent); white-space: nowrap; }

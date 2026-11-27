@@ -23,7 +23,7 @@ const SERVER_ONLY = new Set(['dev']);
 export class GameServer {
   ledger = new Ledger(); market: MarketService; worlds = new Map<string, World>(); conns = new Map<string, Conn>(); invites = new Map<string, Invite>(); trades = new Map<string, Trade>();
   tcgMatches = new Map<string, { id: string; state: TcgState; a: string; b: string; settled: boolean }>();
-  arenaQueue: string[] = []; matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
+  arenaQueues = new Map<string, string[]>(); get arenaQueue(): string[] { return [...this.arenaQueues.values()].flat(); } matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
   private timer?: NodeJS.Timeout; private rng = new Rng(Date.now() & 0xffffff); private chatOut: [string, string, string | null, string | null, string][] = [];
   constructor(public redis: Redis | null) { this.ledger.trackPending = true; this.market = new MarketService(this.ledger, new Rng(7)); }
 
@@ -62,7 +62,7 @@ export class GameServer {
   }
   async leave(charId: string) {
     const c = this.conns.get(charId); if (!c) return;
-    this.cancelTradesOf(charId); this.arenaQueue = this.arenaQueue.filter((x) => x !== charId);
+    this.cancelTradesOf(charId); for (const q of this.arenaQueues.values()) { const i = q.indexOf(charId); if (i >= 0) q.splice(i, 1); }
     if (c.tcgPvp) { const m = this.tcgMatches.get(c.tcgPvp.id); if (m && m.state.winner === null) { applyAction(m.state, c.tcgPvp.side, { type: 'surrender' }); this.tcgPush(m); } }
     const e = c.world.entities.get(`pl_${charId}`); if (e?.partyId) { const m = c.world.parties.get(e.partyId); if (m) { m.splice(m.indexOf(e.id), 1); if (m.length <= 1) { for (const id of m) { const x = c.world.entities.get(id); if (x) x.partyId = null; } c.world.parties.delete(e.partyId); } } }
     c.world.removePlayer(`pl_${charId}`); this.conns.delete(charId);
@@ -138,8 +138,12 @@ export class GameServer {
       // ---- PvP: duel request & ranked arena matchmaking (§30) ----
       case 'duelRequest': { const t = this.target(c, a.target); if (!t) return fail('PLAYER_NOT_NEARBY'); this.invites.set(t.charId, { kind: 'duel', from: c.charId, at: Date.now() }); this.notice(t, `${c.svc.p.name} challenges you to a duel (duelAccept).`); return ok({ pending: true }); }
       case 'duelAccept': { const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'duel') return fail('NO_INVITE'); this.invites.delete(c.charId); const from = this.conns.get(inv.from); if (!from) return fail('GONE'); this.startMatch([from], [c], 'duel', false); return ok(); }
-      case 'arenaJoin': { if (this.arenaQueue.includes(c.charId)) return fail('ALREADY_QUEUED'); this.arenaQueue.push(c.charId); this.notice(c, `Queued for ranked 1v1 (${this.arenaQueue.length} in queue)`); this.matchmake(); return ok({ queued: true }); }
-      case 'arenaLeaveQueue': { this.arenaQueue = this.arenaQueue.filter((x) => x !== c.charId); return ok(); }
+      case 'arenaJoin': { // queues per size × mode; teams balanced by rating (snake draft) when enough players are queued
+        const size = ['1v1', '2v2', '3v3'].includes(a.mode) ? a.mode : '1v1'; const type = ['deathmatch', 'siege', 'rush'].includes(a.type) ? a.type : 'deathmatch'; const key = `${size}:${type}`;
+        if (this.arenaQueue.includes(c.charId)) return fail('ALREADY_QUEUED'); const q = this.arenaQueues.get(key) ?? []; q.push(c.charId); this.arenaQueues.set(key, q);
+        this.notice(c, `Queued for ranked ${size} ${type} (${q.length}/${Number(size[0]) * 2})`); this.matchmake(); return ok({ queued: true, key, inQueue: q.length });
+      }
+      case 'arenaLeaveQueue': { for (const q of this.arenaQueues.values()) { const i = q.indexOf(c.charId); if (i >= 0) q.splice(i, 1); } return ok(); }
       case 'arenaSettle': { return ok({ auto: true, msg: 'Server settles arena results automatically' }); }
       // ---- guild (DB-backed, multi-member) ----
       case 'guildCreate': return this.guildCreate(c, String(a.name ?? ''));
@@ -236,11 +240,17 @@ export class GameServer {
     for (const x of [A, B]) { this.notice(x, 'Trade completed'); x.dirty = true; }
     return ok({ done: true });
   }
-  private matchmake() { while (this.arenaQueue.length >= 2) { const a = this.conns.get(this.arenaQueue.shift()!); const b = this.conns.get(this.arenaQueue.shift()!); if (a && b) this.startMatch([a], [b], 'ranked1v1', true); } }
-  private startMatch(A: Conn[], B: Conn[], mode: string, rated: boolean) {
+  private matchmake() {
+    for (const [key, q] of this.arenaQueues) {
+      const n = Number(key[0]); for (let i = q.length - 1; i >= 0; i--) if (!this.conns.has(q[i]!)) q.splice(i, 1);
+      while (q.length >= n * 2) { const picked = q.splice(0, n * 2).map((id) => this.conns.get(id)!).sort((x, y) => y.svc.p.pvp.rating - x.svc.p.pvp.rating);
+        const A: Conn[] = [], B: Conn[] = []; picked.forEach((c, i) => ((i % 4 === 0 || i % 4 === 3) ? A : B).push(c)); this.startMatch(A, B, `ranked${key}`, true, key.split(':')[1] as any); }
+    }
+  }
+  private startMatch(A: Conn[], B: Conn[], mode: string, rated: boolean, type: 'deathmatch' | 'siege' | 'rush' = 'deathmatch') {
     const id = `m_${randomBytes(6).toString('hex')}`; for (const c of [...A, ...B]) this.changeMap(c, 'arena', undefined, undefined, { arena: id });
     const w = this.worlds.get([...this.worlds.keys()].find((k) => k.startsWith(`arena:${id}`))!)!; for (const c of [...A, ...B]) { if (c.world !== w) { c.world.removePlayer(`pl_${c.charId}`); w.addPlayer(c.svc); c.world = w; } }
-    w.startArena(A.map((c) => `pl_${c.charId}`), B.map((c) => `pl_${c.charId}`)); this.matches.set(id, { world: w, a: A.map((c) => c.charId), b: B.map((c) => c.charId), mode, rated, settled: false });
+    w.startArena(A.map((c) => `pl_${c.charId}`), B.map((c) => `pl_${c.charId}`), 120_000, type); this.matches.set(id, { world: w, a: A.map((c) => c.charId), b: B.map((c) => c.charId), mode, rated, settled: false });
     pool.query('INSERT INTO pvp_matches(id,world_id,mode,team_a,team_b) VALUES ($1,$2,$3,$4,$5)', [id, CONFIG.worldId, mode, JSON.stringify(A.map((c) => c.charId)), JSON.stringify(B.map((c) => c.charId))]).catch(() => undefined);
   }
   private settleMatches() {
@@ -249,6 +259,7 @@ export class GameServer {
       const conns = (ids: string[]) => ids.map((x) => this.conns.get(x)).filter(Boolean) as Conn[]; const avg = (cs: Conn[]) => cs.reduce((s, c) => s + c.svc.p.pvp.rating, 0) / Math.max(1, cs.length);
       const A = conns(m.a), B = conns(m.b); const ra = avg(A), rb = avg(B); const deltas: Record<string, number> = {};
       if (m.rated) { for (const c of A) deltas[c.charId] = c.svc.recordPvp(win === 0, B.map((x) => x.svc.p.name).join(','), rb); for (const c of B) deltas[c.charId] = c.svc.recordPvp(win === 1, A.map((x) => x.svc.p.name).join(','), ra); }
+      const mvp = m.world.arena.mvp?.replace(/^pl_/, ''); if (mvp && this.conns.get(mvp)) this.conns.get(mvp)!.svc.awardMvp();
       for (const c of [...A, ...B]) { this.notice(c, `Match finished: ${((win === 0) === A.includes(c)) ? 'VICTORY' : 'DEFEAT'}${deltas[c.charId] !== undefined ? ` (${deltas[c.charId]! >= 0 ? '+' : ''}${deltas[c.charId]} rating)` : ''}. Use "Leave arena".`); c.dirty = true; }
       pool.query('UPDATE pvp_matches SET winner=$2, rating_delta=$3, finished_at=now() WHERE id=$1', [id, win, JSON.stringify(deltas)]).catch(() => undefined);
       this.persist([...A, ...B]).catch(() => undefined);
