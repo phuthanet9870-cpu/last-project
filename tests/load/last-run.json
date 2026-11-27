@@ -1,0 +1,27 @@
+{
+  "when": "2026-11-27T08:39:18.240Z",
+  "note": "single process on the dev container, all clients in the same town map, movement+chat workload only (no combat)",
+  "results": [
+    {
+      "clients": 20,
+      "tickP95msMax": "4.76",
+      "tickP95msMedian": "4.70",
+      "downKBpsPerClient": "92.0",
+      "rssMB": "105 (test process)"
+    },
+    {
+      "clients": 50,
+      "tickP95msMax": "15.02",
+      "tickP95msMedian": "14.96",
+      "downKBpsPerClient": "174.7",
+      "rssMB": "119 (test process)"
+    },
+    {
+      "clients": 100,
+      "tickP95msMax": "49.16",
+      "tickP95msMedian": "48.05",
+      "downKBpsPerClient": "351.9",
+      "rssMB": "144 (test process)"
+    }
+  ]
+}

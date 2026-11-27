@@ -81,7 +81,7 @@ export class GameServer {
     else if (SERVER_ONLY.has(m.cmd) && !(CONFIG.devCommands && c.role === 'admin')) r = fail('FORBIDDEN', 'Developer commands disabled on this server');
     else r = await this.dispatch(c, m.cmd, m.args ?? {});
     if (r.ok && (ECON_CMDS.has(m.cmd) || this.ledger.pending.length > 0)) { try { await this.persist([...this.conns.values()].filter((x) => x.dirty || x === c)); } catch (e) { this.stats.persistErrors++; console.error('persist failed', e); r = fail('PERSIST_FAILED', 'Server could not save; please retry'); } }
-    this.send(c, { type: 'res', id: m.id, result: r }); c.dirty = true;
+    this.send(c, { type: 'res', id: m.id, result: r }); if (!['move', 'moveTo', 'target', 'ping', 'chat', 'whisper', 'marketView', 'tcgView'].includes(m.cmd)) c.dirty = true; // movement/chat don't change durable state → no full state resend
     if (['marketList', 'marketBuy', 'marketCancel', 'buyOrder', 'cancelBuyOrder', 'auctionCreate', 'auctionBid', 'auctionBuyNow', 'exchangePlace', 'exchangeCancel', 'marketView'].includes(m.cmd)) this.send(c, { type: 'market', market: this.market.serialize() });
     if (m.cmd.startsWith('tcg')) this.send(c, { type: 'tcg', tcg: c.session.tcg ? { view: viewFor(c.session.tcg.state, 0), mode: c.session.tcg.mode, opp: c.session.tcg.oppName } : null });
   }

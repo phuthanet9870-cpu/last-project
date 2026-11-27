@@ -1,0 +1,39 @@
+# Local stack for Hearthbound Online (development / staging rehearsal — not a production deployment).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hb_dev_pw}
+      POSTGRES_DB: hearthbound
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U hb -d hearthbound"], interval: 5s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
+  game:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm build:client && pnpm db:migrate && pnpm server"
+    environment:
+      DATABASE_URL: postgres://hb:${POSTGRES_PASSWORD:-hb_dev_pw}@postgres:5432/hearthbound
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports: ["2567:2567"]
+    volumes: [".:/app"]
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy } }
+  worker:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm worker"
+    environment:
+      DATABASE_URL: postgres://hb:${POSTGRES_PASSWORD:-hb_dev_pw}@postgres:5432/hearthbound
+      REDIS_URL: redis://redis:6379
+    volumes: [".:/app"]
+    depends_on: { game: { condition: service_started } }
+volumes:
+  pgdata:

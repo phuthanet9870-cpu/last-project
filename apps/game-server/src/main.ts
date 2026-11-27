@@ -33,7 +33,7 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
   // ---- health ----
   app.get('/api/health', async () => ({ ok: true, db: (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1, redis: !!redis && redis.status === 'ready', online: game.conns.size, tickMsP95: game.stats.tickMsP95 }));
   // ---- auth (§05) ----
-  app.post('/api/auth/register', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`reg:${req.ip}`, 10, 3600))) throw new AuthError(429, 'Too many registrations'); return register(b.username, b.password); });
+  app.post('/api/auth/register', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`reg:${req.ip}`, Number(process.env.REGISTER_LIMIT_PER_HOUR ?? 10), 3600))) throw new AuthError(429, 'Too many registrations'); return register(b.username, b.password); });
   app.post('/api/auth/login', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`login:${req.ip}`, 20, 60))) throw new AuthError(429, 'Too many login attempts'); return login(b.username, b.password, req.ip); });
   app.post('/api/auth/refresh', async (req) => refresh((req.body as any)?.refreshToken));
   app.post('/api/auth/logout', async (req) => { await logout((req.body as any)?.refreshToken); return { ok: true }; });
