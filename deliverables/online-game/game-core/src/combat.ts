@@ -6,7 +6,7 @@ export interface HitResult { damage: number; crit: boolean; miss: boolean; eleme
 
 export interface DamageInput {
   attacker: CombatStats; defender: CombatStats; power: number; dmgType: 'phys' | 'mag' | 'pure';
-  element: Element | null; buffMult?: number; pvp?: boolean; canMiss?: boolean;
+  element: Element | null; buffMult?: number; pvp?: boolean; canMiss?: boolean; /** +crit% from class gauges (100 = guaranteed) */ critBonus?: number;
 }
 
 /** Canonical damage formula (§12). Pure function with injected RNG; server and local adapter call the same code. */
@@ -22,7 +22,7 @@ export function computeHit(rng: Rng, i: DamageInput): HitResult {
   const defense = i.dmgType === 'pure' ? 0 : i.dmgType === 'mag' ? d.mdef : d.def;
   const pen = i.dmgType === 'mag' ? a.mpen : a.pen;
   const effDef = Math.max(0, defense - pen);
-  const crit = rng.chance(Math.min(CONFIG.critCapPercent, a.crit) / 100);
+  const crit = rng.chance(Math.min(CONFIG.critCapPercent + (i.critBonus ?? 0), a.crit + (i.critBonus ?? 0)) / 100);
   const critMult = crit ? CONFIG.critMultiplier + a.critDmg / 100 : 1;
   const variance = 1 + (rng.next() * 2 - 1) * CONFIG.damageVariance;
   const elemBonus = 1 + (a.elemBonus ?? 0) / 100;

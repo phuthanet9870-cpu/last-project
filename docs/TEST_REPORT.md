@@ -6,10 +6,10 @@ All results below were produced by commands actually run in this repository's de
 |---|---|---|
 | TypeScript strict typecheck | `pnpm typecheck` | **PASS** (0 errors) |
 | Lint (typescript-eslint) | `pnpm lint` | **PASS** (0 errors, 3 unused-var warnings) |
-| Client build (esbuild) | `pnpm build:client` | **PASS** — `game.js` ≈ 619 KB minified (includes registry JSON) |
-| Unit tests (Vitest) | `pnpm test` | **120/120 PASS** (114 game-core incl. 46-test coverage suite + 6 server security incl. RFC 6238/4226 vectors) |
-| Artifact end-to-end (Playwright, real UI) | `pnpm test:e2e` | **39/39 PASS**, 0 browser console/page errors |
-| Multiplayer integration (2 real WS clients + Postgres) | `pnpm server` then `pnpm test:multiplayer` | **29/29 PASS** (server started with `DEV_COMMANDS=1` so the raid step can level two fresh admin test characters) |
+| Client build (esbuild) | `pnpm build:client` | **PASS** — `game.js` ≈ 899 KB minified (includes registry JSON + 468 skill definitions) |
+| Unit tests (Vitest) | `pnpm test` | **170/170 PASS** (164 game-core incl. 47-test Skill V4 suite + coverage suite, 6 server security incl. RFC 6238/4226 vectors) |
+| Artifact end-to-end (Playwright, real UI) | `pnpm test:e2e` | **41/41 PASS**, 0 browser console/page errors (step 41 = Skill V4 window) |
+| Multiplayer integration (2 real WS clients + Postgres) | `pnpm server` then `pnpm test:multiplayer` | **30/30 PASS** incl. "Skill V4 on the server" (server started with `DEV_COMMANDS=1` so the raid step can level two fresh admin test characters) |
 | Online-mode browser E2E (2 browsers vs server) | `node tests/e2e/online.e2e.mjs` | **3/3 PASS**, 0 browser errors |
 | Worker jobs vs real DB | `pnpm worker -- --once` | **PASS** — ledger reconcile: 0 unbalanced tx, 0 wallet mismatches; weeklyChampion wrote 2026-W48 |
 | One-command start | `pnpm game:start` | **PASS** — `/api/health` db=true redis=true; client 200; admin 200 (fails with clear guidance if Postgres is down) |
@@ -17,6 +17,8 @@ All results below were produced by commands actually run in this repository's de
 | Backup → restore drill | `node scripts/backup-drill.mjs` | **PASS** — 30 tables / ~31k rows identical, migrations + ledger totals match, 0 unbalanced tx (dump 0.7 s, restore 1.2 s) |
 | Bundled production build | `node scripts/build-server.mjs` then `node dist/server.mjs` | **PASS** — `/readyz` 200, CSP/XFO headers; `NODE_ENV=production` refuses weak config and starts with hardened config (HSTS, locked CORS) |
 | Docker image / compose prod / CI on GitHub | — | **NOT RUN** (no Docker daemon here; CI not triggered) |
+
+| Skill balance simulation (V4) | `npx tsx scripts/gen-skill-docs.ts` | SIMULATION_ONLY — 26 classes vs neutral dummy; damage roles 894–1,562 single-target DPS after 3 calibration passes (docs/skills/SKILL_BALANCE_REPORT.md) |
 
 ## Unit tests (packages/game-core/test/core.test.ts)
 Content registry integrity (26 classes × 18 = 468 skill IDs; ≥100 items; drop/quest references; every map spawn & portal reachable by A*), stat formulas from the master prompt, crit cap, all 81 element pairs, damage finiteness under extreme defense, EXP curve & multi-level gain, ascension gate, class weapon restriction, inventory overflow → mail, refine costs & +10 downgrade floor, gem socket unlock, double-entry ledger (balanced/negative/idempotency), **master prompt order book example (buy 300 @152 → 100@150 + 200@152 = 45,400G)**, auction outbid refund + settle-once, market double-buy race, farm offline settlement (cap, food, idempotent), pet farm/summon exclusivity, tutorial quest chain + reward once, 7 legal starter decks, 20 AI-vs-AI TCG matches terminate + hidden info redaction, gacha pity, world kill → EXP/gold/death-once, collision at map border, dungeon reward once, save round-trip with BigInt, status effects (stacking, DoT, expiry, shield, CC resist, cleanse).

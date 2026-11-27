@@ -11,7 +11,7 @@ import { EconomyError } from './economy.js';
 import { ITEMS, type Slot } from './items.js';
 import { TILE } from './mapgen.js';
 import { MarketService, guildCan, guildLevelExp } from './market.js';
-import { type PlayerService, type Result, walletId, npcQuests, playerCP } from './player.js';
+import { type PlayerService, type Result, walletId, npcQuests, playerCP , autoAllocateDraft } from './player.js';
 import { Rng, uid } from './rng.js';
 import { TCG_CARDS, STARTER_DECKS, aiChooseAction, applyAction, newMatch, viewFor, type TcgAction, type TcgState } from './tcg.js';
 import type { World } from './world.js';
@@ -69,7 +69,10 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   resetStats: (c) => { const r = c.svc.resetStats(); c.world.refreshPlayer(c.entityId); return r; },
   learnSkill: (c, a) => { const r = c.svc.learnSkill(String(a.skill)); c.world.refreshPlayer(c.entityId); return r; },
   resetSkills: (c) => c.svc.resetSkills(),
+  /** V4: atomic commit of a pending skill draft { draft: {skillId: rank}, rev, opId } (server-authoritative). */
+  skillCommit: (c, a) => { const d = a.draft; if (!d || typeof d !== 'object' || Array.isArray(d) || Object.keys(d).length > 18) return fail('INVALID'); const draft: Record<string, number> = {}; for (const [k, v] of Object.entries(d as Record<string, unknown>)) { if (typeof k !== 'string' || k.length > 64 || typeof v !== 'number') return fail('INVALID'); draft[k] = v; } const r = c.svc.commitSkills(draft, a.rev === undefined ? undefined : Number(a.rev), a.opId ? String(a.opId).slice(0, 64) : undefined); c.world.refreshPlayer(c.entityId); return r; },
   hotbar: (c, a) => c.svc.setHotbar(Number(a.i), a.id ?? null),
+  hotbarSet: (c, a) => c.svc.switchHotbarSet(Number(a.set)),
   ascend: (c) => c.svc.ascend(),
   setTitle: (c, a) => { const r = c.svc.setTitle(a.id ?? null); c.world.refreshPlayer(c.entityId); return r; },
   settings: (c, a) => { for (const k of ['autoLoot', 'offlineAuto'] as const) if (typeof a.settings?.[k] === 'boolean') c.svc.p.settings[k] = a.settings[k]; return ok(); }, // whitelist: clients cannot write arbitrary flags
@@ -99,13 +102,18 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
     return c.changeMap('pet_farm');
   },
   likeFarm: (c) => { const v = c.session.visit; if (!v) return fail('NOT_VISITING'); const k = `like:${v.owner}:${new Date(c.world.now()).toISOString().slice(0, 10)}`; if (c.svc.p.counters[k]) return fail('ALREADY_LIKED', 'You already liked this farm today'); c.svc.p.counters[k] = 1; v.likes++; c.svc.earn('gold', 50, 'farm_like_reward'); return ok({ likes: v.likes }); },
-  slotStone: (c, a) => { const it = c.svc.findInv(String(a.uid)); if (!it?.stone?.skillId) return fail('NOT_INSCRIBED'); if (!it.locked && c.svc.equippedStones().length >= 4) return fail('STONE_SLOTS_FULL'); it.locked = !it.locked; return ok({ slotted: it.locked }); },
+  /** Toggle a stone in/out of the socket of the skill it is inscribed for (free). */
+  slotStone: (c, a) => { const it = c.svc.findInv(String(a.uid)); if (!it?.stone?.skillId) return fail('NOT_INSCRIBED'); const inSock = c.svc.p.skillSockets?.[it.stone.skillId] === it.uid; const r = c.svc.socketStone(it.stone.skillId, inSock ? null : it.uid); c.world.refreshPlayer(c.entityId); return r.ok ? ok({ slotted: !inSock }) : r; },
+  socketStone: (c, a) => { const r = c.svc.socketStone(String(a.skill), a.uid ? String(a.uid) : null); c.world.refreshPlayer(c.entityId); return r; },
+  chooseInscription: (c, a) => c.svc.chooseInscription(String(a.uid), a.keep === 'new' ? 'new' : 'old'),
   // --- quests & NPCs ---
   interact: (c, a) => { const n = NPCS[String(a.npc)]; const me = c.world.entities.get(c.entityId)!; if (!n || n.map !== c.world.mapId) return fail('INVALID'); if (!c.dev && Math.hypot(n.x * TILE + 16 - me.x, n.y * TILE + 16 - me.y) > 160) return fail('TOO_FAR'); c.svc.talkTo(n.id); return ok({ npc: n.id, quests: npcQuests(n.id) }); },
   acceptQuest: (c, a) => c.svc.acceptQuest(String(a.id)),
   abandonQuest: (c, a) => c.svc.abandonQuest(String(a.id)),
   completeQuest: (c, a) => { const q = QUESTS[String(a.id)]; if (!q) return fail('INVALID'); if (!c.dev && !near(c, 'quest') && !near(c, 'board') && !Object.values(NPCS).some((n) => n.id === q.giver && n.map === c.world.mapId)) return fail('RETURN_TO_GIVER', `Return to ${NPCS[q.giver]?.name.en}`); const r = c.svc.completeQuest(q.id, a.choice); c.world.refreshPlayer(c.entityId); return r; },
   buy: (c, a) => { const npc = Object.values(NPCS).find((n) => n.shop === a.shop); if (!c.dev && npc && !near(c, npc.roles[0]!) && !near(c, 'shop')) return fail('NEED_SHOP_NPC'); return c.svc.buy(String(a.shop), String(a.item), Number(a.qty) || 1); },
+  queueCraft: (c, a) => (near(c, 'crafting') || c.world.mapId === 'house' || c.dev ? c.svc.queueCraft(String(a.recipe), Number(a.times) || 1) : fail('NEED_WORKSTATION', 'Visit a crafting station')),
+  collectCrafts: (c) => c.svc.collectCrafts(),
   craft: (c, a) => (near(c, 'crafting') || c.world.mapId === 'house' ? c.svc.craft(String(a.recipe), Number(a.times) || 1, a.focus ? String(a.focus) : undefined) : fail('NEED_WORKSTATION', 'Visit Juno or use your house workbench')),
   // --- pets / farm / mounts / housing ---
   hatch: (c, a) => c.svc.hatchEgg(String(a.egg), c.dev && !!a.instant),
@@ -221,6 +229,9 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   friendAdd: (c, a) => { const name = String(a.name).slice(0, 20); if (!name || c.svc.p.friends.some((f) => f.name === name)) return fail('INVALID'); if (c.svc.p.blocked.includes(name)) return fail('BLOCKED'); if (c.svc.p.friends.length >= 100) return fail('FRIEND_LIMIT'); c.svc.p.friends.push({ name, note: '', since: c.world.now() }); return ok(); },
   friendRemove: (c, a) => { c.svc.p.friends = c.svc.p.friends.filter((f) => f.name !== a.name); return ok(); },
   block: (c, a) => { const n = String(a.name); if (!c.svc.p.blocked.includes(n)) c.svc.p.blocked.push(n); c.svc.p.friends = c.svc.p.friends.filter((f) => f.name !== n); return ok(); },
+  // personal mute (§39): hides that player's chat only — trading, parties and friendship are unaffected (unlike block)
+  mute: (c, a) => { const n = String(a.name ?? '').trim(); if (!n || n === c.svc.p.name) return fail('INVALID'); const m = ((c.svc.p as any).muted ??= []) as string[]; if (!m.includes(n)) m.push(n); return ok({ muted: m.length }); },
+  unmute: (c, a) => { (c.svc.p as any).muted = (((c.svc.p as any).muted ?? []) as string[]).filter((x) => x !== a.name); return ok(); },
   unblock: (c, a) => { c.svc.p.blocked = c.svc.p.blocked.filter((x) => x !== a.name); return ok(); },
   partyInvite: (c, a) => {
     const me = c.world.entities.get(c.entityId)!; const t = c.world.entities.get(String(a.target)); if (!t || (t.kind !== 'bot' && t.kind !== 'player') || t.id === me.id) return fail('INVALID_TARGET');
@@ -273,11 +284,13 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
       case 'gold': s.earn('gold', Number(a.n) || 100000, 'dev_grant'); return ok();
       case 'crystal': s.earn('crystal', Number(a.n) || 10000, 'dev_grant'); return ok();
       case 'currency': s.earn(a.c, Number(a.n) || 1000, 'dev_grant'); return ok();
-      case 'weaken': { const t = c.world.entities.get(String(a.target)); if (!t || t.kind !== 'monster') return fail('INVALID_TARGET'); t.hp = Math.min(t.hp, 1 + Math.floor(t.maxHp * 0.001)); return ok(); } // dev panel: shorten long fights in tests
+      case 'weaken': { const t = c.world.entities.get(String(a.target)); if (!t || t.kind !== 'monster') return fail('INVALID_TARGET'); t.hp = 1; return ok(); } // dev panel: leave the target at 1 HP to shorten long fights in tests
       case 'tcgcards': { const ids = Object.values(TCG_CARDS).filter((x) => x.rarity === (a.rarity ?? 'common') && !x.id.startsWith('tok_')).slice(0, 3).map((x) => x.id); for (const id of ids) s.p.tcg.collection[id] = (s.p.tcg.collection[id] ?? 0) + 3; return ok(ids); } // unbound test copies
       case 'item': if (!ITEMS[a.id]) return fail('UNKNOWN_ITEM'); s.addItem(a.id, Number(a.n) || 1, { rollOptions: true }); return ok();
       case 'materials': for (const id of ['refine_ore', 'refine_ore_hi', 'enchant_stone', 'ward_scroll', 'stone_dust', 'star_dust', 'gem_dust', 'iron_ore', 'oak_log', 'herb_green', 'herb_blue', 'slime_gel', 'berry', 'wheat', 'fish_carp', 'soft_fur', 'cloth', 'capture_net', 'pet_food', 'pet_egg', 'gacha_ticket', 'card_pack', 'boss_heart', 'wisp_dust', 'ember_core', 'pine_log', 'copper_ore', 'silver_ore', 'beetle_shell', 'fish_trout', 'frost_shard', 'herb_gold', 'tool_pickaxe', 'tool_rod', 'deco_lantern', 'deco_flowers', 'wedding_ring', 'gem_ruby_1', 'gem_sapphire_1', 'skill_stone']) s.addItem(id, ['tool_pickaxe', 'tool_rod', 'wedding_ring'].includes(id) ? 1 : 20); return ok();
-      case 'skills': for (const sk of CLASSES[s.p.classId]!.skills) s.p.skillRanks[sk.id] = Math.max(s.p.skillRanks[sk.id] ?? 0, 1); s.p.hotbar = CLASSES[s.p.classId]!.skills.filter((x) => x.type !== 'passive').slice(0, 8).map((x) => x.id); c.world.refreshPlayer(c.entityId); return ok();
+      case 'skills': { // dev: job level up to base level (max 70), then commit the class's first recommended build through the normal V4 rules
+        const cls = CLASSES[s.p.classId]!; s.p.jobLevel = Math.max(s.p.jobLevel, Math.min(70, s.p.level)); const d = autoAllocateDraft(s.p, cls.builds[0]!.seq); const r = s.commitSkills(d); if (!r.ok) return r;
+        const dmg = (x: { dmgType: string }) => (x.dmgType === 'phys' || x.dmgType === 'mag' ? 0 : 1); s.p.hotbar = cls.skills.filter((x) => x.type !== 'passive' && (s.p.skillRanks[x.id] ?? 0) > 0).sort((x, y) => dmg(x) - dmg(y)).slice(0, 8).map((x) => x.id); while (s.p.hotbar.length < 8) s.p.hotbar.push(null); c.world.refreshPlayer(c.entityId); return ok(); }
       case 'class': { const r = s.changeClass(String(a.id)); c.world.refreshPlayer(c.entityId); return r; }
       case 'spawn': { const m = c.world.spawnMonster(String(a.id), me.x + 80, me.y); m.ai!.homeX = m.x; m.ai!.homeY = m.y; return ok({ id: m.id }); }
       case 'boss': if (c.world.map.def.biome !== 'crater') return fail('GO_TO_CRATER'); c.world.spawnWorldBoss(a.id); return ok();

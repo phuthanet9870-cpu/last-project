@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.15.0 — 2026-11-28 — Skill System V4 (Full System Rework phase B) + gap pass 3
+- **Skill System V4**: the 4 shared role kits ("Steel Strike" on a Fortune Dealer, etc.) are gone. 26 classes now have their own authored kits: 18 skills each (468), 3 Ascension stages (8/6/4 nodes), prerequisites (AND/OR), per-skill max rank and rank tables, a class normal attack outside the tree, and 2 recommended builds each (52).
+- 26 data-driven class gauges (resource/stacks/charge/combo/phase) with real effects: Moon Oracle phases, Tide Witch high/low tide, Chrono Rewind cooldown reset, Fortune Dealer dice/cards/reroll/jackpot, Heat/Entropy HP cost, Chill freeze chance, Storm chain boost, summon boosts, Resolve/Bedrock shields.
+- Skill points come from job level only; Ascension gates moved to Lv 40/80/120. Allocation is a client draft (+/−, Undo, Clear) committed by one server-validated `skillCommit` with revision check and idempotency key. Auto Allocate fills a legal draft from a build.
+- New skill window (cream / muted green / brown-gold): ascension tabs, tree with prerequisite lines and node states, current-vs-next rank table from the combat data, stone socket, builds, Confirm. HUD gauge shows the class gauge (phase names for phase gauges).
+- Skill stones: one socket per active skill (free embed/remove), free first inscription, re-inscription with keep-old/take-new, refine +10, legendary stones with behaviours (new item + Runecrafting recipe). Scroll of Unlearning for resets.
+- Hotbar: passives/unlearned refused by the server, drag-and-drop (slots and from the tree), 3 hotbar sets. Auto-combat picks heal/damage skills by readiness, MP, gauge and range.
+- CDR cap 20% (DEX × 0.1%); no cast times. New statuses `matk_up`, `mdef_break`.
+- Balance: headless combat simulation of all 26 classes vs a neutral training dummy, 3 calibration passes into `skills/balance.ts` (SIMULATION_ONLY). Damage roles now within 894–1,562 single-target DPS (was 238–5,300).
+- Migration: saves are migrated on load — old skill ranks are fully refunded, never remapped (see docs/skills/SKILL_MIGRATION_REPORT.md). **Production rollout needs owner approval.**
+- Gap pass 3 (from 0.14): craft queue, world boss Bangkok schedule + daily rotation, personal chat mute, fullscreen.
+- Fixes found by tests: a full gauge's bonus (Focus crit, Radiance blind, Grace heal, Bond, Battery) emptied the gauge before a spending skill could spend it, so those skills lost their spend bonus exactly at full gauge; knockdown only applied together with knockback; auto-combat could stall trying to cast an out-of-range skill; skill-tree nodes overlapped their neighbours' buttons.
+- Docs: docs/skills/ (SKILL_SYSTEM_V4, reference matrix with provenance labels, class skill database, tree registry, builds, stone modifiers, balance, migration, test report, implementation status + asset registry).
+
 ## 0.14.0 — 2026-11-27 — Registry gap pass 2
 - New: need/greed rolls for rare+ party drops (need = can equip; rolls announced), offline auto-play (opt-in, 30% EXP/Gold, 5 min–8 h, mailed summary), 3 equipment presets, gathering tool durability (breaks after 50 uses), Lantern Level titles at 10/25/50.
 - Fix (found by test): auto-battle never collected loot for ranged classes (pick-up radius 40px); it now walks to nearby bags first.

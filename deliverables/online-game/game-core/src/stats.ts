@@ -25,7 +25,7 @@ export interface StatInput {
 export interface StatResult { primary: Primary; derived: Derived; breakdown: Record<string, { stat: StatKey; value: number; kind: string }[]> }
 
 const CAPS: Partial<Record<DerivedKey, [number, number]>> = {
-  crit: [0, CONFIG.critCapPercent], cdr: [0, 40], dmgReduce: [0, 60], block: [0, 50], lifesteal: [0, 25],
+  crit: [0, CONFIG.critCapPercent], cdr: [0, 20], dmgReduce: [0, 60], block: [0, 50], lifesteal: [0, 25],
   dropBonus: [0, 200], aspd: [0.3, 3], moveSpeed: [60, 260], eva: [0, 100000], ccResist: [0, 70],
 };
 
@@ -56,7 +56,7 @@ export function computeStats(input: StatInput): StatResult {
   d.critDmg = 0;
   d.aspd = 1 + p.agi * 0.004;
   d.moveSpeed = 120;
-  d.cdr = p.dex * 0.08;
+  d.cdr = p.dex * 0.1; // V4: CDR = min(20%, DEX×0.1% + equipment CDR) — PROVIDED_SPEC
   d.hpRegen = 1 + p.vit * 0.2;
   d.mpRegen = 1 + p.int * 0.15;
   d.healPower = p.int * 1.2;

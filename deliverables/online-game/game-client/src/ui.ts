@@ -1,5 +1,5 @@
 /** UI framework + HUD (§51–52). Plain DOM with a tiny h() helper; every button maps to a real command. */
-import { ALL_SKILLS, CLASSES, ITEMS, MAPS, MONSTERS, QUESTS, RARITY_COLOR, STATUSES, TITLES, playerStats, requiredExp, type ItemInstance, type PlayerState } from '@hb/game-core';
+import { phaseName, ALL_SKILLS, CLASSES, ITEMS, MAPS, MONSTERS, QUESTS, RARITY_COLOR, STATUSES, TITLES, playerStats, requiredExp, type ItemInstance, type PlayerState } from '@hb/game-core';
 import { characterSprite, itemIcon, skillIcon } from './art.js';
 import { lookOf } from './render.js';
 import type { Adapter, PubEntity } from './adapter.js';
@@ -48,12 +48,12 @@ export function hideTip() { if (tip) tip.style.display = 'none'; }
 // ---------------- windows ----------------
 export type Box = HTMLElement & { append: (...nodes: any[]) => void };
 function boxify(el: HTMLElement): Box { const orig = el.append.bind(el); (el as any).append = (...k: any[]) => orig(...k.flat(9).filter((x) => x !== null && x !== undefined && x !== false).map((x) => (x instanceof Node ? x : String(x)))); return el as Box; }
-export interface WinDef { id: string; title: string; render: (body: Box) => void; width?: number }
+export interface WinDef { id: string; title: string; render: (body: Box) => void; width?: number; cls?: string }
 const openWins = new Map<string, { el: HTMLElement; def: WinDef }>(); let layer: HTMLElement; let zTop = 10;
 export function openWindow(def: WinDef) {
   const ex = openWins.get(def.id); if (ex) { ex.def = def; renderWin(def.id); ex.el.style.zIndex = String(++zTop); return; }
   const body = boxify(h('div', { class: 'win-body' }));
-  const el = h('div', { class: 'win', style: { width: `${Math.min(def.width ?? 520, window.innerWidth - 16)}px`, zIndex: String(++zTop) }, role: 'dialog', 'aria-label': def.title },
+  const el = h('div', { class: `win ${def.cls ?? ''}`, style: { width: `${Math.min(def.width ?? 520, window.innerWidth - 16)}px`, zIndex: String(++zTop) }, role: 'dialog', 'aria-label': def.title },
     h('div', { class: 'win-title' }, h('span', {}, def.title), h('button', { class: 'x', 'aria-label': 'Close', onclick: () => closeWindow(def.id) }, '✕')), body);
   const n = openWins.size; el.style.left = `${Math.max(8, Math.min(window.innerWidth - (def.width ?? 520) - 8, 80 + n * 24))}px`; el.style.top = `${Math.max(8, 60 + n * 24)}px`;
   dragify(el, el.querySelector('.win-title') as HTMLElement); el.addEventListener('mousedown', () => { el.style.zIndex = String(++zTop); });
@@ -79,12 +79,13 @@ export function bar(v: number, max: number, color: string, label?: string) { ret
 
 // ---------------- HUD ----------------
 export interface HudRefs { root: HTMLElement; hp: HTMLElement; mp: HTMLElement; exp: HTMLElement; gauge: HTMLElement; name: HTMLElement; buffs: HTMLElement; hotbar: HTMLElement; target: HTMLElement; tracker: HTMLElement; chatLog: HTMLElement; chatIn: HTMLInputElement; mini: HTMLCanvasElement; mapName: HTMLElement; info: HTMLElement; currencies: HTMLElement; party: HTMLElement; banner: HTMLElement; respawn: HTMLElement; menu: HTMLElement; joy: HTMLElement; mobileBtns: HTMLElement; portrait: HTMLCanvasElement }
-export function buildHud(root: HTMLElement, handlers: { onHotbar: (i: number) => void; onChat: (ch: string, msg: string) => void; onRespawn: () => void; menu: { key: string; label: string; icon: string; open: () => void }[]; onJoy: (dx: number, dy: number) => void; onMobileAttack: () => void; onMobilePickup: () => void; onMobileInteract: () => void }): HudRefs {
+export function buildHud(root: HTMLElement, handlers: { onHotbar: (i: number) => void; onChat: (ch: string, msg: string) => void; onRespawn: () => void; menu: { key: string; label: string; icon: string; open: () => void }[]; onJoy: (dx: number, dy: number) => void; onMobileAttack: () => void; onMobilePickup: () => void; onMobileInteract: () => void; onHotbarDrop?: (slot: number, skill: string | null, fromSlot: number | null) => void; onHotbarSet?: () => void }): HudRefs {
   layer = h('div', { class: 'win-layer' }); toastBox = h('div', { class: 'toasts', 'aria-live': 'polite' }); tip = h('div', { class: 'tooltip' });
   const portrait = document.createElement('canvas'); portrait.width = 40; portrait.height = 52; portrait.className = 'px portrait';
   const hp = h('div', { class: 'bar hp' }), mp = h('div', { class: 'bar mp' }), exp = h('div', { class: 'bar exp' }), gauge = h('div', { class: 'bar gauge' });
   const name = h('div', { class: 'pname' }); const buffs = h('div', { class: 'buffs' });
-  const hotbar = h('div', { class: 'hotbar' }); for (let i = 0; i < 10; i++) { const s = h('button', { class: 'slot', 'aria-label': `Hotbar ${i + 1}`, onclick: () => handlers.onHotbar(i) }, h('span', { class: 'key' }, i < 8 ? String(i + 1) : i === 8 ? 'Q' : 'E'), h('div', { class: 'cd' })); hotbar.append(s); }
+  const hotbar = h('div', { class: 'hotbar' }); for (let i = 0; i < 10; i++) { const s = h('button', { class: 'slot', 'aria-label': `Hotbar ${i + 1}`, onclick: () => handlers.onHotbar(i), draggable: i < 8 ? 'true' : undefined, ondragstart: (e: DragEvent) => { e.dataTransfer?.setData('text/hb-slot', String(i)); }, ondragover: (e: DragEvent) => { if (i < 8) e.preventDefault(); }, ondrop: (e: DragEvent) => { e.preventDefault(); if (i >= 8) return; const sk = e.dataTransfer?.getData('text/hb-skill'); const from = e.dataTransfer?.getData('text/hb-slot'); handlers.onHotbarDrop?.(i, sk || null, from ? Number(from) : null); } }, h('span', { class: 'key' }, i < 8 ? String(i + 1) : i === 8 ? 'Q' : 'E'), h('div', { class: 'cd' })); hotbar.append(s); }
+  const hbset = (h('button', { class: 'slot hbset', 'aria-label': 'Hotbar set', title: 'Switch hotbar set (1–3)', onclick: () => handlers.onHotbarSet?.() }, h('span', { class: 'key' }, 'SET'), h('b', { class: 'hbn' }, '1')));
   const target = h('div', { class: 'target' }); const tracker = h('div', { class: 'tracker' }); const party = h('div', { class: 'party' });
   const chatLog = h('div', { class: 'chat-log', 'aria-live': 'off' }); let ch = 'local';
   const chatIn = h('input', { class: 'chat-in', placeholder: 'Enter to chat…  (/w world, /p party, /g guild)', maxlength: '160', 'aria-label': 'Chat message' }) as HTMLInputElement;
@@ -104,7 +105,7 @@ export function buildHud(root: HTMLElement, handlers: { onHotbar: (i: number) =>
     h('div', { class: 'hud-tl' }, portrait, h('div', { class: 'stats' }, name, hp, mp, gauge, buffs)),
     h('div', { class: 'hud-tr' }, h('div', { class: 'mini-wrap' }, mini, mapName, info), currencies),
     target, tracker, party, banner, respawn,
-    h('div', { class: 'hud-bottom' }, exp, hotbar),
+    h('div', { class: 'hud-bottom' }, exp, h('div', { class: 'hbwrap' }, hbset, hotbar)),
     h('div', { class: 'chat' }, chatTabs, chatLog, chatIn), menu, joy, mobileBtns);
   root.append(hud, layer, toastBox, tip);
   return { root: hud, hp, mp, exp, gauge, name, buffs, hotbar, target, tracker, chatLog, chatIn, mini, mapName, info, currencies, party, banner, respawn, menu, joy, mobileBtns, portrait };
@@ -117,7 +118,7 @@ export function updateHud(refs: HudRefs, a: Adapter, target: PubEntity | null, f
   const d = playerStats(p).derived; const cls = CLASSES[p.classId]!;
   setBar(refs.hp, me.hp, me.mhp, '#e04848', `HP ${Math.ceil(me.hp)}/${me.mhp}`); setBar(refs.mp, me.mp, me.mmp, '#4878e0', `MP ${Math.floor(me.mp)}/${me.mmp}`);
   const req = p.level >= 120 ? 1 : requiredExp(p.level); setBar(refs.exp, p.level >= 120 ? 1 : p.exp, req, '#e0c040', p.level >= 120 ? `Mastery ${p.mastery}` : `EXP ${((p.exp / req) * 100).toFixed(1)}%`);
-  setBar(refs.gauge, me.g ?? 0, 100, '#c070ff', `${L(cls.gauge.name)} ${Math.floor(me.g ?? 0)}%`);
+  { const gd = cls.gauge.def; const gv = me.g ?? 0; const ph = phaseName(gd, gv); setBar(refs.gauge, ph ? (Math.floor(gv) % gd.max) + 1 : gv, gd.max, '#c070ff', `${L(cls.gauge.name)} ${ph ? L({ en: ph[0], th: ph[1] }) : `${Number.isInteger(gv) ? gv : gv.toFixed(1)}/${gd.max}`}`); }
   const key = `${p.name}|${p.level}|${p.classId}|${p.ascension}|${(me.fx ?? []).join(',')}|${a.bal('gold')}|${a.bal('crystal')}|${a.bal('crystal_free')}|${a.mapId}|${p.title}`;
   if (key !== lastHud) {
     lastHud = key; { const px = refs.portrait.getContext('2d')!; px.imageSmoothingEnabled = false; px.clearRect(0, 0, 40, 52); px.drawImage(characterSprite(lookOf(p.classId, p.appearance), 0, 0, 'idle'), 0, 0, 40, 52); } refs.name.innerHTML = `<b>${p.name}</b> <span class="dim">Lv ${p.level}${p.ascension ? ` ✦${p.ascension}` : ''} ${L(cls.name)}</span>`;
@@ -128,6 +129,7 @@ export function updateHud(refs: HudRefs, a: Adapter, target: PubEntity | null, f
   refs.info.textContent = `${(globalThis as any).__timeLabel ?? ''} · ${(globalThis as any).__weather ?? ''} · ${fps}fps${a.mode === 'online' ? ` · ${a.ping}ms` : ' · local'}`;
   // hotbar
   const hk = p.hotbar.join(',') + p.inventory.filter((i) => i.defId.startsWith('potion')).length;
+  { const n = document.querySelector('.hbset .hbn'); if (n) n.textContent = String((p.hotbarSet ?? 0) + 1); }
   if (hk !== lastHotbar) { lastHotbar = hk; [...refs.hotbar.children].forEach((slot, i) => { const s = slot as HTMLElement; s.querySelector('canvas')?.remove(); const id = i < 8 ? p.hotbar[i] : i === 8 ? 'potion_hp' : 'potion_mp'; s.title = ''; if (i < 8 && id && ALL_SKILLS[id]) { const sk = ALL_SKILLS[id]!; s.prepend(iconEl(skillIcon(sk.vfx, cls.palette.trim), 36)); s.title = `${L(sk.name)} — ${L(sk.desc)} (MP ${sk.mp}, CD ${sk.cdMs / 1000}s)`; } else if (i >= 8) { const it = p.inventory.find((x) => x.defId.startsWith(id!)); if (it) { s.prepend(itemIconEl(it, 30)); s.title = `${itemName(it)} ×${it.qty}`; } } }); }
   const now = a.serverTime(); const cds = (me as any).cds as Record<string, number> | undefined;
   [...refs.hotbar.children].forEach((slot, i) => { if (i >= 8) return; const id = p.hotbar[i]; const cdEl = (slot as HTMLElement).querySelector('.cd') as HTMLElement; const until = id ? (cds?.[id] ?? (globalThis as any).__cds?.[id] ?? 0) : 0; const sk = id ? ALL_SKILLS[id] : null; const rem = until - now; if (sk && rem > 0) { cdEl.style.height = `${Math.min(100, (rem / sk.cdMs) * 100)}%`; cdEl.textContent = (rem / 1000).toFixed(rem < 10000 ? 1 : 0); } else { cdEl.style.height = '0'; cdEl.textContent = ''; } (slot as HTMLElement).classList.toggle('nomp', !!sk && me.mp < sk.mp); });

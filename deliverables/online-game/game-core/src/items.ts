@@ -17,7 +17,7 @@ export interface ItemDef {
 }
 export interface ItemInstance {
   uid: string; defId: string; qty: number; refine: number; options: Omit<Modifier, 'source'>[]; sockets: (string | null)[];
-  cards: (string | null)[]; gemRefine?: number[]; cosmetic?: number; stone?: { skillId: string | null; mods: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[]; refine: number }; locked: boolean; bound: boolean; durability: number;
+  cards: (string | null)[]; gemRefine?: number[]; cosmetic?: number; stone?: { skillId: string | null; mods: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[]; refine: number; inscribed?: boolean; pending?: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[] | null; behavior?: 'echo' | 'swift' | 'frugal' | 'expanse' | 'fork' | null; pendingBehavior?: 'echo' | 'swift' | 'frugal' | 'expanse' | 'fork' | null }; locked: boolean; bound: boolean; durability: number;
 }
 
 const D: ItemDef[] = [];
@@ -88,6 +88,7 @@ add({ id: 'blessing_scroll', name: { en: 'Emberlight Blessing', th: 'คัม�
 add({ id: 'food_forest', name: { en: 'Mossberry Kibble', th: 'อาหารเบอร์รีมอส' }, type: 'pet_food', icon: 'food', color: '#70c060', stack: 999, price: 25, rarity: 'uncommon', desc: { en: 'Whisperwood food: double effect for earth & wind pets.', th: 'อาหารป่ากระซิบ: ผลสองเท่ากับสัตว์ธาตุดินและลม' } });
 add({ id: 'food_hills', name: { en: 'Amber Jerky', th: 'เนื้อแห้งอำพัน' }, type: 'pet_food', icon: 'food', color: '#e0a040', stack: 999, price: 25, rarity: 'uncommon', desc: { en: 'Amber Hills food: double effect for fire & neutral pets.', th: 'อาหารเนินอำพัน: ผลสองเท่ากับสัตว์ธาตุไฟและกลาง' } });
 add({ id: 'food_snow', name: { en: 'Frostfish Bites', th: 'ปลาหิมะชิ้นเล็ก' }, type: 'pet_food', icon: 'food', color: '#a0e0ff', stack: 999, price: 25, rarity: 'uncommon', desc: { en: 'Frostmere food: double effect for ice & water pets.', th: 'อาหารฟรอสต์เมียร์: ผลสองเท่ากับสัตว์ธาตุน้ำแข็งและน้ำ' } });
+add({ id: 'skill_reset_scroll', name: { en: 'Scroll of Unlearning', th: 'คัมภีร์ลืมวิชา' }, type: 'material', icon: 'scroll', color: '#e8d8a0', stack: 20, price: 1500, rarity: 'rare', desc: { en: 'Skill window → Reset: refunds every skill point (used before gold).', th: 'หน้าต่างสกิล → รีเซ็ต: คืนแต้มสกิลทั้งหมด (ใช้ก่อนทอง)' } });
 add({ id: 'rune_fang', name: { en: 'Fang Rune', th: 'รูนเขี้ยว' }, type: 'material', icon: 'stone', color: '#ff7060', stack: 50, price: 600, rarity: 'rare', desc: { en: 'Pet rune: +25% pet attack.', th: 'รูนสัตว์เลี้ยง: พลังโจมตีสัตว์เลี้ยง +25%' } });
 add({ id: 'rune_shell', name: { en: 'Shell Rune', th: 'รูนกระดอง' }, type: 'material', icon: 'stone', color: '#60a0ff', stack: 50, price: 600, rarity: 'rare', desc: { en: 'Pet rune: +25% pet HP and +3% owner DEF.', th: 'รูนสัตว์เลี้ยง: HP สัตว์ +25% และ DEF เจ้าของ +3%' } });
 add({ id: 'rune_wind', name: { en: 'Wind Rune', th: 'รูนลม' }, type: 'material', icon: 'stone', color: '#a0ffb0', stack: 50, price: 600, rarity: 'rare', desc: { en: 'Pet rune: pet skill cooldown −30%.', th: 'รูนสัตว์เลี้ยง: คูลดาวน์สกิลสัตว์ −30%' } });
@@ -121,6 +122,7 @@ for (const [id, en, th, color, stat, v] of GEMS) for (let g = 1; g <= 3; g++) ad
 
 // ---- Skill stones, enchant, protection, tools, eggs, mount keys, costumes, tickets, card packs, decorations ----
 add({ id: 'skill_stone', name: { en: 'Blank Skill Stone', th: 'ศิลาสกิลเปล่า' }, type: 'skill_stone', icon: 'stone', color: '#80a0c0', stack: 1, price: 300, rarity: 'rare' });
+add({ id: 'skill_stone_legendary', name: { en: 'Legendary Skill Stone', th: 'ศิลาสกิลตำนาน' }, type: 'skill_stone', icon: 'stone', color: '#ffb040', stack: 1, price: 6000, rarity: 'legendary', desc: { en: 'Inscribing also rolls a behaviour that changes how the skill works.', th: 'การจารึกจะสุ่มพฤติกรรมพิเศษที่เปลี่ยนวิธีทำงานของสกิล' } });
 add({ id: 'enchant_stone', name: { en: 'Enchant Stone', th: 'หินเอนชานต์' }, type: 'enchant', icon: 'crystal', color: '#ff80ff', stack: 99, price: 150, rarity: 'uncommon' });
 add({ id: 'ward_scroll', name: { en: 'Hearthward Charm', th: 'เครื่องรางคุ้มกัน' }, type: 'protection', icon: 'scroll', color: '#80ffff', stack: 99, price: 2000, rarity: 'epic', desc: { en: 'Prevents downgrade on refine failure.', th: 'ป้องกันระดับลดเมื่อตีบวกล้มเหลว' } });
 add({ id: 'tool_pickaxe', name: { en: 'Pickaxe', th: 'จอบขุดแร่' }, type: 'tool', icon: 'pickaxe', color: '#a0a0a0', price: 50 });

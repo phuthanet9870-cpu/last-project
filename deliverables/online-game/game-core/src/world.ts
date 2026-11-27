@@ -4,7 +4,9 @@
  * Clients only send intents (move vector, target, skill id); this class decides outcomes.
  */
 import { CONFIG, type Element } from './config.js';
-import { ALL_SKILLS, CLASSES, type SkillDef } from './classes.js';
+import { ALL_SKILLS, CLASSES, type SkillDef, type SkillEffect } from './classes.js';
+import { PX_PER_M } from './skills/v4.js';
+import { fortuneDie, fortuneMult, gaugeAspdBonus, gaugeCast, gaugeCheck, gaugeDecay, gaugeGain, type CastMods, type GaugeEvent } from './skills/gauge.js';
 import { computeHit, computeHeal } from './combat.js';
 import { DUNGEONS, MAPS, MONSTERS, NPCS, PETS, WORLD_BOSS_ROTATION } from './content.js';
 import { ITEMS } from './items.js';
@@ -24,7 +26,7 @@ export interface Entity {
   ai?: { state: 'idle' | 'patrol' | 'chase' | 'attack' | 'return' | 'dead'; homeX: number; homeY: number; nextAct: number; threat: Record<string, number>; patrolX?: number; patrolY?: number; skillCd: Record<string, number>; phase: number; telegraph?: { id: string; x: number; y: number; r: number; at: number; power: number; status?: string; element?: Element } };
   // movement
   input?: { dx: number; dy: number }; path?: [number, number][]; speedMult?: number;
-  cds: Record<string, number>; gcdUntil: number; castUntil: number; attackAt: number; gauge: number;
+  cds: Record<string, number>; gcdUntil: number; castUntil: number; attackAt: number; gauge: number; lastSkill?: string; reroll?: boolean; lastRoll?: number[];
   loot?: { itemId: string; qty: number; owner: string; until: number }[]; expiresAt?: number; riding?: boolean; mount?: string | null;
   pvp?: boolean; team?: number; botProfile?: { classId: string; chatAt: number; wanderAt: number; aggressive: boolean }; summonAtk?: number; atkMult?: number; partyId?: string | null; contrib?: Record<string, number>;
   hidden?: boolean; fixed?: boolean; cosm?: number;
@@ -55,7 +57,7 @@ export interface DungeonRun { encounterAt?: number; enraged?: boolean; raidSize?
 export interface BossSession { id: string; bossId: string; entityId: string; startedAt: number; contributions: Record<string, { dmg: number; heal: number; tank: number }>; settled: boolean }
 
 const ELEMENT_COLOR: Record<Element, string> = { neutral: '#ffffff', fire: '#ff7a30', water: '#4aa8ff', earth: '#c0a060', wind: '#a0ffb0', ice: '#a0f0ff', light: '#fff0a0', dark: '#b070ff', spirit: '#70ffe0' };
-export interface WorldOptions { mapId: string; instanceId?: string; rng?: Rng; now?: () => number; bots?: number; worldBossIntervalMs?: number; eventMult?: { exp: number; drop: number; gold?: number } }
+export interface WorldOptions { mapId: string; instanceId?: string; rng?: Rng; now?: () => number; bots?: number; worldBossIntervalMs?: number; worldBossTimes?: string[]; eventMult?: { exp: number; drop: number; gold?: number } }
 
 let ENT = 0;
 const eid = (p: string) => `${p}${(++ENT).toString(36)}`;
@@ -76,7 +78,7 @@ export class World {
     for (const m of def.monsters) for (let i = 0; i < m.count; i++) { if (m.at) { const [fx, fy] = this.freeNear(m.at[0], m.at[1]); this.spawnMonster(m.id, fx * TILE + 16, fy * TILE + 16, { fixed: true }); } else this.spawnMonster(m.id); }
     for (const n of Object.values(NPCS)) if (n.map === opts.mapId) this.entities.set(`npc_${n.id}`, this.baseEntity(`npc_${n.id}`, 'npc', n.x * TILE + 16, n.y * TILE + 16, n.name.en, 1, { defId: n.id }));
     for (let i = 0; i < (opts.bots ?? 0); i++) this.spawnBot();
-    if (def.biome === 'crater') this.nextBossAt = this.now() + 15_000;
+    if (def.biome === 'crater') this.nextBossAt = this.opts.worldBossTimes?.length ? nextScheduledBkk(this.now(), this.opts.worldBossTimes) : this.now() + 15_000;
   }
   private baseEntity(id: string, kind: EntityKind, x: number, y: number, name: string, level: number, extra: Partial<Entity> = {}): Entity {
     return { id, kind, x, y, dir: 2, moving: false, name, level, hp: 1, maxHp: 1, mp: 0, maxMp: 0, effects: [], dead: false, deadAt: 0, cds: {}, gcdUntil: 0, castUntil: 0, attackAt: 0, gauge: 0, ...extra };
@@ -170,22 +172,36 @@ export class World {
   }
   teamOf(e: Entity): number { const id = e.ownerId ?? e.id; if (!this.arena) return -1; return this.arena.teams[0].includes(id) ? 0 : this.arena.teams[1].includes(id) ? 1 : -1; }
 
+  // ---------------- V4 class gauges ----------------
+  gdef(e: Entity) { return e.classId && (e.kind === 'player' || e.kind === 'bot') ? CLASSES[e.classId]?.gauge.def : undefined; }
+  addGauge(e: Entity, amount: number) {
+    const d = this.gdef(e); if (!d || d.kind === 'phase' || !amount) return; const before = e.gauge;
+    e.gauge = Math.round(Math.max(0, Math.min(d.max, e.gauge + amount)) * 1000) / 1000;
+    if (before < d.max && e.gauge >= d.max && d.effect === 'shield') { applyStatus(e.effects, 'shield', e.id, 8000, 0, 0, Math.floor(e.maxHp * 0.2)); e.gauge = 0; this.fx.push({ t: 'status', id: e.id, s: 'shield' }); }
+  }
+  gaugeEvent(e: Entity, ev: GaugeEvent, n = 1) { const d = this.gdef(e); if (!d) return; const before = e.gauge; const r = gaugeGain(d, e.gauge, ev, n); if (r.value !== before) this.addGauge(e, r.value - before); }
+
   // ---------------- actions ----------------
   basicAttack(attackerId: string, targetId: string): string | null {
     const a = this.entities.get(attackerId); const t = this.entities.get(targetId);
     if (!a || !t || a.dead) return 'INVALID'; if (!this.hostile(a, t)) return 'NOT_HOSTILE';
     if (hasCC(a.effects, 'stun', 'freeze', 'sleep', 'disarm')) return 'CROWD_CONTROLLED';
     const now = this.now(); const st = this.combatStats(a);
-    const ranged = a.kind === 'player' || a.kind === 'bot' ? ['bow', 'staff', 'tome', 'gun', 'lute', 'cards'].includes(this.weaponOf(a)) : false;
-    const range = ranged ? 280 : 64;
+    const na = a.classId ? CLASSES[a.classId]?.normal : undefined; // V4: class normal attack (separate from the skill tree)
+    const ranged = na ? na.style !== 'melee' : false;
+    const range = na ? Math.round(na.r * PX_PER_M) : 64;
     if (dist(a, t) > range + 16) return 'OUT_OF_RANGE';
     if (now < a.attackAt) return 'COOLDOWN';
-    a.attackAt = now + Math.floor(1100 / st.aspd); a.targetId = t.id; this.face(a, t);
-    const mag = ['staff', 'tome', 'lute'].includes(this.weaponOf(a));
+    const gd = this.gdef(a);
+    a.attackAt = now + Math.floor(1100 / (st.aspd * (1 + (gd ? gaugeAspdBonus(gd, a.gauge) : 0)))); a.targetId = t.id; this.face(a, t);
+    const mag = na ? na.d === 'mag' : false;
     const resolve = (v: Entity) => {
-      const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(v), power: 1, dmgType: mag ? 'mag' : 'phys', element: null, pvp: this.isPvp(a, v) });
-      this.dealDamage(a, v, h.damage, h.crit, h.miss, st.element);
-      if (!h.miss) { a.gauge = Math.min(100, a.gauge + (a.classId ? CLASSES[a.classId]!.gauge.perHit : 0)); if (st.lifesteal > 0) this.heal(a, a, Math.floor(h.damage * st.lifesteal / 100)); }
+      for (let k = 0; k < (na?.hits ?? 1); k++) {
+        if (v.dead) break;
+        const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(v), power: na?.p ?? 1, dmgType: mag ? 'mag' : 'phys', element: null, pvp: this.isPvp(a, v) });
+        this.dealDamage(a, v, h.damage, h.crit, h.miss, st.element);
+        if (!h.miss) { if (k === 0 && na) this.addGauge(a, na.gaugeGain); if (h.crit) this.gaugeEvent(a, 'crit'); if (st.lifesteal > 0) this.heal(a, a, Math.floor(h.damage * st.lifesteal / 100)); }
+      }
     };
     if (ranged && dist(a, t) > 70) { this.spawnProjectile(a, t, { homing: true, speed: mag ? 460 : 560, color: ELEMENT_COLOR[st.element], kind: mag ? 'bolt' : 'arrow', onHit: resolve }); return null; }
     this.fx.push({ t: 'skill', vfx: 'slash', src: a.id, x: a.x, y: a.y, tx: t.x, ty: t.y, r: 0, el: st.element, color: ELEMENT_COLOR[st.element] });
@@ -204,6 +220,7 @@ export class World {
     if (hasCC(a.effects, 'stun', 'freeze', 'sleep', 'silence', 'fear')) return 'CROWD_CONTROLLED';
     const now = this.now(); if ((a.cds[skillId] ?? 0) > now) return 'COOLDOWN'; if (a.gcdUntil > now) return 'GLOBAL_COOLDOWN';
     if (a.mp < s.mp && a.kind === 'player') return 'NOT_ENOUGH_MP';
+    const gd = this.gdef(a); if (gd && a.kind === 'player') { const ge = gaugeCheck(gd, a.gauge, s.gauge); if (ge) return ge; }
     const st = this.combatStats(a);
     let target = targetId ? this.entities.get(targetId) : undefined;
     const needsEnemy = s.target === 'enemy' || s.target === 'line' || s.target === 'cone';
@@ -212,13 +229,34 @@ export class World {
     const aim = point ?? target ?? a;
     if (s.range > 0 && dist(a, aim) > s.range + 24) return 'OUT_OF_RANGE';
     // commit cost and cooldown once
-    a.mp -= s.mp; a.cds[skillId] = now + Math.floor(s.cdMs * (1 - Math.min(40, st.cdr) / 100)); a.gcdUntil = now + CONFIG.globalCooldownMs;
+    a.mp -= s.mp; a.cds[skillId] = now + Math.floor(s.cdMs * (1 - Math.min(20, st.cdr) / 100)); a.gcdUntil = now + CONFIG.globalCooldownMs;
     if (aim !== a) this.face(a, aim);
-    let mult = 1;
-    if (a.gauge >= 100) { a.gauge = 0; mult = 1.5; if (a.classId === 'vanguard') applyStatus(a.effects, 'shield', a.id, 8000, 0, 0, Math.floor(a.maxHp * 0.2)); if (a.classId === 'chrono_adept') { const k = Object.keys(a.cds).find((x) => x !== skillId && a.cds[x]! > now); if (k) a.cds[k] = now; } }
-    if (a.classId === 'fortune_dealer') mult *= 0.5 + this.rng.next() * 2;
-    if (a.classId === 'void_scholar' && s.dmgType === 'mag') { a.hp = Math.max(1, a.hp - Math.floor(a.maxHp * 0.03)); mult *= 1.2; }
-    a.gauge = Math.min(100, a.gauge + 10);
+    // V4 class gauge (skills/gauge.ts): spend/gain, phase, self-cost, cooldown reset, crit/freeze/chain bonuses
+    const dmgish = s.dmgType === 'phys' || s.dmgType === 'mag' || s.dmgType === 'pure';
+    let mult = 1; let gm: CastMods | null = null;
+    if (gd) {
+      const r = gaugeCast(gd, a.gauge, s.gauge, { element: s.element, isDamage: dmgish, isHeal: s.dmgType === 'heal', summons: !!s.summon }); gm = r.mods; a.gauge = r.value; mult = gm.mult;
+      if (gm.selfHpCostPct) a.hp = Math.max(1, a.hp - Math.floor(a.maxHp * gm.selfHpCostPct / 100));
+      if (gm.resetLastCd && a.lastSkill && a.lastSkill !== skillId) a.cds[a.lastSkill] = now;
+    }
+    a.lastSkill = skillId;
+    const extraFx: SkillEffect[] = []; let hitMult: number[] | null = null; let power = s.power;
+    if (gm?.blindAll) extraFx.push({ s: 'blind', d: 3000 });
+    if (a.classId === 'fortune_dealer') { // cards / dice / reroll (spec §14)
+      const reroll = !!a.reroll; const f = a.gauge; const die = (bonus = 0) => fortuneDie(this.rng, f, reroll, bonus);
+      if (s.key === 'reroll') a.reroll = true;
+      else if (dmgish) {
+        a.reroll = false; const rankScale = s.src?.p ? s.power / s.src.p : 1;
+        if (s.key === 'roll_dice') { const d1 = die(), d2 = die(); a.lastRoll = [d1, d2]; power = (0.4 + (d1 + d2) * 0.1) * rankScale; if (d1 === d2) extraFx.push({ s: 'stun', d: 1000 }); }
+        else if (s.key === 'all_in') { const win = this.rng.chance(0.5); a.lastRoll = [win ? 1 : 0]; mult *= win ? 2 : 0.5; }
+        else if (s.key === 'fates_hand') { a.lastRoll = [6]; mult *= fortuneMult(6); }
+        else if (s.key === 'loaded_dice') { const d = die(2); a.lastRoll = [d]; mult *= fortuneMult(d); }
+        else if (s.key === 'jackpot') { const reels = [this.rng.int(1, 3), this.rng.int(1, 3), this.rng.int(1, 3)]; a.lastRoll = reels; const same = Math.max(...[1, 2, 3].map((x) => reels.filter((y) => y === x).length)); mult *= same === 3 ? 3 : same === 2 ? 1.5 : 1; }
+        else if (s.key === 'wild_card') { const pick = this.rng.int(0, 3); a.lastRoll = [pick]; if (pick === 0) extraFx.push({ s: 'stun', d: 1500 }); else if (pick === 1) extraFx.push({ s: 'burn', d: 4000 }); else if (pick === 2) extraFx.push({ s: 'blind', d: 3000 }); else mult *= 2; }
+        else if (s.key === 'card_toss') { const suits = Array.from({ length: s.hits }, () => this.rng.int(0, 3)); a.lastRoll = suits; hitMult = suits.map((x) => (x === 0 ? 1.5 : 1)); for (const x of suits) { if (x === 1) this.heal(a, a, Math.floor(a.maxHp * 0.02)); if (x === 2) this.addGauge(a, 5); } if (suits.includes(3)) extraFx.push({ s: 'slow', d: 2000 }); }
+        else { const d = die(); a.lastRoll = [d]; mult *= fortuneMult(d); }
+      }
+    }
     const color = ELEMENT_COLOR[s.element ?? st.element];
     this.fx.push({ t: 'skill', vfx: s.vfx, src: a.id, x: a.x, y: a.y, tx: aim.x, ty: aim.y, r: s.radius, el: s.element ?? st.element, color });
     if (s.dash && target) { const ang = Math.atan2(target.y - a.y, target.x - a.x); const d0 = Math.max(0, dist(a, target) - 36); for (let i = d0; i > 0; i -= 8) { const nx = a.x + Math.cos(ang) * i, ny = a.y + Math.sin(ang) * i; if (!isSolidPx(this.map, nx, ny)) { a.x = nx; a.y = ny; break; } } }
@@ -232,28 +270,34 @@ export class World {
     if (s.target === 'party' || s.target === 'self') { allies.push(a); if (s.target === 'party') for (const x of this.entities.values()) if (x !== a && !x.dead && (x.kind === 'player' || x.kind === 'bot' || x.kind === 'pet') && !this.hostile(a, x) && dist(a, x) <= Math.max(s.radius, 200) && (x.kind !== 'bot' || a.kind === 'bot' || x.partyId === a.partyId)) allies.push(x); }
     if (s.dmgType === 'phys' || s.dmgType === 'mag' || s.dmgType === 'pure') {
       const defenders = victims.slice(0, 12);
-      if (s.chain && target) { let last = target; const hit = new Set([target.id]); for (let i = 0; i < s.chain; i++) { const n = this.hostilesIn(a, last, 160).find((v) => !hit.has(v.id)); if (!n) break; hit.add(n.id); defenders.push(n); this.fx.push({ t: 'skill', vfx: 'chain', src: last.id, x: last.x, y: last.y, tx: n.x, ty: n.y, r: 0, el: s.element, color }); last = n; } }
+      const chainN = s.chain ? s.chain + (gm?.extraChain ?? 0) : 0;
+      if (chainN && target) { let last = target; const hit = new Set([target.id]); for (let i = 0; i < chainN; i++) { const n = this.hostilesIn(a, last, 160).find((v) => !hit.has(v.id)); if (!n) break; hit.add(n.id); defenders.push(n); this.fx.push({ t: 'skill', vfx: 'chain', src: last.id, x: last.x, y: last.y, tx: n.x, ty: n.y, r: 0, el: s.element, color }); last = n; } }
       const applyTo = (v: Entity, idx: number) => {
         if (v.dead) return;
+        let landed = false;
         for (let k = 0; k < s.hits; k++) {
-          const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(v), power: s.power * mult * (idx > 0 && s.chain ? 0.7 : 1), dmgType: s.dmgType as any, element: s.element, pvp: this.isPvp(a, v), canMiss: s.dmgType === 'phys' });
+          if (v.dead) break;
+          const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(v), power: power * mult * (hitMult?.[k] ?? 1) * (idx > 0 && s.chain ? 0.7 : 1), dmgType: s.dmgType as any, element: s.element, pvp: this.isPvp(a, v), canMiss: s.dmgType === 'phys', critBonus: gm?.critBonus ?? 0 });
           this.dealDamage(a, v, h.damage, h.crit, h.miss, s.element ?? st.element);
-          if (!h.miss && s.lifesteal) this.heal(a, a, Math.floor(h.damage * s.lifesteal));
+          if (!h.miss) { landed = true; if (s.lifesteal) this.heal(a, a, Math.floor(h.damage * s.lifesteal)); if (h.crit) this.gaugeEvent(a, 'crit'); }
         }
-        for (const fx of s.effects) if (!fx.self && !fx.party && !v.dead && this.rng.chance(fx.c ?? 1)) { applyStatus(v.effects, fx.s, a.id, fx.d, Math.floor((st.atk + st.matk) * s.power * 0.5), this.combatStats(v).ccResist); this.fx.push({ t: 'status', id: v.id, s: fx.s }); if (fx.s === 'taunt' && v.ai) { v.ai.threat[a.id] = (v.ai.threat[a.id] ?? 0) + 5000; v.targetId = a.id; } }
-        if (s.knockback && !v.dead) { this.knockback(v, a.x, a.y, s.knockback); if (s.knockdown && !this.ccImmune(v)) applyStatus(v.effects, 'knockdown', a.id, 1200, 0, this.combatStats(v).ccResist); }
+        if (landed) this.gaugeEvent(a, 'hit');
+        if (landed && gm?.extraFreezeChance && !v.dead && this.rng.chance(gm.extraFreezeChance)) { applyStatus(v.effects, 'freeze', a.id, 1500, 0, this.combatStats(v).ccResist); this.fx.push({ t: 'status', id: v.id, s: 'freeze' }); }
+        for (const fx of [...s.effects, ...extraFx]) if (!fx.self && !fx.party && !v.dead && this.rng.chance(fx.c ?? 1)) { applyStatus(v.effects, fx.s, a.id, Math.round(fx.d * (gm?.ccMult ?? 1)), Math.floor((st.atk + st.matk) * s.power * 0.5), this.combatStats(v).ccResist); this.fx.push({ t: 'status', id: v.id, s: fx.s }); if (fx.s === 'taunt' && v.ai) { v.ai.threat[a.id] = (v.ai.threat[a.id] ?? 0) + 5000; v.targetId = a.id; } }
+        if (s.knockback && !v.dead) this.knockback(v, a.x, a.y, s.knockback);
+        if (s.knockdown && landed && !v.dead && !this.ccImmune(v)) applyStatus(v.effects, 'knockdown', a.id, 1200, 0, this.combatStats(v).ccResist);
       };
-      const projectile = s.target === 'enemy' && ['arrow', 'bolt', 'drain'].includes(s.vfx) && target && dist(a, target) > 70 && !s.chain;
+      const projectile = s.target === 'enemy' && ['arrow', 'bolt', 'drain', 'shot'].includes(s.vfx) && target && dist(a, target) > 70 && !s.chain;
       if (projectile) this.spawnProjectile(a, target!, { homing: true, speed: 520, color, kind: s.vfx, onHit: (v) => applyTo(v, 0) });
       else defenders.forEach((v, idx) => applyTo(v, idx));
     }
-    if (s.dmgType === 'heal') for (const t of allies) { const h = computeHeal(this.rng, st, s.power * mult, t.maxHp - t.hp); this.heal(a, t, h.amount, h.crit); if (s.cleanse) cleanse(t.effects, 'debuff'); }
+    if (s.dmgType === 'heal') { for (const t of allies) { const h = computeHeal(this.rng, st, s.power * (gm?.healMult ?? 1), t.maxHp - t.hp); this.heal(a, t, h.amount, h.crit); if (s.cleanse) cleanse(t.effects, 'debuff'); } this.gaugeEvent(a, 'heal'); }
     for (const fx of s.effects) {
       if (fx.self) applyStatus(a.effects, fx.s, a.id, fx.d, Math.floor(st.matk + st.healPower), 0, s.shieldPct ? Math.floor(a.maxHp * s.shieldPct) : 0);
       if (fx.party) for (const t of allies) applyStatus(t.effects, fx.s, a.id, fx.d, Math.floor(st.matk + st.healPower), 0, s.shieldPct ? Math.floor(t.maxHp * s.shieldPct) : 0);
     }
     if (s.cleanse && s.dmgType !== 'heal') for (const t of allies) cleanse(t.effects, 'debuff');
-    if (s.summon) { const id = eid('s'); this.entities.set(id, this.baseEntity(id, 'summon', a.x + 24, a.y, `${s.element ?? 'spirit'} spirit`, a.level, { ownerId: a.id, hp: Math.floor(a.maxHp * 0.4), maxHp: Math.floor(a.maxHp * 0.4), summonAtk: Math.floor((st.atk + st.matk) * 0.35), expiresAt: now + 20000, appearance: { color: color, sprite: 'wisp' } })); }
+    if (s.summon) { const id = eid('s'); const big = /behemoth|reaper|ancient/.test(s.summon); this.entities.set(id, this.baseEntity(id, 'summon', a.x + 24, a.y, s.summon.replace(/_/g, ' '), a.level, { ownerId: a.id, defId: s.summon, hp: Math.floor(a.maxHp * (big ? 0.8 : 0.4)), maxHp: Math.floor(a.maxHp * (big ? 0.8 : 0.4)), summonAtk: Math.floor((st.atk + st.matk) * (big ? 0.6 : 0.35) * (gm?.summonMult ?? 1) * (1 + 0.05 * (s.rank - 1))), expiresAt: now + Math.floor(20000 * (gm?.summonDurMult ?? 1)), appearance: { color: color, sprite: 'wisp' } })); }
     if (a.kind === 'player') this.refreshPlayer(a.id);
     return null;
   }
@@ -301,7 +345,7 @@ export class World {
     if (this.boss && t.id === this.boss.entityId) (this.boss.contributions[owner] ??= { dmg: 0, heal: 0, tank: 0 }).dmg += dmg;
     if (this.arena?.stats[owner]) this.arena.stats[owner]!.d += after;
     if (this.boss && src.id === this.boss.entityId) (this.boss.contributions[t.ownerId ?? t.id] ??= { dmg: 0, heal: 0, tank: 0 }).tank += dmg;
-    if (t.kind === 'player') { const svc = this.services.get(t.id); if (svc) t.gauge = Math.min(100, t.gauge + (t.classId === 'vanguard' ? 6 : 1)); }
+    if (t.kind === 'player' || t.kind === 'bot') this.gaugeEvent(t, 'hurt');
     if (t.kind === 'monster' && MONSTERS[t.defId!]!.ai === 'guard' && t.hp < t.maxHp * 0.5 && !t.effects.some((x) => x.id === 'def_up')) { applyStatus(t.effects, 'def_up', t.id, 8000, 0); this.fx.push({ t: 'status', id: t.id, s: 'def_up' }); }
     if (dmg > 0) { this.wear(src, 'weapon', 0.08); this.wear(t, 'armor', 0.1); }
     if (t.hp <= 0) this.kill(t, src);
@@ -319,7 +363,7 @@ export class World {
     if (t.dead) return; // process death exactly once
     t.dead = true; t.hp = 0; t.deadAt = this.now(); t.effects = []; this.fx.push({ t: 'death', id: t.id, x: t.x, y: t.y });
     if (this.arena) this.arenaOnDeath(t, killer);
-    if (t.kind === 'monster') this.onMonsterDeath(t, killer);
+    if (t.kind === 'monster') { const ko = killer.ownerId ? this.entities.get(killer.ownerId) : killer; if (ko) this.gaugeEvent(ko, 'kill'); this.onMonsterDeath(t, killer); }
     else if (t.kind === 'player') { const svc = this.services.get(t.id)!; svc.p.exp = Math.max(0, svc.p.exp - Math.floor(svc.p.exp * 0.01)); for (const it of Object.values(svc.p.equipment)) if (it) it.durability = Math.max(0, it.durability - 5); this.refreshPlayer(t.id); this.fx.push({ t: 'notice', msg: 'You were defeated. Press Respawn.', to: t.id }); this.checkArena(); const kOwner = this.entities.get(killer.ownerId ?? killer.id); if (kOwner?.kind === 'player' && kOwner !== t && !this.arena) this.services.get(kOwner.id)?.bump('pvp_kills'); }
     else if (t.kind === 'bot') { this.checkArena(); }
     else if (t.kind === 'pet' || t.kind === 'summon') { /* returns later */ }
@@ -403,7 +447,7 @@ export class World {
   // ---------------- world boss (§29) ----------------
   spawnWorldBoss(bossId?: string) {
     if (this.boss && !this.boss.settled) return;
-    const id = bossId ?? WORLD_BOSS_ROTATION[Math.floor(this.now() / 3600_000) % WORLD_BOSS_ROTATION.length]!;
+    const id = bossId ?? dailyWorldBoss(this.now()); // daily rotation (one boss per Asia/Bangkok day)
     const players = [...this.entities.values()].filter((e) => e.kind === 'player' || e.kind === 'bot').length;
     const e = this.spawnMonster(id, this.map.def.w * TILE / 2, this.map.def.h * TILE / 2 - 40);
     const scale = 1 + Math.max(0, players - 1) * 0.35; e.maxHp = e.hp = Math.floor(MONSTERS[id]!.maxHp * scale * 0.25); // fixed at encounter start (artifact scale 25%)
@@ -422,7 +466,7 @@ export class World {
       svc.bump('world_boss'); svc.progressObjective('boss', b.bossId, 1);
       this.fx.push({ t: 'notice', msg: `World boss rank #${i + 1}${i === 0 ? ' (MVP)' : ''}: +${coins} Boss Coins`, to: r.id });
     });
-    this.nextBossAt = this.now() + (this.opts.worldBossIntervalMs ?? 5 * 60_000);
+    this.nextBossAt = this.opts.worldBossTimes?.length ? nextScheduledBkk(this.now() + 60_000, this.opts.worldBossTimes) : this.now() + (this.opts.worldBossIntervalMs ?? 5 * 60_000);
   }
   // ---------------- arena (§30) ----------------
   /** Arena modes (§30): deathmatch = Last Light (elimination); siege = Lantern Siege (3 capture points); rush = Ember Rush (carry crystals to base). */
@@ -499,6 +543,7 @@ export class World {
       // regen
       if (e.kind === 'player') { const d = this.cachedDerived(e); e.hp = Math.min(e.maxHp, e.hp + d.hpRegen * dt * 0.5); e.mp = Math.min(e.maxMp, e.mp + d.mpRegen * dt * 0.8); }
       else if (e.kind === 'bot') { e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.01 * dt); e.mp = Math.min(e.maxMp, e.mp + 5 * dt); }
+      if (e.kind === 'player' || e.kind === 'bot') { const gd = this.gdef(e); if (gd) { if (e.gauge > gd.max) e.gauge = gd.max; e.gauge = gaugeDecay(gd, e.gauge, dt); if (!e.moving && gd.gain.still && e.targetId) this.addGauge(e, gd.gain.still * dt); } }
       if (e.kind === 'player') this.movePlayer(e, dt);
       else if (e.kind === 'monster') this.monsterAI(e, dt, now);
       else if (e.kind === 'pet' || e.kind === 'summon') this.petAI(e, dt, now);
@@ -649,6 +694,14 @@ export class World {
   drainFx(): Fx[] { const f = this.fx; this.fx = []; return f; }
 }
 /** Fields that change often; static fields (name, appearance, class…) are sent once per entity per client. */
+/** Next scheduled time ("HH:MM" Asia/Bangkok, UTC+7) strictly after `now`. */
+export function nextScheduledBkk(now: number, times: string[]): number {
+  const BKK = 7 * 3600_000; const dayStart = Math.floor((now + BKK) / 86400_000) * 86400_000 - BKK; let best = Infinity;
+  for (const d of [0, 1]) for (const t of times) { const [h, m] = t.split(':').map(Number); const at = dayStart + d * 86400_000 + ((h ?? 0) * 60 + (m ?? 0)) * 60_000; if (at > now && at < best) best = at; }
+  return best;
+}
+/** One world boss per Asia/Bangkok day, cycling through the rotation. */
+export function dailyWorldBoss(now: number): string { return WORLD_BOSS_ROTATION[Math.floor((now + 7 * 3600_000) / 86400_000) % WORLD_BOSS_ROTATION.length]!; }
 export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot', 'cosm', 'app'] as const; // app: appearance can change at the salon
 export function publicEntity(e: Entity) {
   return { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y), d: e.dir, m: e.moving, n: e.name, l: e.level, hp: Math.ceil(e.hp), mhp: e.maxHp, mp: Math.floor(e.mp), mmp: e.maxMp, dead: e.dead, def: e.defId, own: e.ownerId, cls: e.classId, app: e.appearance, fx: e.effects.map((x) => x.id), t: e.title, r: e.riding, mt: e.mount, tg: e.targetId, g: e.gauge, team: e.team, gu: e.guild, cosm: e.cosm, tele: e.ai?.telegraph ? { x: e.ai.telegraph.x, y: e.ai.telegraph.y, r: e.ai.telegraph.r, at: e.ai.telegraph.at } : undefined, loot: e.loot?.length };

@@ -5,6 +5,8 @@
  */
 import { CONFIG, requiredExp, requiredJobExp, requiredMasteryExp, type Element } from './config.js';
 import { ALL_SKILLS, CLASSES, type SkillDef } from './classes.js';
+import { valuesAt } from './skills/v4.js';
+import { STONE_RULES, applyStone, rollBehavior, rollStoneMods } from './skills/stones.js';
 import { MEMBERSHIPS, TCG_COSMETICS, seasonalFeatured, activeEventAt, WEEK_MS, ACHIEVEMENTS, CARD_SET_BONUS, EGG_POOL, LOGIN_CALENDAR, MISSIONS_DAILY, ACTIVITY_CHESTS, MONSTER_CARDS, MOUNTS, PASS, PETS, QUESTS, RECIPES, SHOPS, TITLES, NPCS, EVENTS, GACHA_BANNERS, DUNGEONS, type Objective, type Profession } from './content.js';
 import { EconomyError, Ledger, feeOf, type Currency } from './economy.js';
 import { EQUIP_SLOTS, ITEMS, OPTION_POOL, RARITIES, SET_BONUS, type ItemInstance, type Rarity, type Slot } from './items.js';
@@ -21,6 +23,9 @@ export interface PlayerState {
   v: 1; id: string; accountId: string; name: string; classId: string; appearance: Appearance; createdAt: number; playtimeMs: number;
   level: number; exp: number; jobLevel: number; jobExp: number; ascension: number; mastery: number; masteryExp: number;
   statPoints: number; skillPoints: number; allocated: Primary; skillRanks: Record<string, number>; hotbar: (string | null)[];
+  /** Skill System V4: save schema of skills (4), server revision for atomic commits, recent idempotency keys */ skillV?: number; skillRev?: number; skillOps?: string[]; skillMigration?: { at: number; refunded: number; fromV: number };
+  /** V4: one stone socket per active skill (skillId → stone uid). */ skillSockets?: Record<string, string>;
+  /** V4: up to 3 hotbar sets; `hotbar` is always the active one. */ hotbarSets?: (string | null)[][]; hotbarSet?: number;
   hp: number; mp: number; gauge: number; map: string; x: number; y: number; savedMap: string;
   inventory: ItemInstance[]; invSlots: number; storage: ItemInstance[]; equipment: Partial<Record<Slot, ItemInstance>>;
   quests: { active: QuestProgress[]; done: string[]; lastDaily: string; lastWeekly: string };
@@ -86,8 +91,8 @@ export function createCharacter(opts: { id?: string; accountId: string; name: st
   const id = opts.id ?? uid('ch');
   const p: PlayerState = {
     v: 1, id, accountId: opts.accountId, name: opts.name.trim(), classId: cls.id, appearance: opts.appearance, createdAt: now, playtimeMs: 0,
-    level: 1, exp: 0, jobLevel: 1, jobExp: 0, ascension: 0, mastery: 0, masteryExp: 0, statPoints: 5, skillPoints: 2, allocated: zeroPrimary(),
-    skillRanks: Object.fromEntries(cls.skills.filter((s) => s.reqLevel <= 1).map((s) => [s.id, 1])), hotbar: [cls.skills[0]!.id, cls.skills[1]!.id, null, null, null, null, null, null],
+    level: 1, exp: 0, jobLevel: 1, jobExp: 0, ascension: 0, mastery: 0, masteryExp: 0, statPoints: 5, skillPoints: 0, allocated: zeroPrimary(),
+    skillRanks: starterRanks(cls.id), hotbar: [cls.skills[0]!.id, null, null, null, null, null, null, null], skillV: 4, skillRev: 0, skillOps: [],
     hp: 1, mp: 1, gauge: 0, map: 'emberglen', x: 28 * 32 + 16, y: 24 * 32 + 16, savedMap: 'emberglen',
     inventory: [], invSlots: CONFIG.inventoryBaseSlots, storage: [], equipment: {},
     quests: { active: [], done: [], lastDaily: dayKey(now), lastWeekly: weekKey(now) }, counters: {}, achievements: [], titles: ['title_newcomer'], title: 'title_newcomer',
@@ -155,7 +160,7 @@ export function weaponElement(p: PlayerState): Element { return ITEMS[p.equipmen
 
 export class PlayerService {
   events: GameEvent[] = [];
-  constructor(public p: PlayerState, public rng: Rng = new Rng(), public now: () => number = Date.now) {}
+  constructor(public p: PlayerState, public rng: Rng = new Rng(), public now: () => number = Date.now) { migrateSkillsV4(p, now()); }
   emit(e: GameEvent) { this.events.push(e); this.onEvent(e); }
   note(msg: string) { this.p.log.unshift({ ts: this.now(), msg }); if (this.p.log.length > 80) this.p.log.length = 80; }
   // ---- wallet ----
@@ -340,23 +345,51 @@ export class PlayerService {
     const idx = it.cards.findIndex((x) => x === null); if (idx < 0) return fail('NO_CARD_SLOT', it.refine < 10 ? 'Second card slot unlocks at +10' : 'All card slots used');
     it.cards[idx] = cardId; this.p.monsterCards[cardId]!--; if (this.p.monsterCards[cardId]! <= 0) this.p.monsterCards[cardId] = 0; return ok();
   }
-  // ---- skill stones (§15) ----
+  // ---- skill stones (V4 §24): one socket per active skill ----
+  /** First inscription is free (STONE_RULES.firstInscriptionFree). A stone is bound to one active skill of your class. */
   inscribeStone(stoneUid: string, skillId: string): Result {
     const st = this.findInv(stoneUid); if (!st?.stone) return fail('NOT_STONE'); const sk = ALL_SKILLS[skillId]; if (!sk || sk.classId !== this.p.classId || sk.type === 'passive') return fail('INCOMPATIBLE');
-    if (!this.spend('gold', 1000, 'stone_inscribe')) return fail('NOT_ENOUGH_GOLD');
-    const keys = ['power', 'cd', 'mp', 'radius'] as const;
-    st.stone.skillId = skillId; st.stone.mods = this.rng.shuffle([...keys]).slice(0, 2).map((key) => ({ key, value: key === 'power' ? this.rng.int(5, 15) : key === 'cd' ? this.rng.int(5, 12) : key === 'mp' ? this.rng.int(5, 20) : this.rng.int(5, 20) }));
-    return ok();
+    if (st.stone.skillId || st.stone.inscribed) return fail('ALREADY_INSCRIBED', 'Use re-inscription');
+    st.stone.skillId = skillId; st.stone.inscribed = true; st.stone.mods = rollStoneMods(this.rng); st.stone.pending = null;
+    st.stone.behavior = ITEMS[st.defId]?.rarity === 'legendary' ? rollBehavior(this.rng, sk) : null;
+    return ok({ mods: st.stone.mods, behavior: st.stone.behavior });
   }
-  /** Re-inscription (§15): keep the skill, reroll the two modifiers. */
-  reinscribeStone(stoneUid: string): Result { const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.locked) return fail('UNSLOT_FIRST', 'Unslot the stone first'); if (!this.removeItem('stone_dust', 5)) return fail('NEED_STONE_DUST', 'Need 5 Stone Dust'); if (!this.spend('gold', 500, 'stone_reinscribe')) { this.addItem('stone_dust', 5); return fail('NOT_ENOUGH_GOLD'); } const keys = ['power', 'cd', 'mp', 'radius'] as const; st.stone.mods = this.rng.shuffle([...keys]).slice(0, 2).map((key) => ({ key, value: key === 'power' ? this.rng.int(5, 15) : key === 'cd' ? this.rng.int(5, 12) : this.rng.int(5, 20) })); return ok({ mods: st.stone.mods }); }
-  refineStone(stoneUid: string): Result { const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.refine >= 10) return fail('MAX'); if (this.countItem('stone_dust') < 5 + st.stone.refine * 3) return fail('NOT_ENOUGH_DUST'); this.removeItem('stone_dust', 5 + st.stone.refine * 3); if (this.rng.chance(Math.max(0.3, 1 - st.stone.refine * 0.07))) { st.stone.refine++; return ok({ success: true }); } return ok({ success: false }); }
-  equippedStones(): ItemInstance[] { return this.p.inventory.filter((i) => i.stone?.skillId && i.locked); }
+  /** Re-inscription: costs Stone Dust + gold, rolls a NEW set that is held as `pending` until the player keeps old or new. */
+  reinscribeStone(stoneUid: string): Result {
+    const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.pending) return fail('CHOOSE_FIRST', 'Keep the old or the new inscription first');
+    const c = STONE_RULES.reinscribe; if (this.countItem('stone_dust') < c.dust) return fail('NEED_STONE_DUST', `Need ${c.dust} Stone Dust`); if (!this.spend('gold', c.gold, 'stone_reinscribe')) return fail('NOT_ENOUGH_GOLD');
+    this.removeItem('stone_dust', c.dust);
+    st.stone.pending = rollStoneMods(this.rng); st.stone.pendingBehavior = st.stone.behavior ? rollBehavior(this.rng, ALL_SKILLS[st.stone.skillId]!) : null;
+    return ok({ old: st.stone.mods, new: st.stone.pending, oldBehavior: st.stone.behavior, newBehavior: st.stone.pendingBehavior });
+  }
+  /** Resolve a pending re-inscription. The choice persists (saved on the item) until made. */
+  chooseInscription(stoneUid: string, keep: 'old' | 'new'): Result {
+    const st = this.findInv(stoneUid); if (!st?.stone?.pending) return fail('NOTHING_PENDING');
+    if (keep === 'new') { st.stone.mods = st.stone.pending; if (st.stone.behavior) st.stone.behavior = st.stone.pendingBehavior ?? st.stone.behavior; }
+    st.stone.pending = null; st.stone.pendingBehavior = null; return ok({ mods: st.stone.mods, behavior: st.stone.behavior });
+  }
+  refineStone(stoneUid: string): Result {
+    const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); const R = STONE_RULES.refine; if (st.stone.refine >= R.max) return fail('MAX');
+    const dust = R.dust(st.stone.refine); if (this.countItem('stone_dust') < dust) return fail('NOT_ENOUGH_DUST', `Need ${dust} Stone Dust`); this.removeItem('stone_dust', dust);
+    if (this.rng.chance(R.chance(st.stone.refine))) { st.stone.refine++; return ok({ success: true, refine: st.stone.refine }); } return ok({ success: false, refine: st.stone.refine });
+  }
+  /** Embed (free) a stone into its skill's socket, replacing any stone already there; `stoneUid=null` removes (free). */
+  socketStone(skillId: string, stoneUid: string | null): Result {
+    const sk = ALL_SKILLS[skillId]; if (!sk || sk.classId !== this.p.classId || sk.type === 'passive') return fail('INCOMPATIBLE');
+    this.p.skillSockets ??= {}; const cur = this.p.skillSockets[skillId];
+    if (cur) { const old = this.findInv(cur); if (old) old.locked = false; delete this.p.skillSockets[skillId]; }
+    if (!stoneUid) return ok({ socketed: null });
+    const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.skillId !== skillId) return fail('WRONG_SKILL', `Inscribed for ${ALL_SKILLS[st.stone.skillId]?.name.en ?? '?'}`);
+    for (const [k, u] of Object.entries(this.p.skillSockets)) if (u === stoneUid) delete this.p.skillSockets[k];
+    this.p.skillSockets[skillId] = stoneUid; st.locked = true; return ok({ socketed: stoneUid });
+  }
+  equippedStones(): ItemInstance[] { const s = this.p.skillSockets ?? {}; return Object.values(s).map((u) => this.findInv(u)).filter((x): x is ItemInstance => !!x?.stone?.skillId); }
   /** Skill modified by rank + slotted (locked) skill stones; values clamped so no negative cost/cooldown. */
   effectiveSkill(id: string): SkillDef & { rank: number } | null {
     const s = ALL_SKILLS[id]; const rank = this.p.skillRanks[id] ?? 0; if (!s || rank <= 0) return null;
-    const e = { ...s, rank, power: s.power * (1 + s.perRank * (rank - 1)) };
-    for (const st of this.equippedStones()) if (st.stone!.skillId === id) for (const m of st.stone!.mods) { const v = m.value * (1 + st.stone!.refine * 0.1) / 100; if (m.key === 'power') e.power *= 1 + v; if (m.key === 'cd') e.cdMs = Math.max(500, Math.floor(e.cdMs * (1 - v))); if (m.key === 'mp') e.mp = Math.max(0, Math.floor(e.mp * (1 - v))); if (m.key === 'radius') e.radius = Math.floor(e.radius * (1 + v)); }
+    const rv = valuesAt(s.src, rank); // single source: same table the skill detail UI shows
+    const e = { ...s, rank, power: rv.power, mp: rv.mp, cdMs: rv.cdMs, hits: rv.hits };
+    const sockUid = this.p.skillSockets?.[id]; const stone = sockUid ? this.findInv(sockUid)?.stone : undefined; if (stone?.skillId === id) applyStone(e, stone);
     return e;
   }
 
@@ -376,7 +409,7 @@ export class PlayerService {
       const req = this.p.level >= CONFIG.ascensionLevelReq[this.p.ascension]! && this.p.ascension < CONFIG.ascensionTiers ? null : requiredExp(this.p.level);
       if (req === null) { this.p.exp = Math.min(this.p.exp, requiredExp(this.p.level)); break; } // ascension gate: overflow capped
       this.p.exp -= req; this.p.level++; levels++;
-      this.p.statPoints += CONFIG.statPointsPerLevel; this.p.skillPoints += CONFIG.skillPointsPerLevel;
+      this.p.statPoints += CONFIG.statPointsPerLevel; // V4: skill points come from job level only
     }
     if (this.p.level >= capLvl) this.p.exp = 0;
     if (levels) {
@@ -392,23 +425,61 @@ export class PlayerService {
     const tier = this.p.ascension; if (tier >= CONFIG.ascensionTiers) return fail('MAX_ASCENSION');
     if (this.p.level < CONFIG.ascensionLevelReq[tier]!) return fail('LEVEL_TOO_LOW', `Requires level ${CONFIG.ascensionLevelReq[tier]}`);
     const hearts = 3 * (tier + 1); if (this.countItem('boss_heart') < hearts) return fail('NEED_HEARTS', `Requires ${hearts}× Guardian Heart`);
-    this.removeItem('boss_heart', hearts); this.p.ascension++; this.p.statPoints += 10; this.p.skillPoints += 5;
+    this.removeItem('boss_heart', hearts); this.p.ascension++; this.p.statPoints += 10;
     this.emit({ type: 'announce', msg: `${this.p.name} has reached Ascension ${this.p.ascension}!` }); return ok();
   }
   allocate(stat: keyof Primary, n = 1): Result { if (n <= 0 || this.p.statPoints < n) return fail('NO_POINTS'); this.p.allocated[stat] += n; this.p.statPoints -= n; return ok(); }
   resetStats(): Result { const total = Object.values(this.p.allocated).reduce((a, b) => a + b, 0); if (!this.spend('gold', 1000 + this.p.level * 50, 'stat_reset')) return fail('NOT_ENOUGH_GOLD'); this.p.allocated = zeroPrimary(); this.p.statPoints += total; this.clampVitals(); return ok(); }
+  /** V4 allocation rules (prerequisites AND/OR, job level, ascension stage, max rank, point budget). Returns an error code or null. */
+  validateSkillDraft(draft: Record<string, number>): { code: string; msg?: string } | null { return validateSkillDraft(this.p, draft); }
+  /**
+   * Atomic commit of a pending allocation (spec: Undo/Confirm on the client, one transaction on the server).
+   * - `rev` must equal the current revision (stale tabs/devices are rejected: STALE_REVISION)
+   * - `opId` makes retries idempotent (the same opId is accepted once; a replay returns the stored result)
+   * - ranks can only go up here; lowering needs a reset (scroll or gold)
+   */
+  commitSkills(draft: Record<string, number>, rev?: number, opId?: string): Result {
+    this.p.skillOps ??= []; this.p.skillRev ??= 0;
+    if (opId && this.p.skillOps.includes(opId)) return ok({ duplicate: true, rev: this.p.skillRev });
+    if (rev !== undefined && rev !== this.p.skillRev) return fail('STALE_REVISION', `Skill data changed (rev ${this.p.skillRev}); reload and try again`);
+    const next: Record<string, number> = { ...this.p.skillRanks };
+    for (const [id, r] of Object.entries(draft)) { if ((this.p.skillRanks[id] ?? 0) > r) return fail('CANNOT_LOWER', 'Use a reset to lower ranks'); next[id] = r; }
+    const err = this.validateSkillDraft(next); if (err) return fail(err.code, err.msg);
+    const before = Object.keys(this.p.skillRanks).filter((k) => this.p.skillRanks[k]! > 0);
+    this.p.skillRanks = Object.fromEntries(Object.entries(next).filter(([, r]) => r > 0));
+    this.p.skillPoints = skillPointBudget(this.p) - spentPoints(this.p.skillRanks);
+    for (const id of Object.keys(this.p.skillRanks)) if (!before.includes(id) && ALL_SKILLS[id]?.type !== 'passive') { const i = this.p.hotbar.indexOf(null); if (i >= 0 && !this.p.hotbar.includes(id)) this.p.hotbar[i] = id; }
+    this.p.skillRev++; if (opId) { this.p.skillOps.push(opId); if (this.p.skillOps.length > 20) this.p.skillOps.shift(); }
+    return ok({ rev: this.p.skillRev, skillPoints: this.p.skillPoints });
+  }
   learnSkill(id: string): Result {
     const s = ALL_SKILLS[id]; if (!s || s.classId !== this.p.classId) return fail('INVALID_SKILL');
-    const rank = this.p.skillRanks[id] ?? 0; if (rank >= s.maxRank) return fail('MAX_RANK'); if (this.p.level < s.reqLevel + rank * 2) return fail('LEVEL_TOO_LOW', `Requires level ${s.reqLevel + rank * 2}`);
+    const rank = this.p.skillRanks[id] ?? 0; if (rank >= s.maxRank) return fail('MAX_RANK');
     if (this.p.skillPoints < 1) return fail('NO_SKILL_POINTS');
-    this.p.skillPoints--; this.p.skillRanks[id] = rank + 1;
-    if (rank === 0 && s.type !== 'passive') { const i = this.p.hotbar.indexOf(null); if (i >= 0) this.p.hotbar[i] = id; }
-    return ok();
+    return this.commitSkills({ [id]: rank + 1 });
   }
-  resetSkills(): Result { if (!this.spend('gold', 2000, 'skill_reset')) return fail('NOT_ENOUGH_GOLD'); const cls = CLASSES[this.p.classId]!; let pts = 0; for (const [id, r] of Object.entries(this.p.skillRanks)) { const s = ALL_SKILLS[id]!; pts += s.reqLevel <= 1 ? r - 1 : r; } this.p.skillRanks = Object.fromEntries(cls.skills.filter((s) => s.reqLevel <= 1).map((s) => [s.id, 1])); this.p.skillPoints += pts; this.p.hotbar = [cls.skills[0]!.id, cls.skills[1]!.id, null, null, null, null, null, null]; return ok(); }
-  setHotbar(i: number, skillOrItem: string | null): Result { if (i < 0 || i >= 8) return fail('INVALID'); this.p.hotbar[i] = skillOrItem; return ok(); }
+  /** Full refund. Uses a Skill Reset Scroll if owned, otherwise 2,000 G. Keeps the starter skill at rank 1. */
+  resetSkills(): Result {
+    const scroll = this.countItem('skill_reset_scroll') > 0;
+    if (scroll) this.removeItem('skill_reset_scroll', 1); else if (!this.spend('gold', 2000, 'skill_reset')) return fail('NOT_ENOUGH_GOLD');
+    const cls = CLASSES[this.p.classId]!; this.p.skillRanks = starterRanks(cls.id); this.p.skillPoints = skillPointBudget(this.p) - spentPoints(this.p.skillRanks);
+    this.p.hotbar = this.p.hotbar.map((h) => (h && ALL_SKILLS[h] ? null : h)); this.p.hotbar[0] = cls.skills[0]!.id; this.p.skillRev = (this.p.skillRev ?? 0) + 1;
+    return ok({ usedScroll: scroll });
+  }
+  /** Hotbar (V4 §27): 8 slots, passives cannot be placed, only learned skills of your class (or items). */
+  setHotbar(i: number, skillOrItem: string | null): Result {
+    if (!Number.isInteger(i) || i < 0 || i >= 8) return fail('INVALID');
+    if (skillOrItem) { const sk = ALL_SKILLS[skillOrItem]; if (sk) { if (sk.type === 'passive') return fail('PASSIVE_NOT_ALLOWED', 'Passive skills work automatically'); if (sk.classId !== this.p.classId || !(this.p.skillRanks[sk.id] > 0)) return fail('SKILL_NOT_LEARNED'); } else if (!ITEMS[skillOrItem]) return fail('INVALID'); }
+    const prev = this.p.hotbar.indexOf(skillOrItem); if (skillOrItem && prev >= 0 && prev !== i) this.p.hotbar[prev] = this.p.hotbar[i] ?? null; // dragging onto another slot swaps
+    this.p.hotbar[i] = skillOrItem; return ok();
+  }
+  /** Multiple hotbar sets (3). Switching stores the current bar and loads the chosen one. */
+  switchHotbarSet(n: number): Result {
+    if (!Number.isInteger(n) || n < 0 || n > 2) return fail('INVALID'); const cur = this.p.hotbarSet ?? 0; this.p.hotbarSets ??= [[], [], []];
+    this.p.hotbarSets[cur] = [...this.p.hotbar]; const next = this.p.hotbarSets[n] ?? []; this.p.hotbar = Array.from({ length: 8 }, (_, i) => { const id = next[i] ?? null; return id && ALL_SKILLS[id] && !(this.p.skillRanks[id] > 0) ? null : id; }); this.p.hotbarSet = n; return ok({ set: n });
+  }
   /** Change class (Developer/Testing only; production gated by class-change quest). */
-  changeClass(classId: string): Result { const c = CLASSES[classId]; if (!c) return fail('INVALID'); this.p.classId = classId; this.p.skillRanks = Object.fromEntries(c.skills.filter((s) => s.reqLevel <= 1).map((s) => [s.id, 1])); this.p.skillPoints = this.p.level + 1; this.p.hotbar = [c.skills[0]!.id, c.skills[1]!.id, null, null, null, null, null, null]; this.clampVitals(); return ok(); }
+  changeClass(classId: string): Result { const c = CLASSES[classId]; if (!c) return fail('INVALID'); this.p.classId = classId; this.p.skillRanks = starterRanks(classId); this.p.skillPoints = skillPointBudget(this.p) - 1; this.p.hotbar = [c.skills[0]!.id, null, null, null, null, null, null, null]; this.p.skillRev = (this.p.skillRev ?? 0) + 1; this.p.gauge = 0; this.clampVitals(); return ok(); }
 
   // ---- kill rewards (called by world/combat engine exactly once per death) ----
   onKill(monsterId: string, level: number, baseExp: number, gold: number, drops: { itemId: string; qty: number }[], eventMult: { exp: number; drop: number; gold?: number } = { exp: 1, drop: 1 }, killKey?: string) {
@@ -587,17 +658,29 @@ export class PlayerService {
   }
 
   // ---- crafting & gathering (§32) ----
-  craft(recipeId: string, times = 1, focusStat?: string): Result {
+  craft(recipeId: string, times = 1, focusStat?: string, prepaid = false): Result {
     const r = RECIPES[recipeId]; if (!r || times < 1 || times > 50) return fail('INVALID');
     const prof = this.p.professions[r.profession] ?? { lvl: 1, exp: 0 }; if (prof.lvl < r.level) return fail('PROFESSION_LEVEL', `Requires ${r.profession} ${r.level}`);
-    for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`);
-    if (this.gold() < BigInt(r.gold * times)) return fail('NOT_ENOUGH_GOLD'); if (this.slotsNeeded(r.output.itemId, r.output.qty * times) > this.freeSlots()) return fail('INVENTORY_FULL');
+    if (!prepaid) for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`);
+    if (!prepaid && this.gold() < BigInt(r.gold * times)) return fail('NOT_ENOUGH_GOLD'); if (this.slotsNeeded(r.output.itemId, r.output.qty * times) > this.freeSlots()) return fail('INVENTORY_FULL');
     const outDef = ITEMS[r.output.itemId]!; const focus = focusStat ? OPTION_POOL.find((o) => o.stat === focusStat && o.slots.includes(outDef.type)) : undefined;
     if (focusStat && !focus) return fail('INVALID_OPTION', 'That option cannot appear on this item'); if (focus && this.countItem('enchant_stone') < times) return fail('NEED_ENCHANT_STONE', 'Focused crafting needs 1 Enchant Stone per item');
     let made = 0;
-    for (let t = 0; t < times; t++) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { const got = this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); if (focus) { this.removeItem('enchant_stone', 1); const g = got[got.length - 1]; if (g) { g.options = [{ stat: focus.stat, kind: 'flat' as const, value: this.rng.int(Math.ceil((focus.min + focus.max) / 2), focus.max) }, ...g.options.filter((o) => o.stat !== focus.stat)].slice(0, 3); } } made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }
+    for (let t = 0; t < times; t++) { if (!prepaid) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); } if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { const got = this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); if (focus) { this.removeItem('enchant_stone', 1); const g = got[got.length - 1]; if (g) { g.options = [{ stat: focus.stat, kind: 'flat' as const, value: this.rng.int(Math.ceil((focus.min + focus.max) / 2), focus.max) }, ...g.options.filter((o) => o.stat !== focus.stat)].slice(0, 3); } } made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }
     this.p.professions[r.profession] = prof; this.bump('crafts', made); this.progressObjective('craft', '', made);
     return ok({ made, failed: times - made });
+  }
+  /** Timed crafting queue (§32): materials + gold are paid when queued; results (same success rolls/EXP as instant crafting) are collected when the timer ends. 3 slots, 20 s per item. */
+  queueCraft(recipeId: string, times = 1): Result<{ finishAt: number }> {
+    const r = RECIPES[recipeId]; if (!r || times < 1 || times > 50) return fail('INVALID'); const q = ((this.p as any).craftQueue ??= []) as { id: string; recipe: string; times: number; finishAt: number }[]; if (q.length >= 3) return fail('QUEUE_FULL', 'All 3 crafting slots are busy');
+    const prof = this.p.professions[r.profession] ?? { lvl: 1, exp: 0 }; if (prof.lvl < r.level) return fail('PROFESSION_LEVEL', `Requires ${r.profession} ${r.level}`);
+    for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`); if (!this.spend('gold', r.gold * times, 'craft_queue')) return fail('NOT_ENOUGH_GOLD');
+    for (const i of r.inputs) this.removeItem(i.itemId, i.qty * times); const start = Math.max(this.now(), ...q.map((x) => x.finishAt)); const e = { id: uid('cq'), recipe: recipeId, times, finishAt: start + 20_000 * times }; q.push(e); return ok({ finishAt: e.finishAt });
+  }
+  collectCrafts(): Result<{ collected: number; made: number; waiting: number }> {
+    const q = ((this.p as any).craftQueue ?? []) as { id: string; recipe: string; times: number; finishAt: number }[]; let collected = 0, made = 0;
+    for (const e of [...q]) { if (e.finishAt > this.now()) continue; const r = this.craft(e.recipe, e.times, undefined, true); if (!r.ok) break; /* e.g. bag full: stays queued */ made += (r.data as any).made; collected++; q.splice(q.indexOf(e), 1); }
+    return ok({ collected, made, waiting: q.length });
   }
   gather(type: 'ore' | 'tree' | 'herb' | 'fish', tier: number): Result<{ itemId: string; qty: number }> {
     const tool = { ore: 'tool_pickaxe', tree: 'tool_axe', herb: 'tool_sickle', fish: 'tool_rod' }[type];
@@ -733,4 +816,64 @@ export { NPCS, feeOf, EconomyError };
 
 /** Serialize/deserialize save (BigInt-safe). Save format versioned (v). */
 export function serializePlayer(p: PlayerState): string { return JSON.stringify({ ...p, wallet: p.wallet.serialize() }); }
-export function deserializePlayer(s: string): PlayerState { const o = JSON.parse(s); if (o.v !== 1) throw new Error('UNSUPPORTED_SAVE_VERSION'); o.wallet = Ledger.deserialize(o.wallet); return o as PlayerState; }
+export function deserializePlayer(s: string): PlayerState { const o = JSON.parse(s); if (o.v !== 1) throw new Error('UNSUPPORTED_SAVE_VERSION'); o.wallet = Ledger.deserialize(o.wallet); migrateSkillsV4(o as PlayerState); return o as PlayerState; }
+
+// ---- Skill System V4 helpers ----
+/** V4 allocation rules shared by server commit and client preview (prerequisites AND/OR, job level, ascension stage, max rank, point budget). */
+export function validateSkillDraft(p: Pick<PlayerState, 'classId' | 'jobLevel' | 'ascension'>, draft: Record<string, number>): { code: string; msg?: string } | null {
+    const cls = CLASSES[p.classId]!; const byId = new Map(cls.skills.map((s) => [s.id, s]));
+    let total = 0;
+    for (const [id, r] of Object.entries(draft)) {
+      const s = byId.get(id); if (!s) return { code: 'INVALID_SKILL', msg: id }; if (!Number.isInteger(r) || r < 0) return { code: 'INVALID_RANK', msg: id };
+      if (r === 0) continue; total += r;
+      if (r > s.maxRank) return { code: 'MAX_RANK', msg: `${s.name.en} max ${s.maxRank}` };
+      if (p.jobLevel < s.jobReq) return { code: 'JOB_LEVEL_TOO_LOW', msg: `${s.name.en} requires job level ${s.jobReq}` };
+      if (p.ascension < s.asc - 1) return { code: 'ASCENSION_REQUIRED', msg: `${s.name.en} requires Ascension ${s.asc}` };
+      if (s.pre.length) { const met = s.pre.map(([k, pr]) => (draft[`${cls.id}.${k}`] ?? 0) >= pr); if (s.preAny ? !met.some(Boolean) : !met.every(Boolean)) return { code: 'PREREQUISITE', msg: `${s.name.en} requires ${s.pre.map(([k, pr]) => `${byId.get(`${cls.id}.${k}`)?.name.en} ${pr}`).join(s.preAny ? ' or ' : ' and ')}` }; }
+    }
+    if (total > skillPointBudget(p)) return { code: 'NO_SKILL_POINTS', msg: `${total} > ${skillPointBudget(p)}` };
+    return null;
+  }
+
+/** Skill points available in total: 1 per job level (job level 1 = 1 point, spent on the starter skill). PROVIDED_SPEC (job level → skill points), amount CUSTOM_DESIGN. */
+export function skillPointBudget(p: Pick<PlayerState, 'jobLevel'>): number { return Math.max(1, p.jobLevel); }
+export function spentPoints(ranks: Record<string, number>): number { return Object.values(ranks).reduce((a, b) => a + Math.max(0, b), 0); }
+/**
+ * Auto Allocate (spec V4): fills a DRAFT from a recommended build, one rank at a time, keeping every intermediate state legal.
+ * Nothing is committed — the player reviews the draft and presses Confirm. Entries that are not yet legal (job level/ascension) are skipped.
+ */
+export function autoAllocateDraft(p: Pick<PlayerState, 'classId' | 'jobLevel' | 'ascension' | 'skillRanks'>, seq: [string, number][]): Record<string, number> {
+  const draft: Record<string, number> = { ...p.skillRanks };
+  for (let pass = 0; pass < 2; pass++) for (const [key, target] of seq) {
+    const id = `${p.classId}.${key}`;
+    while ((draft[id] ?? 0) < target) { const next = { ...draft, [id]: (draft[id] ?? 0) + 1 }; if (validateSkillDraft(p, next)) break; draft[id] = next[id]!; }
+  }
+  // leftover points: raise the build's own skills toward max rank, in build order (still legal at every step)
+  const cls = CLASSES[p.classId]!;
+  const raise = (id: string, to: number) => { while ((draft[id] ?? 0) < to) { const next = { ...draft, [id]: (draft[id] ?? 0) + 1 }; if (validateSkillDraft(p, next)) return false; draft[id] = next[id]!; } return true; };
+  // then unlock the ultimate through its prerequisite chain, then passives, then everything else (tree order) — CUSTOM_DESIGN
+  const ult = cls.skills.find((s) => s.type === 'ultimate');
+  if (ult) { const chain = (k: string, r: number): void => { const s = cls.skills.find((x) => x.key === k)!; for (const [pk, pr] of s.preAny ? s.pre.slice(0, 1) : s.pre) chain(pk, pr); raise(s.id, r); }; chain(ult.key, 1); }
+  for (const [key] of seq) { const id = `${p.classId}.${key}`; raise(id, cls.skills.find((s) => s.id === id)?.maxRank ?? 0); }
+  for (const s of cls.skills.filter((x) => x.type === 'passive')) raise(s.id, s.maxRank);
+  for (const s of cls.skills) raise(s.id, s.maxRank);
+  return draft;
+}
+/** New characters know their class's first Ascension I skill at rank 1. */
+export function starterRanks(classId: string): Record<string, number> { return { [CLASSES[classId]!.skills[0]!.id]: 1 }; }
+/**
+ * Migration to Skill System V4 (idempotent). Old saves used generic ids `<class>_sNN` (shared role kits).
+ * Old ranks cannot be mapped to the new authored skills (e.g. warrior skills must not become Fortune Dealer skills),
+ * so every point is refunded: ranks reset to the starter skill, points = job level − 1, skill hotbar slots cleared,
+ * stones inscribed to removed skills become blank (free re-inscription). Items on the hotbar are kept.
+ */
+export function migrateSkillsV4(p: PlayerState, now = Date.now()): boolean {
+  if (p.skillV === 4) return false;
+  const cls = CLASSES[p.classId]; if (!cls) return false;
+  const oldSpent = spentPoints(p.skillRanks ?? {});
+  p.skillRanks = starterRanks(cls.id); p.skillPoints = skillPointBudget(p) - 1;
+  p.hotbar = (p.hotbar ?? []).map((h) => (h && !ALL_SKILLS[h] && ITEMS[h] ? h : null)); while (p.hotbar.length < 8) p.hotbar.push(null); p.hotbar[0] = cls.skills[0]!.id;
+  for (const it of [...(p.inventory ?? []), ...(p.storage ?? [])]) if (it.stone?.skillId && !ALL_SKILLS[it.stone.skillId]) { it.stone.skillId = null as unknown as string; it.stone.mods = []; it.locked = false; }
+  p.gauge = 0; p.skillV = 4; p.skillRev = (p.skillRev ?? 0) + 1; p.skillOps = []; p.skillSockets = {}; p.skillMigration = { at: now, refunded: oldSpent, fromV: 3 };
+  return true;
+}

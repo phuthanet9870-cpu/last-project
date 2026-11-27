@@ -60,6 +60,7 @@ export const MONSTERS: Record<string, MonsterDef> = Object.fromEntries([
   mon({ id: 'star_wraith', name: { en: 'Star Wraith', th: 'วิญญาณดวงดาว' }, level: 52, element: 'spirit', sprite: 'ghost', color: '#c0c0ff', ai: 'aggressive', drops: [d('star_fragment', 0.4), d('star_dust', 0.2), d('dawn_staff', 0.02)] }),
   mon({ id: 'clockwork_knight', name: { en: 'Clockwork Knight', th: 'อัศวินจักรกล' }, level: 56, element: 'neutral', sprite: 'golem', color: '#c09a50', ai: 'aggressive', def: 220, drops: [d('iron_ore', 0.5, 1, 3), d('dawn_sword', 0.02), d('refine_ore', 0.3)] }),
   mon({ id: 'astral_eye', name: { en: 'Astral Eye', th: 'ดวงตาดารา' }, level: 60, element: 'light', sprite: 'wisp', color: '#ffe0ff', ai: 'ranged', attackRange: 210, drops: [d('star_fragment', 0.45, 1, 2), d('gem_opal_2', 0.05)] }),
+  mon({ id: 'training_dummy', name: { en: 'Training Dummy', th: 'หุ่นฝึกซ้อม' }, level: 60, element: 'neutral', sprite: 'golem', color: '#c8a878', size: 1.2, rank: 'elite', ai: 'guard', aggroRange: 150, leashRange: 230, def: 240, mdef: 240, drops: [] }), // balance simulation target (DEF = MDEF), not spawned in maps
   mon({ id: 'ruin_sentinel', name: { en: 'Ruin Sentinel', th: 'ทหารยามซากเมือง' }, level: 62, element: 'light', sprite: 'golem', color: '#e0d0a0', size: 1.7, rank: 'elite', ai: 'guard', aggroRange: 150, leashRange: 230, def: 300, mdef: 220, drops: [d('dawn_body', 0.05), d('refine_ore_hi', 0.4, 1, 2), d('star_fragment', 0.8, 2, 4)] }),
   mon({ id: 'magma_hound', name: { en: 'Magma Hound', th: 'สุนัขแมกมา' }, level: 68, element: 'fire', sprite: 'wolf', color: '#ff5020', ai: 'aggressive', moveSpeed: 105, drops: [d('magma_core', 0.25), d('astral_boots', 0.01), d('gem_ruby_2', 0.04)] }),
   mon({ id: 'cinder_drake', name: { en: 'Cinder Drake', th: 'มังกรถ่านเถ้า' }, level: 74, element: 'fire', sprite: 'lizard', color: '#c03010', size: 1.3, ai: 'ranged', attackRange: 190, drops: [d('magma_core', 0.3), d('astral_gloves', 0.01), d('refine_ore_hi', 0.15)] }),
@@ -287,6 +288,7 @@ export const RECIPES: Record<string, RecipeDef> = Object.fromEntries([
   r('rc_gun', 'engineering', 2, [['iron_ore', 4], ['ember_core', 1], ['pine_log', 2]], 220, ['iron_gun', 1], 0.85),
   r('rc_enchant', 'enchanting', 1, [['wisp_dust', 2], ['stone_dust', 3]], 60, ['enchant_stone', 1]),
   r('rc_skillstone', 'runecrafting', 2, [['stone_dust', 10], ['star_dust', 2]], 300, ['skill_stone', 1], 0.8),
+  r('rc_skillstone_leg', 'runecrafting', 6, [['skill_stone', 3], ['star_dust', 10], ['boss_heart', 1]], 5000, ['skill_stone_legendary', 1], 0.35, 4000),
   r('rc_food_forest', 'cooking', 2, [['berry', 2], ['herb_green', 1]], 10, ['food_forest', 3]),
   r('rc_food_hills', 'cooking', 2, [['soft_fur', 1], ['wheat', 2]], 10, ['food_hills', 3]),
   r('rc_food_snow', 'cooking', 3, [['fish_trout', 1], ['frost_shard', 1]], 15, ['food_snow', 3]),

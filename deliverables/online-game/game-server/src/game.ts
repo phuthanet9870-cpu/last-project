@@ -34,7 +34,7 @@ export class GameServer {
   }
   world(mapId: string, instanceKey?: string): World {
     const key = instanceKey ?? mapId; let w = this.worlds.get(key);
-    if (!w) { w = new World({ mapId, instanceId: key, rng: new Rng(MAPS[mapId]!.seed * 131 + key.length), bots: 0, worldBossIntervalMs: Number(process.env.WORLD_BOSS_INTERVAL_MS ?? 10 * 60_000) }); this.worlds.set(key, w); }
+    if (!w) { w = new World({ mapId, instanceId: key, rng: new Rng(MAPS[mapId]!.seed * 131 + key.length), bots: 0, ...(process.env.WORLD_BOSS_INTERVAL_MS ? { worldBossIntervalMs: Number(process.env.WORLD_BOSS_INTERVAL_MS) } : { worldBossTimes: (process.env.WORLD_BOSS_TIMES ?? GAME.worldBossTimesBkk.join(',')).split(',').map((x) => x.trim()) }) }); this.worlds.set(key, w); }
     return w;
   }
   start() { const dt = 1000 / CONFIG.tickHz; let last = performance.now(); this.timer = setInterval(() => { const t0 = performance.now(); this.tick(t0 - last); last = t0; const took = performance.now() - t0; const s = this.stats.tickSamples; s.push(took); if (s.length > 200) s.shift(); this.stats.ticks++; if (this.stats.ticks % 20 === 0) this.stats.tickMsAvg = s.reduce((a, b) => a + b, 0) / s.length; if (this.stats.ticks % 20 === 0) this.stats.tickMsP95 = [...s].sort((a, b) => a - b)[Math.floor(s.length * 0.95)] ?? 0; }, dt); }
@@ -121,10 +121,10 @@ export class GameServer {
     switch (cmd) {
       // ---- chat (world/whisper are cross-map) ----
       case 'chat': { if (c.muted) return fail('MUTED', 'You are muted by a moderator'); const ch = String(a.ch ?? 'local'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160).trim(); if (!msg) return fail('EMPTY');
-        if (ch === 'world' || ch === 'trade' || ch === 'help') for (const x of this.conns.values()) { if (!x.svc.p.blocked.includes(c.svc.p.name) && x.world !== c.world) this.sendFx(x, [{ t: 'chat', ch, from: c.svc.p.name, msg }]); }
+        if (ch === 'world' || ch === 'trade' || ch === 'help') for (const x of this.conns.values()) { if (!x.svc.p.blocked.includes(c.svc.p.name) && !((x.svc.p as any).muted ?? []).includes(c.svc.p.name) && x.world !== c.world) this.sendFx(x, [{ t: 'chat', ch, from: c.svc.p.name, msg }]); }
         if (ch === 'party') { const e = c.world.entities.get(me); const m = e?.partyId ? c.world.parties.get(e.partyId) ?? [] : []; for (const id of m) { const t = this.conns.get(id.replace('pl_', '')); if (t) this.sendFx(t, [{ t: 'chat', ch, from: c.svc.p.name, msg }]); } this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
         c.world.chat(me, ch, msg); this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
-      case 'whisper': { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.to ?? '').toLowerCase()); if (!t) return fail('PLAYER_OFFLINE'); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160); this.sendFx(t, [{ t: 'chat', ch: 'whisper', from: c.svc.p.name, msg }]); this.chatOut.push(['whisper', msg, c.charId, t.charId, c.svc.p.name]); return ok(); }
+      case 'whisper': { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.to ?? '').toLowerCase()); if (!t) return fail('PLAYER_OFFLINE'); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160); if (!((t.svc.p as any).muted ?? []).includes(c.svc.p.name)) this.sendFx(t, [{ t: 'chat', ch: 'whisper', from: c.svc.p.name, msg }]); /* muted: silently not shown */ this.chatOut.push(['whisper', msg, c.charId, t.charId, c.svc.p.name]); return ok(); }
       // ---- party with consent ----
       case 'partyInvite': { const t = this.target(c, a.target); if (!t) return executeCommand(this.ctx(c), cmd, a); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); this.invites.set(t.charId, { kind: 'party', from: c.charId, at: Date.now() }); this.notice(t, `${c.svc.p.name} invites you to a party. Type /accept party or click Accept.`); return ok({ pending: true }); }
       case 'partyAccept': { const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'party' || Date.now() - inv.at > 60_000) return fail('NO_INVITE'); this.invites.delete(c.charId); const from = this.conns.get(inv.from); if (!from || from.world !== c.world) return fail('INVITER_GONE'); const r = executeCommand({ ...this.ctx(from), mode: 'server' }, 'partyInvite', { target: me }); if (r.ok) { this.notice(from, `${c.svc.p.name} joined your party`); } return r; }
@@ -423,7 +423,7 @@ export class GameServer {
     const pub = (w: World) => { let m = cache.get(w); if (!m) { m = new Map(); for (const e of w.entities.values()) { const full = publicEntity(e); const dyn = JSON.stringify(DYNAMIC_KEYS.map((k) => (full as any)[k])); m.set(e.id, { full, dyn }); } cache.set(w, m); } return m; };
     for (const c of this.conns.values()) {
       const meE = c.world.entities.get(`pl_${c.charId}`); // spatial fx filter: positional effects and local chat only reach players within 1300px
-      const fx = (fxByWorld.get(c.world) ?? []).filter((f) => f.t !== 'notice' || !f.to || f.to === `pl_${c.charId}`).filter((f) => f.t !== 'chat' || !c.svc.p.blocked.includes(f.from)).filter((f: any) => !meE || f.x === undefined || f.t === 'notice' || Math.abs(f.x - meE.x) + Math.abs(f.y - meE.y) < 1300);
+      const fx = (fxByWorld.get(c.world) ?? []).filter((f) => f.t !== 'notice' || !f.to || f.to === `pl_${c.charId}`).filter((f) => f.t !== 'chat' || (!c.svc.p.blocked.includes(f.from) && !((c.svc.p as any).muted ?? []).includes(f.from))).filter((f: any) => !meE || f.x === undefined || f.t === 'notice' || Math.abs(f.x - meE.x) + Math.abs(f.y - meE.y) < 1300);
       this.sendFx(c, fx);
       if ((this.stats.ticks + c.phase) % Math.round(CONFIG.tickHz / CONFIG.snapshotHz) === 0) { // staggered: half the clients on even ticks, half on odd → no burst every other tick
         c.lastSnap = now; const myId = `pl_${c.charId}`; const e = c.world.entities.get(myId); const m = pub(c.world);

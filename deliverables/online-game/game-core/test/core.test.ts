@@ -42,7 +42,7 @@ describe('stats & combat formulas', () => {
 describe('progression', () => {
   it('requiredExp(L)=floor(100*L^2.2)', () => { expect(requiredExp(1)).toBe(100); expect(requiredExp(10)).toBe(Math.floor(100 * Math.pow(10, 2.2))); });
   it('single EXP grant can raise multiple levels and grants points', () => { const { svc, p } = mk(); svc.gainExp(50_000, 'test'); expect(p.level).toBeGreaterThan(5); expect(p.statPoints).toBeGreaterThan(5 + 3 * 4); });
-  it('ascension gate caps level at 60 until ascended', () => { const { svc, p } = mk(); svc.gainExp(1e12, 'test'); expect(p.level).toBe(60); svc.addItem('boss_heart', 3); expect(svc.ascend().ok).toBe(true); svc.gainExp(1e12, 'test'); expect(p.level).toBe(90); });
+  it('ascension gate caps level at 40 until ascended (V4 stages: 40 / 80)', () => { const { svc, p } = mk(); svc.gainExp(1e12, 'test'); expect(p.level).toBe(40); svc.addItem('boss_heart', 3); expect(svc.ascend().ok).toBe(true); svc.gainExp(1e12, 'test'); expect(p.level).toBe(80); });
 });
 
 describe('items, equipment, refine', () => {
@@ -220,7 +220,7 @@ describe('items & pets additions (v0.5)', () => {
     expect((svc.expandStorage().data as any).slots).toBe(140);
     const w = p.equipment.main!; w.refine = 5; svc.addItem('refine_ore', 5); svc.addItem('blessing_scroll', 1); const pv = svc.refinePreview(w.uid)!; expect(pv.max).toBe(false); svc.refine(w.uid, false, true); expect(svc.countItem('blessing_scroll')).toBe(0);
     w.refine = 10; p.monsterCards['mc_forest_slime'] = 2; p.monsterCards['mc_cave_spider'] = 2; const cards = Object.keys(p.monsterCards); let n = 0; for (const c of cards) for (let i = 0; i < 2; i++) if (svc.insertCard(w.uid, c).ok) n++; expect(n).toBeLessThanOrEqual(2); expect(w.cards.length).toBe(2);
-    svc.addItem('stone_dust', 20); const [st0] = svc.addItem('skill_stone'); svc.inscribeStone(st0!.uid, p.hotbar[0]!); const before = JSON.stringify(st0!.stone!.mods); let changed = false; for (let i = 0; i < 3; i++) { svc.reinscribeStone(st0!.uid); if (JSON.stringify(st0!.stone!.mods) !== before) changed = true; } expect(changed).toBe(true); expect(st0!.stone!.skillId).toBe(p.hotbar[0]);
+    svc.addItem('stone_dust', 20); const [st0] = svc.addItem('skill_stone'); svc.inscribeStone(st0!.uid, p.hotbar[0]!); const before = JSON.stringify(st0!.stone!.mods); let changed = false; for (let i = 0; i < 3; i++) { const cur = JSON.stringify(st0!.stone!.mods); svc.reinscribeStone(st0!.uid); expect(svc.reinscribeStone(st0!.uid).err).toBe('CHOOSE_FIRST'); expect(JSON.stringify(st0!.stone!.mods)).toBe(cur); svc.chooseInscription(st0!.uid, 'new'); if (JSON.stringify(st0!.stone!.mods) !== before) changed = true; } expect(changed).toBe(true); expect(st0!.stone!.skillId).toBe(p.hotbar[0]);
   });
 });
 
