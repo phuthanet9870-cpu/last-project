@@ -100,7 +100,7 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
   });
   // Sanction appeals (§63): a sanctioned player (banned/suspended accounts cannot sign in) proves identity with username + password.
   app.post('/api/appeals', async (req) => {
-    const b: any = req.body ?? {}; if (!(await limit(`appeal:${req.ip}`, 5, 3600))) throw new AuthError(429, 'Too many appeals'); const text = String(b.text ?? '').replace(/<[^>]*>/g, '').trim().slice(0, 2000); if (text.length < 10) throw new AuthError(400, 'Please explain in at least 10 characters');
+    const b: any = req.body ?? {}; if (!(await limit(`appeal:${req.ip}`, Number(process.env.APPEAL_LIMIT_PER_HOUR ?? 5), 3600))) throw new AuthError(429, 'Too many appeals'); const text = String(b.text ?? '').replace(/<[^>]*>/g, '').trim().slice(0, 2000); if (text.length < 10) throw new AuthError(400, 'Please explain in at least 10 characters');
     const acc = await verifyCredentials(b.username, b.password); if (!acc) throw new AuthError(401, 'Invalid credentials');
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [acc.id])).rowCount! > 0; if (acc.status === 'active' && !muted) throw new AuthError(400, 'There is no active sanction to appeal');
     try { const r = await pool.query('INSERT INTO appeals(account_id,text) VALUES ($1,$2) RETURNING id', [acc.id, text]); return { ok: true, id: Number(r.rows[0].id) }; } catch (e: any) { if (e.code === '23505') throw new AuthError(409, 'You already have an open appeal'); throw e; }

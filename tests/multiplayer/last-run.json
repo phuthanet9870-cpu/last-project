@@ -1,7 +1,7 @@
 {
-  "when": "2026-11-27T16:00:19.632Z",
+  "when": "2026-11-27T16:12:15.866Z",
   "server": "http://localhost:2567",
-  "durationMs": 101788,
+  "durationMs": 101003,
   "passed": 28,
   "total": 29,
   "results": [
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwz61p8t1ko9q, ch_mwz61p93bciix"
+      "detail": "ch_mwz6h2gv3f3xp5, ch_mwz6h2h13p7tlg"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -28,7 +28,7 @@
     {
       "name": "server-authoritative movement replicated (collision-checked)",
       "ok": true,
-      "detail": "912→1009"
+      "detail": "912→1008"
     },
     {
       "name": "chat local + world + whisper delivered; malformed packet rejected",
@@ -103,22 +103,22 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwz61p8t1ko9q\":16,\"ch_mwz61p93bciix\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwz6h2gv3f3xp5\":16,\"ch_mwz6h2h13p7tlg\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
       "ok": true,
-      "detail": "online=2 p95 tick=0.62ms ledger ok=true"
+      "detail": "online=2 p95 tick=0.61ms ledger ok=true"
     },
     {
       "name": "Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title",
       "ok": true,
-      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:35; title_weekly → B"
+      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:37; title_weekly → B"
     },
     {
       "name": "guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds",
       "ok": true,
-      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lanza76d score [0,0]"
+      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Land50ju score [0,0]"
     },
     {
       "name": "worker: weekly champion = most PvP rating gained in the last 7 days (not all-time rating)",
@@ -138,7 +138,7 @@
     {
       "name": "character rename (offline, unique, 30-day cooldown, friend lists follow) + sanction appeal workflow",
       "ok": false,
-      "detail": ""
+      "detail": "bad creds → 429"
     },
     {
       "name": "admin MFA (TOTP): enrol → login needs code → admin works → code replay rejected",

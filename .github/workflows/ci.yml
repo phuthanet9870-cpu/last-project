@@ -53,7 +53,7 @@ jobs:
       - run: pnpm db:migrate
       - name: Start game server (test settings, never used in production)
         run: |
-          DEV_COMMANDS=1 REGISTER_LIMIT_PER_HOUR=5000 MARRIAGE_MIN_FRIEND_MS=0 CHAMPION_SYNC_MS=1000 WEDDING_PHASE_MS=500 GUILD_WAR_MS=3000 pnpm server > server.log 2>&1 &
+          DEV_COMMANDS=1 REGISTER_LIMIT_PER_HOUR=5000 APPEAL_LIMIT_PER_HOUR=500 MARRIAGE_MIN_FRIEND_MS=0 CHAMPION_SYNC_MS=1000 WEDDING_PHASE_MS=500 GUILD_WAR_MS=3000 pnpm server > server.log 2>&1 &
           for i in $(seq 1 60); do curl -sf localhost:2567/readyz && break; sleep 1; done
       - run: pnpm test:multiplayer
       - run: node tests/e2e/online.e2e.mjs
