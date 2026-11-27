@@ -42,7 +42,7 @@ export interface PlayerState {
   guild: { id: string; name: string; role: 'leader' | 'officer' | 'member'; contribution: number; level: number; exp: number; storage: ItemInstance[]; log: string[] } | null;
   marriage: { partner: string; since: number; anniversary: number } | null;
   house: { furniture: { itemId: string; x: number; y: number; rot: number }[]; theme: number };
-  refinePity: Record<string, number>; settings: Record<string, any>; storageSlots?: number; wallet: Ledger;
+  refinePity: Record<string, number>; settings: Record<string, any>; storageSlots?: number; wishlist?: { defId: string; maxPrice: number }[]; wallet: Ledger;
   log: { ts: number; msg: string }[];
 }
 
@@ -109,7 +109,7 @@ export function createCharacter(opts: { id?: string; accountId: string; name: st
   for (const c of deck.cards) p.tcg.collection[c] = (p.tcg.collection[c] ?? 0) + 1;
   p.tcg.decks.push({ id: 'deck1', name: deck.name.en, cards: [...deck.cards] }); p.tcg.activeDeck = 'deck1';
   p.wallet.mint(walletId(p), 'gold', 500n, 'starter', `starter:${id}`);
-  p.wallet.mint(walletId(p), 'crystal', 1500n, 'starter_sim', `starter_c:${id}`); // simulated currency, no real money
+  p.wallet.mint(walletId(p), 'crystal_free', 1500n, 'starter_sim', `starter_c:${id}`); // simulated, non-tradeable Free Crystal (no real money)
   const s = playerStats(p); p.hp = s.derived.maxHp; p.mp = s.derived.maxMp;
   return p;
 }
@@ -477,7 +477,7 @@ export class PlayerService {
   claimLogin(): Result {
     const day = dayKey(this.now()); if (this.p.login.lastDay === day) return fail('ALREADY_CLAIMED');
     const yesterday = dayKey(this.now() - 86400_000); this.p.login.streak = this.p.login.lastDay === yesterday ? this.p.login.streak + 1 : 1; this.p.login.lastDay = day;
-    const reward = LOGIN_CALENDAR[this.p.login.claimed % LOGIN_CALENDAR.length]!; this.p.login.claimed++; this.addItem(reward.itemId, reward.qty); this.earn('gold', 200 * Math.min(7, this.p.login.streak), 'login');
+    const reward = LOGIN_CALENDAR[this.p.login.claimed % LOGIN_CALENDAR.length]!; this.p.login.claimed++; this.addItem(reward.itemId, reward.qty); this.earn('gold', 200 * Math.min(7, this.p.login.streak), 'login'); this.earn('crystal_free', 20, 'login_free_crystal');
     return ok({ reward, streak: this.p.login.streak });
   }
   claimEventMission(evId: string, mId: string): Result { const ev = EVENTS.find((e) => e.id === evId); const m = ev?.missions.find((x) => x.id === mId); if (!m) return fail('INVALID'); if (this.p.events.claimed.includes(mId)) return fail('ALREADY_CLAIMED'); if ((this.p.events.progress[mId] ?? 0) < m.target) return fail('INCOMPLETE'); this.p.events.claimed.push(mId); this.addItem(m.reward.itemId, m.reward.qty); return ok(); }
@@ -487,7 +487,7 @@ export class PlayerService {
     if (level < 1 || level > this.p.pass.level) return fail('LOCKED'); const list = premium ? this.p.pass.claimedPremium : this.p.pass.claimedFree; if (list.includes(level)) return fail('ALREADY_CLAIMED');
     if (premium && !this.p.pass.premium) return fail('PREMIUM_REQUIRED'); const r = (premium ? PASS.premium : PASS.free)[level - 1]!; list.push(level); this.addItem(r.itemId, r.qty); return ok();
   }
-  buyPremiumPass(): Result { if (this.p.pass.premium) return fail('OWNED'); if (!this.spend('crystal', 980, 'pass_premium_sim')) return fail('NOT_ENOUGH_CRYSTAL'); this.p.pass.premium = true; return ok(); }
+  buyPremiumPass(): Result { if (this.p.pass.premium) return fail('OWNED'); if (!this.spendCrystal(980, 'pass_premium_sim')) return fail('NOT_ENOUGH_CRYSTAL'); this.p.pass.premium = true; return ok(); }
 
   // ---- quests (§18) ----
   questAvailable(id: string): boolean { const q = QUESTS[id]; if (!q) return false; if (this.p.quests.done.includes(id) || this.p.quests.active.some((a) => a.id === id)) return false; if (q.prereq && !this.p.quests.done.includes(q.prereq)) return false; return this.p.level >= q.reqLevel; }
@@ -631,10 +631,12 @@ export class PlayerService {
   recordPvp(win: boolean, oppName: string, oppRating: number) { const d = elo(this.p.pvp.rating, oppRating, win); this.p.pvp.rating += d; win ? this.p.pvp.wins++ : this.p.pvp.losses++; this.p.pvp.history.unshift({ ts: this.now(), opp: oppName, win, delta: d }); this.p.pvp.history.length = Math.min(20, this.p.pvp.history.length); this.earn('arena_token', win ? 10 : 3, 'arena'); if (win) { this.bump('pvp_wins'); this.progressObjective('pvp_win', '', 1); } return d; }
 
   // ---- gacha (§46) — simulated Crystal only; real-money random rewards disabled by feature flag ----
+  /** Spend Crystal: Free (bound) Crystal first, then tradeable Crystal (§33). */
+  spendCrystal(n: number, reason: string): boolean { const free = Number(this.bal('crystal_free')); if (free + Number(this.bal('crystal')) < n) return false; const f = Math.min(free, n); if (f) this.spend('crystal_free', f, reason); if (n - f) this.spend('crystal', n - f, reason); return true; }
   gachaDraw(times: 1 | 10, useTicket: boolean): Result<{ itemId: string; rarity: string }[]> {
     const b = GACHA_BANNERS.standard;
     if (useTicket) { if (!this.removeItem('gacha_ticket', times)) return fail('NOT_ENOUGH_TICKETS'); }
-    else if (!this.spend('crystal', b.cost.crystal * times, 'gacha_sim')) return fail('NOT_ENOUGH_CRYSTAL');
+    else if (!this.spendCrystal(b.cost.crystal * times, 'gacha_sim')) return fail('NOT_ENOUGH_CRYSTAL');
     const out: { itemId: string; rarity: string }[] = [];
     for (let i = 0; i < times; i++) {
       this.p.gacha.pity++;

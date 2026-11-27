@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 — 2026-11-27 — Task 6: market & economy
+- Auto-bid (proxy) auctions: bids are private maxima, winner pays one increment above the runner-up, unused reservation released.
+- Market: filters (type, rarity, max level, usable by my class, has stat), Best Sellers (24h), Wishlist with price alerts, personal trade history, per-item price chart (1h/24h/7d), exchange candles (1m/5m/1h).
+- Account-wide sales collection box (proceeds from listings/auctions collected by any character on the account).
+- Crystal split: tradeable, waiting (72h holding period after exchange purchases) and free/bound (starter, login); free is spent first; only tradeable Crystal can be sold.
+- Security: server market snapshots are per-player (other players' history, Crystal holds and auction maxima are never sent).
+- Tests: unit 55 (auction expectation updated for second-price proxy bidding), E2E 32/32, multiplayer 20/20.
+
 ## 0.6.0 — 2026-11-27 — Task 5: PvP modes
 - Three arena modes: Last Light (elimination), Lantern Siege (3 capture lanterns, points per second, first to 100), Ember Rush (carry crystals to base, carriers drop on death, first to 5); objective-mode respawns at base; bots play objectives.
 - Per-match stats (kills/damage/healing/objectives) and MVP (+10 tokens, «Arena MVP» title); in-match score banner and scoreboard.

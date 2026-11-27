@@ -3,8 +3,8 @@
  * price-time-priority order book, auction state machine. Pure & deterministic; the online server
  * wraps these in PostgreSQL transactions, the artifact runs them locally.
  */
-export type Currency = 'gold' | 'crystal' | 'arena_token' | 'boss_coin' | 'card_dust' | 'star_dust' | 'guild_token' | 'event_token' | 'stable_seal';
-export const CURRENCIES: Currency[] = ['gold', 'crystal', 'arena_token', 'boss_coin', 'card_dust', 'star_dust', 'guild_token', 'event_token', 'stable_seal'];
+export type Currency = 'gold' | 'crystal' | 'arena_token' | 'boss_coin' | 'card_dust' | 'star_dust' | 'guild_token' | 'event_token' | 'stable_seal' | 'crystal_free';
+export const CURRENCIES: Currency[] = ['gold', 'crystal', 'arena_token', 'boss_coin', 'card_dust', 'star_dust', 'guild_token', 'event_token', 'stable_seal', 'crystal_free'];
 
 export interface LedgerEntry { txId: string; account: string; currency: Currency; amount: bigint; reason: string; ts: number }
 export interface WalletBalance { available: bigint; reserved: bigint }
@@ -118,24 +118,38 @@ export class OrderBook {
 const minB = (a: bigint, b: bigint) => (a < b ? a : b);
 
 // ---------------- Auction (§36) ----------------
-export interface Auction { id: string; seller: string; itemUid: string; itemDefId: string; start: bigint; buyNow: bigint | null; current: bigint; bidder: string | null; endsAt: number; status: 'active' | 'sold' | 'expired' | 'bought'; bids: { bidder: string; amount: bigint; ts: number }[] }
+export interface Auction { id: string; seller: string; itemUid: string; itemDefId: string; start: bigint; buyNow: bigint | null; current: bigint; bidder: string | null; endsAt: number; status: 'active' | 'sold' | 'expired' | 'bought'; maxBids?: Record<string, bigint>; payTo?: string; bids: { bidder: string; amount: bigint; ts: number }[] }
 export function minNextBid(a: Auction, incBps: number): bigint { return a.bidder ? a.current + maxB(1n, feeOf(a.current, incBps)) : a.start; }
 const maxB = (a: bigint, b: bigint) => (a > b ? a : b);
-/** Place bid: reserves bidder funds, refunds previous bidder (outbid). Anti-snipe extension. */
-export function placeBid(ledger: Ledger, a: Auction, bidder: string, amount: bigint, now: number, incBps: number, antiSnipeMs: number) {
+/**
+ * Proxy (auto) bidding (§36): a bid is the bidder's private MAXIMUM. The leader pays only one increment above the
+ * runner-up's maximum. The full maximum is reserved; losing bidders are released immediately; maxima are never exposed.
+ * Returns whether the caller now leads.
+ */
+export function placeBid(ledger: Ledger, a: Auction, bidder: string, max: bigint, now: number, incBps: number, antiSnipeMs: number): { leading: boolean; current: bigint } {
   if (a.status !== 'active' || now >= a.endsAt) throw new EconomyError('AUCTION_CLOSED');
   if (bidder === a.seller) throw new EconomyError('SELF_BID');
-  if (amount < minNextBid(a, incBps)) throw new EconomyError('BID_TOO_LOW');
-  ledger.reserve(bidder, 'gold', amount);
-  if (a.bidder) ledger.release(a.bidder, 'gold', a.current);
-  a.current = amount; a.bidder = bidder; a.bids.push({ bidder, amount, ts: now });
+  const maxes = (a.maxBids ??= {}); const inc = (v: bigint) => maxB(1n, feeOf(v, incBps));
+  if (a.bidder === bidder) { // leader raises own maximum: reserve only the difference
+    const old = maxes[bidder] ?? a.current; if (max <= old) throw new EconomyError('BID_TOO_LOW'); ledger.reserve(bidder, 'gold', max - old); maxes[bidder] = max; a.bids.push({ bidder, amount: a.current, ts: now }); return { leading: true, current: a.current };
+  }
+  if (max < minNextBid(a, incBps)) throw new EconomyError('BID_TOO_LOW');
+  ledger.reserve(bidder, 'gold', max);
+  const leader = a.bidder; const leaderMax = leader ? maxes[leader] ?? a.current : 0n;
+  let leading: boolean;
+  if (!leader) { a.bidder = bidder; a.current = a.start; maxes[bidder] = max; leading = true; }
+  else if (max > leaderMax) { ledger.release(leader, 'gold', leaderMax); delete maxes[leader]; a.bidder = bidder; maxes[bidder] = max; a.current = minB(max, leaderMax + inc(leaderMax)); leading = true; }
+  else { ledger.release(bidder, 'gold', max); a.current = minB(leaderMax, max + inc(max)); leading = false; } // challenger immediately outbid by the leader's proxy
+  a.bids.push({ bidder: a.bidder!, amount: a.current, ts: now });
   if (a.endsAt - now < antiSnipeMs) a.endsAt = now + antiSnipeMs;
+  return { leading, current: a.current };
 }
 /** Settle exactly once: winner pays from reservation, seller receives minus fee (sink). */
 export function settleAuction(ledger: Ledger, a: Auction, now: number, feeBps: number): 'sold' | 'expired' | null {
   if (a.status !== 'active' || now < a.endsAt) return null;
   if (!a.bidder) { a.status = 'expired'; return 'expired'; }
   const fee = feeOf(a.current, feeBps);
-  ledger.settleReserved(a.bidder, [{ to: a.seller, amount: a.current - fee }, { to: 'system:burn:auction_fee', amount: fee }], 'gold', 'auction_settle', `auction:${a.id}`);
+  const reservedMax = a.maxBids?.[a.bidder] ?? a.current; if (reservedMax > a.current) ledger.release(a.bidder, 'gold', reservedMax - a.current); // winner pays the second-price amount
+  ledger.settleReserved(a.bidder, [{ to: a.payTo ?? a.seller, amount: a.current - fee }, { to: 'system:burn:auction_fee', amount: fee }], 'gold', 'auction_settle', `auction:${a.id}`);
   a.status = 'sold'; return 'sold';
 }

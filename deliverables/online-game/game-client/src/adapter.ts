@@ -33,6 +33,7 @@ export class LocalAdapter implements Adapter {
   constructor(player: PlayerState, marketSave: any, opts: { dev: boolean }) {
     this.dev = opts.dev; this.ledger = player.wallet; this.svc = new PlayerService(player, new Rng(Date.now() & 0xffffff));
     this.marketSvc = new MarketService(this.ledger, new Rng(Date.now() ^ 0x5bd1e995)); this.marketSvc.load(marketSave);
+    this.marketSvc.onNewListing = (l) => { const w = this.svc.p.wishlist?.find((x) => x.defId === l.item.defId); if (w && Number(l.price) <= w.maxPrice && l.seller !== `p:${this.svc.p.id}`) this.world?.fx.push({ t: 'notice', msg: `Wishlist alert: ${l.item.defId.replace(/_/g, ' ')} listed at ${l.price}G (your limit ${w.maxPrice}G)`, to: this.myId }); };
     const map = MAPS[player.map] && !MAPS[player.map]!.instanced ? player.map : player.savedMap ?? 'emberglen';
     this.enter(map, MAPS[player.map]?.instanced ? undefined : { x: player.x, y: player.y });
     const off = this.svc.settleFarm(); if (off.minutes > 0) this.svc.note(`While you were away (${off.minutes} min) your farm pets gained ${off.exp} EXP each.`);
