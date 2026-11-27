@@ -337,6 +337,24 @@ await step('40 crafting queue UI, personal chat mute, fullscreen toggle', async 
   const fs = await page.evaluate(() => !!document.fullscreenElement); if (fs) await page.evaluate(() => document.exitFullscreen()); await close();
   return `craft queue add → collect; mute hides chat only from Juniper; fullscreen ${fs ? 'entered' : 'blocked by headless browser (button handled it)'}`;
 } catch (e) { throw new Error(`[${stage}] ${String(e.message).split('\n').slice(0, 3).join(' | ')}`); } });
+await step('41 Skill V4 window: tree, prerequisites, pending Undo/Confirm, Auto Allocate, gauge HUD', async () => {
+  let stage = 'open'; try {
+  await page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click())); await cmd('resetSkills', {});
+  const pts0 = await st('(a,p)=>p.skillPoints'); const rev0 = await st('(a,p)=>p.skillRev'); assert(pts0 > 5, `points ${pts0}`);
+  await page.keyboard.press('k'); await page.waitForSelector('.win.skwin .sk-tree'); await shot('41_skilltree');
+  const tabs = await page.$$eval('.skwin .sk-tab', (x) => x.length); const nodes = await page.$$eval('.skwin .sk-node', (x) => x.length); assert(tabs === 3 && nodes >= 6, `tabs ${tabs} nodes ${nodes}`);
+  const locked = await page.$$eval('.skwin .sk-node.locked', (x) => x.length); assert(locked >= 1, 'some nodes locked by prerequisites');
+  stage = 'plus'; await page.click('.skwin .sk-node.available button[aria-label^="+"]', { timeout: 5000 }); const pend1 = await page.textContent('.skwin .sk-confirm'); assert(/\(1\)/.test(pend1), `pending ${pend1}`);
+  assert((await st('(a,p)=>p.skillPoints')) === pts0, 'server unchanged before Confirm');
+  stage = 'undo'; await page.click('.skwin .sk-foot button:has-text("Undo")', { timeout: 5000 }); const pend0 = await page.textContent('.skwin .sk-confirm'); assert(/\(0\)/.test(pend0), `undo ${pend0}`);
+  stage = 'select'; await page.click('.skwin .sk-node.learned .sk-nm, .skwin .sk-node.available .sk-nm', { timeout: 5000 }); const cmpRows = await page.$$eval('.skwin .sk-cmp tr', (x) => x.length); assert(cmpRows >= 3, `compare rows ${cmpRows}`);
+  stage = 'auto'; await page.click('.skwin button:has-text("Auto Allocate")', { timeout: 5000 }); await page.waitForTimeout(100); const pendA = Number(/\((\d+)\)/.exec(await page.textContent('.skwin .sk-confirm'))[1]); assert(pendA > 0, 'auto allocate filled the draft');
+  await shot('41_skilltree_draft'); stage = 'confirm'; await page.click('.skwin .sk-confirm', { timeout: 5000 }); await page.waitForTimeout(300);
+  const pts1 = await st('(a,p)=>p.skillPoints'); const rev1 = await st('(a,p)=>p.skillRev'); assert(pts1 === pts0 - pendA && rev1 === rev0 + 1, `after confirm pts ${pts0}→${pts1} rev ${rev0}→${rev1}`);
+  const stale = await cmd('skillCommit', { draft: {}, rev: rev0 }); assert(!stale.ok && stale.err === 'STALE_REVISION', JSON.stringify(stale));
+  const g = await page.textContent('#hud .bar.gauge, .bar.gauge'); await page.keyboard.press('k');
+  return `${nodes} nodes in Ascension I, ${locked} locked; +1/Undo ok; Auto Allocate +${pendA} → confirmed (rev ${rev0}→${rev1}); stale revision rejected; HUD gauge "${(g ?? '').trim().slice(0, 30)}"`;
+  } catch (e) { await shot('41_fail'); throw new Error(`[${stage}] ${e.message.split('\n')[0]}`); } });
 await step('22 developer System Registry view', async () => { await page.keyboard.press('`'); await page.click('.win button.tab:has-text("System Registry")'); await page.waitForTimeout(200); await shot('22_registry'); const n = await page.$$eval('.reg .li', (x) => x.length); assert(n > 100, `rows ${n}`); await page.keyboard.press('Escape'); return `${n} registry rows`; });
 await step('23 save → reload → continue keeps progress', async () => { const lv = await st('(a,p)=>p.level'); const name = await st('(a,p)=>p.name'); const ok = await st('(a)=>a.save()'); assert(ok, 'saved'); await page.reload(); await page.click('text=Continue'); await page.click('.slot-card:has-text("' + name + '") button:has-text("Play")'); await page.waitForTimeout(800); const lv2 = await st('(a,p)=>p.level'); assert(lv2 === lv, `${lv} vs ${lv2}`); return `level ${lv} restored`; });
 await step('24 export save produces valid file', async () => { const s = await page.evaluate(() => window.__hb.a.exportSave()); const o = JSON.parse(s); assert(o.format === 'hearthbound-save', 'format'); return `${s.length} bytes`; });

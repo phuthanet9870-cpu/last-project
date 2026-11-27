@@ -303,6 +303,7 @@ const SKILL_GLYPH: Record<string, string[]> = {
   none: ['.....aa.....', '.....aa.....', '....awwa....', 'aaaawwwwaaaa', '.awwwwwwwwa.', '..awwwwwwa..', '..awwaawwa..', '.awwa..awwa.', '.aa......aa.', '............', '............', '............'],
 };
 export function skillIcon(vfx: string, color: string, passive = false): HTMLCanvasElement {
+  if (vfx === 'shot') vfx = 'arrow'; else if (vfx === 'summon') vfx = 'mark';
   return cached(`s_${vfx}_${color}_${passive}`, 16, 16, (x) => {
     p(x, 0, 0, 16, 16, '#1a1420'); p(x, 1, 1, 14, 14, shade(color, -0.6)); p(x, 1, 1, 14, 1, shade(color, -0.3));
     ascii(x, SKILL_GLYPH[passive ? 'none' : vfx] ?? SKILL_GLYPH.bolt!, { a: color, w: '#ffffff' }, 2, 2);

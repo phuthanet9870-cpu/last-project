@@ -287,7 +287,7 @@ export class World {
         if (s.knockback && !v.dead) this.knockback(v, a.x, a.y, s.knockback);
         if (s.knockdown && landed && !v.dead && !this.ccImmune(v)) applyStatus(v.effects, 'knockdown', a.id, 1200, 0, this.combatStats(v).ccResist);
       };
-      const projectile = s.target === 'enemy' && ['arrow', 'bolt', 'drain'].includes(s.vfx) && target && dist(a, target) > 70 && !s.chain;
+      const projectile = s.target === 'enemy' && ['arrow', 'bolt', 'drain', 'shot'].includes(s.vfx) && target && dist(a, target) > 70 && !s.chain;
       if (projectile) this.spawnProjectile(a, target!, { homing: true, speed: 520, color, kind: s.vfx, onHit: (v) => applyTo(v, 0) });
       else defenders.forEach((v, idx) => applyTo(v, idx));
     }

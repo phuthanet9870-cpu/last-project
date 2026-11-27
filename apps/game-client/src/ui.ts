@@ -1,5 +1,5 @@
 /** UI framework + HUD (§51–52). Plain DOM with a tiny h() helper; every button maps to a real command. */
-import { ALL_SKILLS, CLASSES, ITEMS, MAPS, MONSTERS, QUESTS, RARITY_COLOR, STATUSES, TITLES, playerStats, requiredExp, type ItemInstance, type PlayerState } from '@hb/game-core';
+import { phaseName, ALL_SKILLS, CLASSES, ITEMS, MAPS, MONSTERS, QUESTS, RARITY_COLOR, STATUSES, TITLES, playerStats, requiredExp, type ItemInstance, type PlayerState } from '@hb/game-core';
 import { characterSprite, itemIcon, skillIcon } from './art.js';
 import { lookOf } from './render.js';
 import type { Adapter, PubEntity } from './adapter.js';
@@ -48,12 +48,12 @@ export function hideTip() { if (tip) tip.style.display = 'none'; }
 // ---------------- windows ----------------
 export type Box = HTMLElement & { append: (...nodes: any[]) => void };
 function boxify(el: HTMLElement): Box { const orig = el.append.bind(el); (el as any).append = (...k: any[]) => orig(...k.flat(9).filter((x) => x !== null && x !== undefined && x !== false).map((x) => (x instanceof Node ? x : String(x)))); return el as Box; }
-export interface WinDef { id: string; title: string; render: (body: Box) => void; width?: number }
+export interface WinDef { id: string; title: string; render: (body: Box) => void; width?: number; cls?: string }
 const openWins = new Map<string, { el: HTMLElement; def: WinDef }>(); let layer: HTMLElement; let zTop = 10;
 export function openWindow(def: WinDef) {
   const ex = openWins.get(def.id); if (ex) { ex.def = def; renderWin(def.id); ex.el.style.zIndex = String(++zTop); return; }
   const body = boxify(h('div', { class: 'win-body' }));
-  const el = h('div', { class: 'win', style: { width: `${Math.min(def.width ?? 520, window.innerWidth - 16)}px`, zIndex: String(++zTop) }, role: 'dialog', 'aria-label': def.title },
+  const el = h('div', { class: `win ${def.cls ?? ''}`, style: { width: `${Math.min(def.width ?? 520, window.innerWidth - 16)}px`, zIndex: String(++zTop) }, role: 'dialog', 'aria-label': def.title },
     h('div', { class: 'win-title' }, h('span', {}, def.title), h('button', { class: 'x', 'aria-label': 'Close', onclick: () => closeWindow(def.id) }, '✕')), body);
   const n = openWins.size; el.style.left = `${Math.max(8, Math.min(window.innerWidth - (def.width ?? 520) - 8, 80 + n * 24))}px`; el.style.top = `${Math.max(8, 60 + n * 24)}px`;
   dragify(el, el.querySelector('.win-title') as HTMLElement); el.addEventListener('mousedown', () => { el.style.zIndex = String(++zTop); });
@@ -117,7 +117,7 @@ export function updateHud(refs: HudRefs, a: Adapter, target: PubEntity | null, f
   const d = playerStats(p).derived; const cls = CLASSES[p.classId]!;
   setBar(refs.hp, me.hp, me.mhp, '#e04848', `HP ${Math.ceil(me.hp)}/${me.mhp}`); setBar(refs.mp, me.mp, me.mmp, '#4878e0', `MP ${Math.floor(me.mp)}/${me.mmp}`);
   const req = p.level >= 120 ? 1 : requiredExp(p.level); setBar(refs.exp, p.level >= 120 ? 1 : p.exp, req, '#e0c040', p.level >= 120 ? `Mastery ${p.mastery}` : `EXP ${((p.exp / req) * 100).toFixed(1)}%`);
-  setBar(refs.gauge, me.g ?? 0, 100, '#c070ff', `${L(cls.gauge.name)} ${Math.floor(me.g ?? 0)}%`);
+  { const gd = cls.gauge.def; const gv = me.g ?? 0; const ph = phaseName(gd, gv); setBar(refs.gauge, ph ? (Math.floor(gv) % gd.max) + 1 : gv, gd.max, '#c070ff', `${L(cls.gauge.name)} ${ph ? L({ en: ph[0], th: ph[1] }) : `${Number.isInteger(gv) ? gv : gv.toFixed(1)}/${gd.max}`}`); }
   const key = `${p.name}|${p.level}|${p.classId}|${p.ascension}|${(me.fx ?? []).join(',')}|${a.bal('gold')}|${a.bal('crystal')}|${a.bal('crystal_free')}|${a.mapId}|${p.title}`;
   if (key !== lastHud) {
     lastHud = key; { const px = refs.portrait.getContext('2d')!; px.imageSmoothingEnabled = false; px.clearRect(0, 0, 40, 52); px.drawImage(characterSprite(lookOf(p.classId, p.appearance), 0, 0, 'idle'), 0, 0, 40, 52); } refs.name.innerHTML = `<b>${p.name}</b> <span class="dim">Lv ${p.level}${p.ascension ? ` ✦${p.ascension}` : ''} ${L(cls.name)}</span>`;

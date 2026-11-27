@@ -10,11 +10,12 @@ import { L, fmt, getLang, setLang, t } from './i18n.js';
 import { type Box, bar, bindTip, closeWindow, confirmDialog, h, iconEl, isOpen, itemIconEl, itemName, itemTooltip, objLabel, openWindow, refreshAll, renderWin, tabs, toast } from './ui.js';
 import type { Audio } from './audio.js';
 import { RADIO } from './audio.js';
+import { initSkillTree, openSkillTree } from './skilltree.js';
 import REGISTRY from './registry.json';
 
 export interface PanelCtx { a: Adapter; target: () => PubEntity | null; audio: Audio; settings: Record<string, any>; applySettings: () => void; exportSave: () => void; importSave: () => void; quit: () => void; setNight: (v: number | null) => void }
 let C: PanelCtx;
-export function initPanels(c: PanelCtx) { C = c; }
+export function initPanels(c: PanelCtx) { C = c; initSkillTree({ send: (cmd, args, okMsg) => act(cmd, args, okMsg), player: () => C.a.p, gauge: () => C.a.entities().find((e) => e.id === C.a.myId)?.g ?? 0 }); }
 export async function act(cmd: string, args: Record<string, any> = {}, okMsg?: string): Promise<Result> {
   const r = await C.a.send(cmd, args);
   if (!r.ok) { toast(prettyErr(r), 'err'); C.audio.play('ui'); } else if (okMsg) { toast(okMsg, 'ok'); C.audio.play('coin'); }
@@ -73,20 +74,7 @@ export function openInventory() { openWindow({ id: 'inv', title: `${t('inventory
 } }); }
 
 // ---------------- Skills ----------------
-export function openSkills() { openWindow({ id: 'skills', title: `${t('skills')} (K)`, width: 620, render: (b) => {
-  const p = C.a.p; const cls = CLASSES[p.classId]!;
-  b.append(h('div', { class: 'row' }, h('b', {}, `${L(cls.name)} — ${p.skillPoints} skill points`), btn('Reset skills (2,000G)', () => confirmDialog('Reset all skill ranks?', () => act('resetSkills', {}, 'Skills reset')))), h('p', { class: 'dim' }, 'Click a skill icon then press a hotbar number (or use Assign) to bind it. Gauge: ' + L(cls.gauge.effect)));
-  const list = h('div', { class: 'skills' });
-  for (const s of cls.skills) {
-    const rank = p.skillRanks[s.id] ?? 0; const can = p.level >= s.reqLevel + rank * 2 && rank < s.maxRank && p.skillPoints > 0;
-    const row = h('div', { class: `sk ${rank ? '' : 'locked'} ${sel.skill === s.id ? 'sel' : ''}`, onclick: () => { sel.skill = s.id; renderWin('skills'); } }, iconEl(skillIcon(s.vfx, cls.palette.trim, s.type === 'passive'), 32),
-      h('div', { class: 'skt' }, h('b', {}, `${L(s.name)} `), h('span', { class: 'dim' }, `${s.type} · Lv${s.reqLevel} · rank ${rank}/${s.maxRank}${s.type !== 'passive' ? ` · MP ${s.mp} · CD ${(s.cdMs / 1000).toFixed(1)}s · range ${s.range}` : ''}`), h('div', { class: 'dim small' }, L(s.desc))),
-      btn(rank ? 'Rank up' : 'Learn', () => act('learnSkill', { skill: s.id }), 'btn sm', !can));
-    list.append(row);
-  }
-  b.append(list);
-  if (sel.skill && ALL_SKILLS[sel.skill]?.type !== 'passive' && (p.skillRanks[sel.skill] ?? 0) > 0) b.append(h('div', { class: 'row' }, h('span', {}, 'Assign to slot: '), Array.from({ length: 8 }, (_, i) => btn(String(i + 1), () => act('hotbar', { i, id: sel.skill }), 'btn sm'))));
-} }); }
+export function openSkills() { openSkillTree(); }
 
 // ---------------- Quests ----------------
 export function openQuests() { openWindow({ id: 'quests', title: `${t('quests')} (J)`, width: 560, render: (b) => {

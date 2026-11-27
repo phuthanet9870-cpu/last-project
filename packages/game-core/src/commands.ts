@@ -11,7 +11,7 @@ import { EconomyError } from './economy.js';
 import { ITEMS, type Slot } from './items.js';
 import { TILE } from './mapgen.js';
 import { MarketService, guildCan, guildLevelExp } from './market.js';
-import { type PlayerService, type Result, walletId, npcQuests, playerCP } from './player.js';
+import { type PlayerService, type Result, walletId, npcQuests, playerCP , autoAllocateDraft } from './player.js';
 import { Rng, uid } from './rng.js';
 import { TCG_CARDS, STARTER_DECKS, aiChooseAction, applyAction, newMatch, viewFor, type TcgAction, type TcgState } from './tcg.js';
 import type { World } from './world.js';
@@ -284,7 +284,9 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
       case 'tcgcards': { const ids = Object.values(TCG_CARDS).filter((x) => x.rarity === (a.rarity ?? 'common') && !x.id.startsWith('tok_')).slice(0, 3).map((x) => x.id); for (const id of ids) s.p.tcg.collection[id] = (s.p.tcg.collection[id] ?? 0) + 3; return ok(ids); } // unbound test copies
       case 'item': if (!ITEMS[a.id]) return fail('UNKNOWN_ITEM'); s.addItem(a.id, Number(a.n) || 1, { rollOptions: true }); return ok();
       case 'materials': for (const id of ['refine_ore', 'refine_ore_hi', 'enchant_stone', 'ward_scroll', 'stone_dust', 'star_dust', 'gem_dust', 'iron_ore', 'oak_log', 'herb_green', 'herb_blue', 'slime_gel', 'berry', 'wheat', 'fish_carp', 'soft_fur', 'cloth', 'capture_net', 'pet_food', 'pet_egg', 'gacha_ticket', 'card_pack', 'boss_heart', 'wisp_dust', 'ember_core', 'pine_log', 'copper_ore', 'silver_ore', 'beetle_shell', 'fish_trout', 'frost_shard', 'herb_gold', 'tool_pickaxe', 'tool_rod', 'deco_lantern', 'deco_flowers', 'wedding_ring', 'gem_ruby_1', 'gem_sapphire_1', 'skill_stone']) s.addItem(id, ['tool_pickaxe', 'tool_rod', 'wedding_ring'].includes(id) ? 1 : 20); return ok();
-      case 'skills': for (const sk of CLASSES[s.p.classId]!.skills) s.p.skillRanks[sk.id] = Math.max(s.p.skillRanks[sk.id] ?? 0, 1); s.p.hotbar = CLASSES[s.p.classId]!.skills.filter((x) => x.type !== 'passive').slice(0, 8).map((x) => x.id); c.world.refreshPlayer(c.entityId); return ok();
+      case 'skills': { // dev: job level up to base level (max 70), then commit the class's first recommended build through the normal V4 rules
+        const cls = CLASSES[s.p.classId]!; s.p.jobLevel = Math.max(s.p.jobLevel, Math.min(70, s.p.level)); const d = autoAllocateDraft(s.p, cls.builds[0]!.seq); const r = s.commitSkills(d); if (!r.ok) return r;
+        const dmg = (x: { dmgType: string }) => (x.dmgType === 'phys' || x.dmgType === 'mag' ? 0 : 1); s.p.hotbar = cls.skills.filter((x) => x.type !== 'passive' && (s.p.skillRanks[x.id] ?? 0) > 0).sort((x, y) => dmg(x) - dmg(y)).slice(0, 8).map((x) => x.id); while (s.p.hotbar.length < 8) s.p.hotbar.push(null); c.world.refreshPlayer(c.entityId); return ok(); }
       case 'class': { const r = s.changeClass(String(a.id)); c.world.refreshPlayer(c.entityId); return r; }
       case 'spawn': { const m = c.world.spawnMonster(String(a.id), me.x + 80, me.y); m.ai!.homeX = m.x; m.ai!.homeY = m.y; return ok({ id: m.id }); }
       case 'boss': if (c.world.map.def.biome !== 'crater') return fail('GO_TO_CRATER'); c.world.spawnWorldBoss(a.id); return ok();
