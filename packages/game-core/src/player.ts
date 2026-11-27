@@ -12,7 +12,7 @@ import { Rng, uid } from './rng.js';
 import { combatPower, computeStats, zeroPrimary, type Modifier, type Primary, type StatResult } from './stats.js';
 import { STARTER_DECKS, TCG_CARDS, openPack, validateDeck } from './tcg.js';
 
-export interface PetInstance { uid: string; species: string; name: string; level: number; exp: number; stars: number; happiness: number; hunger: number; onFarm: boolean; skillLevel: number }
+export interface PetInstance { runes?: string[]; uid: string; species: string; name: string; level: number; exp: number; stars: number; happiness: number; hunger: number; onFarm: boolean; skillLevel: number }
 export interface Mail { id: string; from: string; subject: string; body: string; items: { itemId: string; qty: number }[]; gold: string; read: boolean; claimed: boolean; ts: number; expiresAt: number }
 export interface QuestProgress { id: string; progress: number[]; acceptedAt: number }
 export interface Appearance { body: 0 | 1; hair: number; hairColor: string; skin: string; eyes: string }
@@ -42,11 +42,16 @@ export interface PlayerState {
   guild: { id: string; name: string; role: 'leader' | 'officer' | 'member'; contribution: number; level: number; exp: number; storage: ItemInstance[]; log: string[] } | null;
   marriage: { partner: string; since: number; anniversary: number } | null;
   house: { furniture: { itemId: string; x: number; y: number; rot: number }[]; theme: number };
-  refinePity: Record<string, number>; settings: Record<string, any>; wallet: Ledger;
+  refinePity: Record<string, number>; settings: Record<string, any>; storageSlots?: number; wallet: Ledger;
   log: { ts: number; msg: string }[];
 }
 
 export type GameEvent = { type: string; [k: string]: any };
+/** Regional pet foods (§25): double effect for pets of these elements. */
+export const REGIONAL_FOOD: Record<string, string[]> = { food_forest: ['earth', 'wind'], food_hills: ['fire', 'neutral'], food_snow: ['ice', 'water'] };
+export const PET_RUNES = ['rune_fang', 'rune_shell', 'rune_wind'];
+export const GEM_REFINE_RATE = [100, 90, 80, 70, 60, 50, 40, 32, 25, 20]; // % success +0→+1 … +9→+10
+export const COSMETIC_MAX = 5;
 export interface Result<T = unknown> { ok: boolean; err?: string; msg?: string; data?: T }
 const ok = <T>(data?: T, msg?: string): Result<T> => ({ ok: true, data, msg });
 const fail = (err: string, msg?: string): Result<any> => ({ ok: false, err, msg: msg ?? err });
@@ -117,7 +122,7 @@ export function playerModifiers(p: PlayerState, extra: Modifier[] = []): Modifie
       mods.push({ ...m, value: m.value + bonus, source: src });
     }
     for (const o of it.options) mods.push({ ...o, source: `option:${slot}` });
-    it.sockets.forEach((g, i) => { if (g && it.refine >= CONFIG.gemSocketUnlock[i]!) for (const m of ITEMS[g]?.stats ?? []) mods.push({ ...m, source: `gem:${slot}` }); });
+    it.sockets.forEach((g, i) => { if (g && it.refine >= CONFIG.gemSocketUnlock[i]!) for (const m of ITEMS[g]?.stats ?? []) mods.push({ ...m, value: Math.round(m.value * (1 + (it.gemRefine?.[i] ?? 0) * 0.1) * 10) / 10, source: `gem:${slot}` }); });
     for (const c of it.cards) if (c) for (const m of MONSTER_CARDS[c]?.mods ?? []) mods.push({ ...m, source: `card:${slot}` });
     if (def.setId) setCounts[def.setId] = (setCounts[def.setId] ?? 0) + 1;
   }
@@ -127,6 +132,7 @@ export function playerModifiers(p: PlayerState, extra: Modifier[] = []): Modifie
   for (const [sid, rank] of Object.entries(p.skillRanks)) { const s = ALL_SKILLS[sid]; if (s?.type === 'passive' && rank > 0) for (const m of s.passive ?? []) mods.push({ ...m, value: m.value * rank, source: `passive:${sid}` }); }
   const pet = p.pets.find((x) => x.uid === p.activePet);
   if (pet) for (const m of PETS[pet.species]?.ownerBonus ?? []) mods.push({ ...m, value: m.value * (1 + pet.stars * 0.25), source: `pet:${pet.species}` });
+  if (pet?.runes?.includes('rune_shell')) mods.push({ stat: 'def', kind: 'pct', value: 3, source: 'pet_rune:shell' });
   if (p.activeMount) { const md = MOUNTS[p.activeMount]; for (const m of md?.bonus ?? []) mods.push({ ...m, value: m.value * (1 + (p.mountLevels[p.activeMount] ?? 0) * 0.1), source: `mount:${p.activeMount}` }); if (p.riding && md) mods.push({ stat: 'moveSpeed', kind: 'flat', value: md.speed, source: 'riding' }); }
   if (p.title) for (const m of TITLES[p.title]?.mods ?? []) mods.push({ ...m, source: `title:${p.title}` });
   if (p.ascension > 0) mods.push({ stat: 'maxHp', kind: 'pct', value: p.ascension * 5, source: 'ascension' }, { stat: 'atk', kind: 'pct', value: p.ascension * 4, source: 'ascension' }, { stat: 'matk', kind: 'pct', value: p.ascension * 4, source: 'ascension' });
@@ -203,10 +209,11 @@ export class PlayerService {
     if (d.type === 'gem') this.addItem('gem_dust', 2 * tier); else if (d.type === 'skill_stone') this.addItem('stone_dust', 5 + it.stone!.refine * 2); else { this.addItem('stone_dust', tier * 2); if (tier >= 3) this.addItem('refine_ore', tier - 2); }
     return ok();
   }
+  expandStorage(): Result { const cur = this.p.storageSlots ?? 120; if (cur >= 300) return fail('MAX'); const cost = 2000 + (cur - 120) * 150; if (!this.spend('gold', cost, 'storage_expand')) return fail('NOT_ENOUGH_GOLD', `Expansion costs ${cost}G`); this.p.storageSlots = cur + 20; return ok({ slots: this.p.storageSlots }); }
   storageMove(uidv: string, toStorage: boolean): Result {
     const from = toStorage ? this.p.inventory : this.p.storage, to = toStorage ? this.p.storage : this.p.inventory;
     const i = from.findIndex((x) => x.uid === uidv); if (i < 0) return fail('NOT_FOUND');
-    if (!toStorage && this.freeSlots() <= 0) return fail('INVENTORY_FULL'); if (toStorage && this.p.storage.length >= 120) return fail('STORAGE_FULL');
+    if (!toStorage && this.freeSlots() <= 0) return fail('INVENTORY_FULL'); if (toStorage && this.p.storage.length >= (this.p.storageSlots ?? 120)) return fail('STORAGE_FULL');
     to.push(from.splice(i, 1)[0]!); return ok();
   }
   useItem(uidv: string): Result<any> {
@@ -264,13 +271,13 @@ export class PlayerService {
     return { max: false, from: lvl, to: lvl + 1, chance: Math.min(100, base + (base < 100 ? pity : 0)), gold: CONFIG.refineGoldCost(lvl + 1), ore, oreQty: CONFIG.refineOreCost(lvl + 1),
       onFail: lvl + 1 <= 5 ? 'none' : lvl + 1 <= 10 ? 'materials lost' : lvl + 1 <= 15 ? `materials lost, ${Math.round(CONFIG.refineDowngradeChance11to15 * 100)}% chance −1` : 'materials lost, −1 unless protected', pity };
   }
-  refine(uidv: string, useProtection = false): Result<{ success: boolean; level: number; downgraded: boolean }> {
+  refine(uidv: string, useProtection = false, useBlessing = false): Result<{ success: boolean; level: number; downgraded: boolean }> {
     const it = this.findOwned(uidv); const pv = this.refinePreview(uidv); if (!it || !pv) return fail('NOT_FOUND'); if (pv.max) return fail('MAX_LEVEL');
     const d = ITEMS[it.defId]!; if (!['weapon', 'armor', 'accessory'].includes(d.type)) return fail('NOT_REFINABLE');
     if (this.gold() < BigInt(pv.gold)) return fail('NOT_ENOUGH_GOLD'); if (this.countItem(pv.ore) < pv.oreQty) return fail('NOT_ENOUGH_ORE', `Need ${pv.oreQty}× ${ITEMS[pv.ore]!.name.en}`);
-    if (useProtection && this.countItem('ward_scroll') < 1) return fail('NO_PROTECTION');
-    this.spend('gold', pv.gold, 'refine'); this.removeItem(pv.ore, pv.oreQty);
-    const success = this.rng.next() * 100 < pv.chance; let downgraded = false;
+    if (useProtection && this.countItem('ward_scroll') < 1) return fail('NO_PROTECTION'); if (useBlessing && this.countItem('blessing_scroll') < 1) return fail('NO_BLESSING');
+    this.spend('gold', pv.gold, 'refine'); this.removeItem(pv.ore, pv.oreQty); if (useBlessing) this.removeItem('blessing_scroll', 1);
+    const success = this.rng.next() * 100 < Math.min(100, pv.chance + (useBlessing ? 10 : 0)); let downgraded = false;
     if (success) { it.refine++; this.p.refinePity[uidv] = 0; this.bump('refine_success'); this.p.counters.max_refine = Math.max(this.p.counters.max_refine ?? 0, it.refine); if (it.refine >= 10) this.emit({ type: 'announce', msg: `${this.p.name} refined ${d.name.en} to +${it.refine}!` }); }
     else {
       this.p.refinePity[uidv] = (this.p.refinePity[uidv] ?? 0) + 1;
@@ -295,6 +302,20 @@ export class PlayerService {
   }
   unsocketGem(itemUid: string, idx: number): Result { const it = this.findOwned(itemUid); if (!it || !it.sockets[idx]) return fail('EMPTY'); if (!this.spend('gold', 500, 'gem_remove')) return fail('NOT_ENOUGH_GOLD'); const g = it.sockets[idx]!; it.sockets[idx] = null; this.addItem(g, 1); return ok(); }
   fuseGems(defId: string): Result { const m = /^gem_(\w+)_(\d)$/.exec(defId); if (!m || m[2] === '3') return fail('CANNOT_FUSE'); if (this.countItem(defId) < 3) return fail('NEED_3'); if (!this.spend('gold', 300 * Number(m[2]), 'gem_fuse')) return fail('NOT_ENOUGH_GOLD'); this.removeItem(defId, 3); this.addItem(`gem_${m[1]}_${Number(m[2]) + 1}`, 1); return ok(); }
+  /** Gem refining (§23): socketed gem +0–10, +10% of its stat per level; costs Gem Dust + Gold; failure keeps the level (no destruction). */
+  refineGem(itemUid: string, idx: number): Result<{ success: boolean; level: number }> {
+    const it = this.findOwned(itemUid); if (!it || !it.sockets[idx]) return fail('NO_GEM', 'No gem in that socket'); it.gemRefine ??= it.sockets.map(() => 0); while (it.gemRefine.length < it.sockets.length) it.gemRefine.push(0);
+    const lv = it.gemRefine[idx] ?? 0; if (lv >= 10) return fail('MAX_LEVEL'); const dust = 2 + lv * 2, gold = 300 * (lv + 1);
+    if (this.countItem('gem_dust') < dust) return fail('NEED_GEM_DUST', `Need ${dust} Gem Dust`); if (!this.spend('gold', gold, 'gem_refine')) return fail('NOT_ENOUGH_GOLD', `Need ${gold}G`);
+    this.removeItem('gem_dust', dust); const success = this.rng.next() * 100 < GEM_REFINE_RATE[lv]!; if (success) it.gemRefine[idx] = lv + 1; this.clampVitals(); return ok({ success, level: it.gemRefine[idx]! });
+  }
+  /** Cosmetic enhancement (§22): costumes/wings +0–5 using a duplicate costume or Star Dust; purely visual (aura), never adds stats. */
+  enhanceCosmetic(itemUid: string, fodderUid?: string): Result<{ level: number }> {
+    const it = this.findOwned(itemUid); if (!it || ITEMS[it.defId]!.type !== 'costume') return fail('NOT_COSMETIC'); const lv = it.cosmetic ?? 0; if (lv >= COSMETIC_MAX) return fail('MAX_LEVEL');
+    if (fodderUid) { const f = this.findInv(fodderUid); if (!f || f === it || f.defId !== it.defId || f.locked) return fail('NEED_DUPLICATE', 'Use an identical costume'); this.p.inventory.splice(this.p.inventory.indexOf(f), 1); }
+    else if (!this.removeItem('star_dust', 3 + lv * 2)) return fail('NEED_STAR_DUST', `Need ${3 + lv * 2} Star Dust (or a duplicate costume)`);
+    it.cosmetic = lv + 1; return ok({ level: it.cosmetic });
+  }
   // ---- random options / enchant ----
   enchant(itemUid: string, lockIdx: number[] = []): Result {
     const it = this.findOwned(itemUid); if (!it) return fail('NOT_FOUND'); const d = ITEMS[it.defId]!; if (!['weapon', 'armor', 'accessory'].includes(d.type)) return fail('INVALID');
@@ -309,7 +330,8 @@ export class PlayerService {
   insertCard(itemUid: string, cardId: string): Result {
     const it = this.findOwned(itemUid); if (!it) return fail('NOT_FOUND'); const c = MONSTER_CARDS[cardId]; if (!c || (this.p.monsterCards[cardId] ?? 0) < 1) return fail('NO_CARD');
     const t = ITEMS[it.defId]!.type; if (t !== c.slot) return fail('WRONG_SLOT', `Card fits ${c.slot}`);
-    const idx = it.cards.findIndex((x) => x === null); if (idx < 0) return fail('NO_CARD_SLOT');
+    while (it.cards.length < (it.refine >= 10 ? 2 : 1)) it.cards.push(null); // second card row unlocks at +10
+    const idx = it.cards.findIndex((x) => x === null); if (idx < 0) return fail('NO_CARD_SLOT', it.refine < 10 ? 'Second card slot unlocks at +10' : 'All card slots used');
     it.cards[idx] = cardId; this.p.monsterCards[cardId]!--; if (this.p.monsterCards[cardId]! <= 0) this.p.monsterCards[cardId] = 0; return ok();
   }
   // ---- skill stones (§15) ----
@@ -320,6 +342,8 @@ export class PlayerService {
     st.stone.skillId = skillId; st.stone.mods = this.rng.shuffle([...keys]).slice(0, 2).map((key) => ({ key, value: key === 'power' ? this.rng.int(5, 15) : key === 'cd' ? this.rng.int(5, 12) : key === 'mp' ? this.rng.int(5, 20) : this.rng.int(5, 20) }));
     return ok();
   }
+  /** Re-inscription (§15): keep the skill, reroll the two modifiers. */
+  reinscribeStone(stoneUid: string): Result { const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.locked) return fail('UNSLOT_FIRST', 'Unslot the stone first'); if (!this.removeItem('stone_dust', 5)) return fail('NEED_STONE_DUST', 'Need 5 Stone Dust'); if (!this.spend('gold', 500, 'stone_reinscribe')) { this.addItem('stone_dust', 5); return fail('NOT_ENOUGH_GOLD'); } const keys = ['power', 'cd', 'mp', 'radius'] as const; st.stone.mods = this.rng.shuffle([...keys]).slice(0, 2).map((key) => ({ key, value: key === 'power' ? this.rng.int(5, 15) : key === 'cd' ? this.rng.int(5, 12) : this.rng.int(5, 20) })); return ok({ mods: st.stone.mods }); }
   refineStone(stoneUid: string): Result { const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.refine >= 10) return fail('MAX'); if (this.countItem('stone_dust') < 5 + st.stone.refine * 3) return fail('NOT_ENOUGH_DUST'); this.removeItem('stone_dust', 5 + st.stone.refine * 3); if (this.rng.chance(Math.max(0.3, 1 - st.stone.refine * 0.07))) { st.stone.refine++; return ok({ success: true }); } return ok({ success: false }); }
   equippedStones(): ItemInstance[] { return this.p.inventory.filter((i) => i.stone?.skillId && i.locked); }
   /** Skill modified by rank + slotted (locked) skill stones; values clamped so no negative cost/cooldown. */
@@ -490,13 +514,15 @@ export class PlayerService {
   }
 
   // ---- crafting & gathering (§32) ----
-  craft(recipeId: string, times = 1): Result {
+  craft(recipeId: string, times = 1, focusStat?: string): Result {
     const r = RECIPES[recipeId]; if (!r || times < 1 || times > 50) return fail('INVALID');
     const prof = this.p.professions[r.profession] ?? { lvl: 1, exp: 0 }; if (prof.lvl < r.level) return fail('PROFESSION_LEVEL', `Requires ${r.profession} ${r.level}`);
     for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`);
     if (this.gold() < BigInt(r.gold * times)) return fail('NOT_ENOUGH_GOLD'); if (this.slotsNeeded(r.output.itemId, r.output.qty * times) > this.freeSlots()) return fail('INVENTORY_FULL');
+    const outDef = ITEMS[r.output.itemId]!; const focus = focusStat ? OPTION_POOL.find((o) => o.stat === focusStat && o.slots.includes(outDef.type)) : undefined;
+    if (focusStat && !focus) return fail('INVALID_OPTION', 'That option cannot appear on this item'); if (focus && this.countItem('enchant_stone') < times) return fail('NEED_ENCHANT_STONE', 'Focused crafting needs 1 Enchant Stone per item');
     let made = 0;
-    for (let t = 0; t < times; t++) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }
+    for (let t = 0; t < times; t++) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { const got = this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); if (focus) { this.removeItem('enchant_stone', 1); const g = got[got.length - 1]; if (g) { g.options = [{ stat: focus.stat, kind: 'flat' as const, value: this.rng.int(Math.ceil((focus.min + focus.max) / 2), focus.max) }, ...g.options.filter((o) => o.stat !== focus.stat)].slice(0, 3); } } made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }
     this.p.professions[r.profession] = prof; this.bump('crafts', made); this.progressObjective('craft', '', made);
     return ok({ made, failed: times - made });
   }
@@ -530,9 +556,11 @@ export class PlayerService {
     this.p.eggs.splice(i, 1); const sp = this.rng.weighted(EGG_POOL).id; const pet = this.addPet(sp); this.progressObjective('hatch', '', 1); this.progressObjective('capture', '', 1); return ok(pet);
   }
   petGainExp(pet: PetInstance, n: number) { pet.exp += n; while (pet.level < 100 && pet.exp >= pet.level * pet.level * 40) { pet.exp -= pet.level * pet.level * 40; pet.level++; } }
-  feedPet(petUid: string, foodId = 'pet_food'): Result { const pet = this.p.pets.find((x) => x.uid === petUid); if (!pet) return fail('NOT_FOUND'); if (!this.removeItem(foodId, 1)) return fail('NO_FOOD'); const fine = foodId === 'pet_food_fine'; pet.hunger = Math.min(100, pet.hunger + (fine ? 40 : 20)); pet.happiness = Math.min(100, pet.happiness + (fine ? 15 : 5)); this.petGainExp(pet, fine ? 200 : 50); this.bump('pet_feeds'); return ok(); }
+  feedPet(petUid: string, foodId = 'pet_food'): Result<{ bonus: boolean }> { const pet = this.p.pets.find((x) => x.uid === petUid); if (!pet) return fail('NOT_FOUND'); if (ITEMS[foodId]?.type !== 'pet_food') return fail('NOT_FOOD'); if (!this.removeItem(foodId, 1)) return fail('NO_FOOD'); const fine = foodId === 'pet_food_fine'; const regional = REGIONAL_FOOD[foodId]; const el = PETS[pet.species]!.element; const bonus = !!regional && regional.includes(el); const k = bonus ? 2 : 1; pet.hunger = Math.min(100, pet.hunger + (fine || regional ? 40 : 20)); pet.happiness = Math.min(100, pet.happiness + (fine ? 15 : regional ? 8 : 5) * k); this.petGainExp(pet, (fine ? 200 : regional ? 100 : 50) * k); this.bump('pet_feeds'); return ok({ bonus }); }
+  /** Pet runes (§25): up to 2 per pet; removing returns the rune. */
+  petRune(petUid: string, runeId: string, remove = false): Result { const pet = this.p.pets.find((x) => x.uid === petUid); if (!pet) return fail('NOT_FOUND'); if (!PET_RUNES.includes(runeId)) return fail('INVALID_RUNE'); pet.runes ??= []; if (remove) { const i = pet.runes.indexOf(runeId); if (i < 0) return fail('NOT_SOCKETED'); if (this.freeSlots() <= 0) return fail('INVENTORY_FULL'); pet.runes.splice(i, 1); this.addItem(runeId, 1); this.clampVitals(); return ok(); } if (pet.runes.length >= 2) return fail('RUNE_SLOTS_FULL'); if (pet.runes.includes(runeId)) return fail('DUPLICATE_RUNE'); if (!this.removeItem(runeId, 1)) return fail('NO_RUNE'); pet.runes.push(runeId); this.clampVitals(); return ok(); }
   summonPet(petUid: string | null): Result { if (petUid === null) { this.p.activePet = null; return ok(); } const pet = this.p.pets.find((x) => x.uid === petUid); if (!pet) return fail('NOT_FOUND'); if (pet.onFarm) return fail('ON_FARM', 'Remove from farm first'); this.p.activePet = petUid; this.clampVitals(); return ok(); }
-  petStats(pet: PetInstance) { const s = PETS[pet.species]!; const m = (1 + pet.level * 0.12 * s.growth) * (1 + pet.stars * 0.2); return { hp: Math.floor(s.base.hp * m), atk: Math.floor(s.base.atk * m) }; }
+  petStats(pet: PetInstance) { const s = PETS[pet.species]!; const m = (1 + pet.level * 0.12 * s.growth) * (1 + pet.stars * 0.2); const r = pet.runes ?? []; return { hp: Math.floor(s.base.hp * m * (r.includes('rune_shell') ? 1.25 : 1)), atk: Math.floor(s.base.atk * m * (r.includes('rune_fang') ? 1.25 : 1)), cdMult: r.includes('rune_wind') ? 0.7 : 1 }; }
   starUpPet(petUid: string, fodderUid: string): Result { const pet = this.p.pets.find((x) => x.uid === petUid); const f = this.p.pets.find((x) => x.uid === fodderUid); if (!pet || !f || pet === f) return fail('INVALID'); if (f.species !== pet.species) return fail('SAME_SPECIES'); if (pet.stars >= 5) return fail('MAX_STARS'); if (this.p.activePet === f.uid) this.p.activePet = null; this.p.pets.splice(this.p.pets.indexOf(f), 1); pet.stars++; return ok(); }
   evolvePet(petUid: string): Result { const pet = this.p.pets.find((x) => x.uid === petUid); if (!pet) return fail('NOT_FOUND'); const next = PETS[pet.species]?.evolvesTo; if (!next) return fail('CANNOT_EVOLVE'); if (pet.level < 20) return fail('LEVEL_TOO_LOW', 'Pet must be level 20'); if (!this.removeItem('star_dust', 5) && !this.spend('gold', 5000, 'pet_evolve')) return fail('NEED_STAR_DUST'); pet.species = next; pet.name = PETS[next]!.name.en; return ok(); }
   releasePet(petUid: string): Result { const i = this.p.pets.findIndex((x) => x.uid === petUid); if (i < 0) return fail('NOT_FOUND'); const pet = this.p.pets[i]!; if (this.p.activePet === pet.uid) this.p.activePet = null; this.p.pets.splice(i, 1); this.addItem('star_dust', 1 + pet.stars); return ok(); }
@@ -559,7 +587,7 @@ export class PlayerService {
   rotateDecoration(i: number, inHouse: boolean): Result { const list = inHouse ? this.p.house.furniture : this.p.farm.decorations; const d = list[i]; if (!d) return fail('INVALID'); d.rot = (d.rot + 1) % 4; return ok(); }
 
   // ---- mounts (§27) ----
-  unlockMount(uidv: string): Result { const it = this.findInv(uidv); if (!it) return fail('NOT_FOUND'); const m = Object.values(MOUNTS).find((x) => x.key === it.defId); if (!m) return fail('INVALID'); it.qty--; if (it.qty <= 0) this.p.inventory.splice(this.p.inventory.indexOf(it), 1); if (this.p.mounts.includes(m.id)) { this.addItem('star_dust', 5); return ok({ duplicate: true }); } this.p.mounts.push(m.id); this.p.mountLevels[m.id] = 0; if (!this.p.activeMount) this.p.activeMount = m.id; this.checkAchievements(); this.note(`Mount unlocked: ${m.name.en}`); return ok(); }
+  unlockMount(uidv: string): Result { const it = this.findInv(uidv); if (!it) return fail('NOT_FOUND'); const m = Object.values(MOUNTS).find((x) => x.key === it.defId); if (!m) return fail('INVALID'); it.qty--; if (it.qty <= 0) this.p.inventory.splice(this.p.inventory.indexOf(it), 1); if (this.p.mounts.includes(m.id)) { this.earn('stable_seal', 10 + ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'].indexOf(m.rarity) * 10, 'duplicate_mount'); this.note('Duplicate mount converted to Stable Seals'); return ok({ duplicate: true }); } this.p.mounts.push(m.id); this.p.mountLevels[m.id] = 0; if (!this.p.activeMount) this.p.activeMount = m.id; this.checkAchievements(); this.note(`Mount unlocked: ${m.name.en}`); return ok(); }
   setMount(id: string | null): Result { if (id && !this.p.mounts.includes(id)) return fail('LOCKED'); this.p.activeMount = id; if (!id) this.p.riding = false; return ok(); }
   toggleRide(inCombat: boolean, mapAllows: boolean): Result { if (!this.p.activeMount) return fail('NO_MOUNT'); if (!this.p.riding && (inCombat || !mapAllows)) return fail('CANNOT_RIDE_HERE'); this.p.riding = !this.p.riding; return ok({ riding: this.p.riding }); }
   upgradeMount(id: string): Result { if (!this.p.mounts.includes(id)) return fail('LOCKED'); const lv = this.p.mountLevels[id] ?? 0; if (lv >= 10) return fail('MAX'); if (!this.removeItem('star_dust', 2 + lv)) return fail('NEED_STAR_DUST'); this.p.mountLevels[id] = lv + 1; return ok(); }

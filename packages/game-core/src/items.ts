@@ -17,7 +17,7 @@ export interface ItemDef {
 }
 export interface ItemInstance {
   uid: string; defId: string; qty: number; refine: number; options: Omit<Modifier, 'source'>[]; sockets: (string | null)[];
-  cards: (string | null)[]; stone?: { skillId: string | null; mods: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[]; refine: number }; locked: boolean; bound: boolean; durability: number;
+  cards: (string | null)[]; gemRefine?: number[]; cosmetic?: number; stone?: { skillId: string | null; mods: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[]; refine: number }; locked: boolean; bound: boolean; durability: number;
 }
 
 const D: ItemDef[] = [];
@@ -83,6 +83,13 @@ add({ id: 'food_soup', name: { en: 'Frost Soup', th: 'ซุปหิมะ' }, 
 add({ id: 'scroll_haste', name: { en: 'Swiftwind Scroll', th: 'ม้วนคัมภีร์ลมเร็ว' }, type: 'consumable', icon: 'scroll', color: '#e0f0e0', stack: 30, price: 60, rarity: 'uncommon', use: { status: 'haste', durationMs: 30000 } });
 add({ id: 'scroll_return', name: { en: 'Hearth Scroll', th: 'ม้วนกลับบ้าน' }, type: 'consumable', icon: 'scroll', color: '#ffc080', stack: 30, price: 25, use: { grant: 'teleport_town' } });
 add({ id: 'repair_kit', name: { en: 'Tinker Kit', th: 'ชุดซ่อมพกพา' }, type: 'consumable', icon: 'pickaxe', color: '#c0a070', stack: 20, price: 150, use: { grant: 'repair' }, desc: { en: 'Fully repairs all equipped gear.', th: 'ซ่อมอุปกรณ์ที่สวมใส่ทั้งหมด' } });
+add({ id: 'blessing_scroll', name: { en: 'Emberlight Blessing', th: 'คัมภีร์พรแสงถ่าน' }, type: 'protection', icon: 'scroll', color: '#ffd080', stack: 99, price: 800, rarity: 'rare', desc: { en: '+10% refine success for one attempt.', th: 'เพิ่มโอกาสตีบวกสำเร็จ 10% หนึ่งครั้ง' } });
+add({ id: 'food_forest', name: { en: 'Mossberry Kibble', th: 'อาหารเบอร์รีมอส' }, type: 'pet_food', icon: 'food', color: '#70c060', stack: 999, price: 25, rarity: 'uncommon', desc: { en: 'Whisperwood food: double effect for earth & wind pets.', th: 'อาหารป่ากระซิบ: ผลสองเท่ากับสัตว์ธาตุดินและลม' } });
+add({ id: 'food_hills', name: { en: 'Amber Jerky', th: 'เนื้อแห้งอำพัน' }, type: 'pet_food', icon: 'food', color: '#e0a040', stack: 999, price: 25, rarity: 'uncommon', desc: { en: 'Amber Hills food: double effect for fire & neutral pets.', th: 'อาหารเนินอำพัน: ผลสองเท่ากับสัตว์ธาตุไฟและกลาง' } });
+add({ id: 'food_snow', name: { en: 'Frostfish Bites', th: 'ปลาหิมะชิ้นเล็ก' }, type: 'pet_food', icon: 'food', color: '#a0e0ff', stack: 999, price: 25, rarity: 'uncommon', desc: { en: 'Frostmere food: double effect for ice & water pets.', th: 'อาหารฟรอสต์เมียร์: ผลสองเท่ากับสัตว์ธาตุน้ำแข็งและน้ำ' } });
+add({ id: 'rune_fang', name: { en: 'Fang Rune', th: 'รูนเขี้ยว' }, type: 'material', icon: 'stone', color: '#ff7060', stack: 50, price: 600, rarity: 'rare', desc: { en: 'Pet rune: +25% pet attack.', th: 'รูนสัตว์เลี้ยง: พลังโจมตีสัตว์เลี้ยง +25%' } });
+add({ id: 'rune_shell', name: { en: 'Shell Rune', th: 'รูนกระดอง' }, type: 'material', icon: 'stone', color: '#60a0ff', stack: 50, price: 600, rarity: 'rare', desc: { en: 'Pet rune: +25% pet HP and +3% owner DEF.', th: 'รูนสัตว์เลี้ยง: HP สัตว์ +25% และ DEF เจ้าของ +3%' } });
+add({ id: 'rune_wind', name: { en: 'Wind Rune', th: 'รูนลม' }, type: 'material', icon: 'stone', color: '#a0ffb0', stack: 50, price: 600, rarity: 'rare', desc: { en: 'Pet rune: pet skill cooldown −30%.', th: 'รูนสัตว์เลี้ยง: คูลดาวน์สกิลสัตว์ −30%' } });
 add({ id: 'exp_tome', name: { en: 'Tome of Insight', th: 'ตำราปัญญา' }, type: 'consumable', icon: 'book', color: '#ffe080', stack: 30, price: 500, rarity: 'rare', use: { exp: 2000 } });
 
 // ---- Materials (monster drops / gathering) ----

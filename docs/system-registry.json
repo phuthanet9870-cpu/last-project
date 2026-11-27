@@ -1,12 +1,12 @@
 {
- "generated": "2026-11-27T10:17:52.497Z",
+ "generated": "2026-11-27T13:30:10.726Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 295,
-  "PARTIAL": 89,
-  "NOT_STARTED": 89,
+  "COMPLETE": 308,
+  "PARTIAL": 86,
+  "NOT_STARTED": 78,
   "BLOCKED": 8,
-  "TESTING": 96,
+  "TESTING": 97,
   "SIMULATED": 4
  },
  "systems": [
@@ -710,8 +710,8 @@
    "id": "L088",
    "name": "Stone Re-inscription",
    "section": "Skills",
-   "status": "PARTIAL",
-   "evidence": "re-inscription not separate (inscribe once)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts re-inscription",
    "mode": "artifact+online"
   },
   {
@@ -1182,9 +1182,9 @@
    "id": "L147",
    "name": "Warehouse Expansion",
    "section": "Items",
-   "status": "NOT_STARTED",
-   "evidence": "warehouse expansion",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts (+20 up to 300)",
+   "mode": "artifact+online"
   },
   {
    "id": "L148",
@@ -1366,9 +1366,9 @@
    "id": "L170",
    "name": "Refine Blessing",
    "section": "Enhancement",
-   "status": "NOT_STARTED",
-   "evidence": "separate blessing item not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts blessing +10%",
+   "mode": "artifact+online"
   },
   {
    "id": "L171",
@@ -1414,9 +1414,9 @@
    "id": "L176",
    "name": "Crafting Option",
    "section": "Enhancement",
-   "status": "NOT_STARTED",
-   "evidence": "choose option when crafting",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts focused crafting; e2e: tests/e2e/artifact.e2e.mjs step 30",
+   "mode": "artifact+online"
   },
   {
    "id": "L177",
@@ -1446,9 +1446,9 @@
    "id": "L180",
    "name": "Gem Refining",
    "section": "Enhancement",
-   "status": "NOT_STARTED",
-   "evidence": "gem refine +0–10 (fusion only)",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts gem refine +0–10; e2e: tests/e2e/artifact.e2e.mjs step 30",
+   "mode": "artifact+online"
   },
   {
    "id": "L181",
@@ -1462,9 +1462,9 @@
    "id": "L182",
    "name": "Cosmetic Enhancement",
    "section": "Enhancement",
-   "status": "NOT_STARTED",
-   "evidence": "cosmetic enhancement",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts (no stat change); e2e: tests/e2e/artifact.e2e.mjs step 30",
+   "mode": "artifact+online"
   },
   {
    "id": "L183",
@@ -1494,8 +1494,8 @@
    "id": "L186",
    "name": "Card Slot / Row",
    "section": "Monster cards",
-   "status": "PARTIAL",
-   "evidence": "one card slot per gear piece; no rows",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts second card row at +10",
    "mode": "artifact+online"
   },
   {
@@ -1598,8 +1598,8 @@
    "id": "L199",
    "name": "Pet Passive Skill",
    "section": "Pets",
-   "status": "PARTIAL",
-   "evidence": "owner passive bonus per species; no rune/passive tree",
+   "status": "TESTING",
+   "evidence": "owner passive bonus per species + Shell Rune owner DEF",
    "mode": "artifact+online"
   },
   {
@@ -1614,9 +1614,9 @@
    "id": "L201",
    "name": "Regional Pet Food",
    "section": "Pets",
-   "status": "NOT_STARTED",
-   "evidence": "regional pet food",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 30",
+   "mode": "artifact+online"
   },
   {
    "id": "L202",
@@ -1630,9 +1630,9 @@
    "id": "L203",
    "name": "Pet Skill Rune",
    "section": "Pets",
-   "status": "NOT_STARTED",
-   "evidence": "pet skill runes",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 30",
+   "mode": "artifact+online"
   },
   {
    "id": "L204",
@@ -1718,9 +1718,9 @@
    "id": "L214",
    "name": "Friend Farm Visit",
    "section": "Pet farm",
-   "status": "NOT_STARTED",
-   "evidence": "friend farm visit (likes counter only)",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"visit a real friend\" ; e2e: tests/e2e/artifact.e2e.mjs step 30 (artifact: simulated friend farms)",
+   "mode": "artifact+online"
   },
   {
    "id": "L215",
@@ -1774,9 +1774,9 @@
    "id": "L221",
    "name": "Stable Seal Exchange",
    "section": "Mount",
-   "status": "NOT_STARTED",
-   "evidence": "stable seal exchange",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts duplicate → seals; seal shop",
+   "mode": "artifact+online"
   },
   {
    "id": "L222",
@@ -2246,9 +2246,9 @@
    "id": "L280",
    "name": "Crafting Option Selection",
    "section": "Life skills",
-   "status": "NOT_STARTED",
-   "evidence": "crafting option selection",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts focused crafting",
+   "mode": "artifact+online"
   },
   {
    "id": "L281",
@@ -2326,9 +2326,9 @@
    "id": "L290",
    "name": "Stable Seals",
    "section": "Economy",
-   "status": "NOT_STARTED",
-   "evidence": "stable seals",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
+   "mode": "artifact+online"
   },
   {
    "id": "L291",
@@ -4287,7 +4287,7 @@
    "name": "Random options, enchantment and gems",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "options/enchant/gems; no extraction/transfer, no gem refine",
+   "evidence": "options/enchant/gems incl. gem refine +0–10; no option extraction/transfer",
    "mode": "artifact+online"
   },
   {
@@ -4303,7 +4303,7 @@
    "name": "Pet system",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "capture/hatch/feed/star/evolve/release; no runes/breeding/equipment",
+   "evidence": "capture/hatch/feed (regional)/star/evolve/runes/release; no breeding/pet equipment",
    "mode": "artifact+online"
   },
   {

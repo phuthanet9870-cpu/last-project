@@ -89,6 +89,11 @@ await step('marriage requires the partner to accept', async () => {
   const acc = await B.cmd('marriageAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(400);
   assert(A.state.marriage?.partner === `Bo${tag}` && B.state.marriage?.partner === `Al${tag}`, 'both married'); assert(A.gold() <= g0, 'proposer paid'); return `gold ${g0}→${A.gold()}`;
 });
+await step('visit a real friend\'s farm and like it (persists to owner)', async () => {
+  const before = B.state.farm.likes; const v = await A.cmd('visitFarm', { name: `Bo${tag}` }); assert(v.ok, JSON.stringify(v)); await sleep(400); assert(A.mapId === 'pet_farm', A.mapId);
+  const l = await A.cmd('likeFarm'); assert(l.ok, JSON.stringify(l)); await sleep(300); assert(B.state.farm.likes === before + 1, `likes ${before}→${B.state.farm.likes}`); assert(!(await A.cmd('likeFarm')).ok, 'once per day');
+  await A.cmd('leaveInstance'); await sleep(300); return `owner likes ${before}→${B.state.farm.likes}`;
+});
 await step('Hearthcards PvP duel between the two players to completion', async () => {
   const ch = await A.cmd('tcgChallenge', { target: B.myId }); assert(ch.ok && ch.data.pending, JSON.stringify(ch)); const acc = await B.cmd('tcgAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(300);
   assert(A.tcg?.mode === 'pvp' && B.tcg?.mode === 'pvp', 'both in pvp view'); assert(typeof A.tcg.view.sides[1].hand === 'number', 'opponent hand hidden');

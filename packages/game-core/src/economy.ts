@@ -3,8 +3,8 @@
  * price-time-priority order book, auction state machine. Pure & deterministic; the online server
  * wraps these in PostgreSQL transactions, the artifact runs them locally.
  */
-export type Currency = 'gold' | 'crystal' | 'arena_token' | 'boss_coin' | 'card_dust' | 'star_dust' | 'guild_token' | 'event_token';
-export const CURRENCIES: Currency[] = ['gold', 'crystal', 'arena_token', 'boss_coin', 'card_dust', 'star_dust', 'guild_token', 'event_token'];
+export type Currency = 'gold' | 'crystal' | 'arena_token' | 'boss_coin' | 'card_dust' | 'star_dust' | 'guild_token' | 'event_token' | 'stable_seal';
+export const CURRENCIES: Currency[] = ['gold', 'crystal', 'arena_token', 'boss_coin', 'card_dust', 'star_dust', 'guild_token', 'event_token', 'stable_seal'];
 
 export interface LedgerEntry { txId: string; account: string; currency: Currency; amount: bigint; reason: string; ts: number }
 export interface WalletBalance { available: bigint; reserved: bigint }
