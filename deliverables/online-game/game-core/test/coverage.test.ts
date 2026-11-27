@@ -207,3 +207,58 @@ describe('gap closures (L007 L228 L319 L320 L353 L420 B14)', () => {
     const pk = svc.addItem('card_pack')[0]!; const c0 = calls; svc.openCardPack(pk.uid); expect(calls).toBeGreaterThan(c0);
   });
 });
+
+describe('market analytics, buy-now & announcements (L251 L298 L299 L300 L307 L322)', () => {
+  const two = () => { const A = mk(); const B = mk('dawn_priest'); B.p.wallet = A.p.wallet; B.p.id = 'buyer'; A.p.wallet.mint(`p:${B.p.id}`, 'gold', 10_000_000n, 't'); return { A, B, m: new MarketService(A.p.wallet) }; };
+  it('L307 buy-now settles an auction instantly: item to buyer, gold to seller (minus fee), any leading bid refunded', () => {
+    const { A, B, m } = two(); A.p.wallet.mint('p:third', 'gold', 10000n, 't'); const [it] = A.svc.addItem('frost_sword'); const au = m.createAuction(A.svc, it!.uid, 100n, 5000n, 3600_000);
+    m.bid({ p: { id: 'third' } } as any, au.id, 300n); const g0 = A.svc.gold(), c0 = m.collectable(A.p.accountId); m.buyNowAuction(B.svc, au.id);
+    expect(au.status).not.toBe('active'); expect(B.p.inventory.some((x) => x.defId === 'frost_sword') || B.p.mail.some((x) => x.items.some((i) => i.itemId === 'frost_sword'))).toBe(true);
+    expect(A.svc.gold() + m.collectable(A.p.accountId)).toBeGreaterThan(g0 + c0); expect(A.p.wallet.available('p:third', 'gold')).toBe(10000n); expect(A.p.wallet.verify().ok).toBe(true);
+  });
+  it('L298 best sellers rank items by recent sales; L299 the reference price follows the last sales', () => {
+    const { A, B, m } = two(); const before = m.refPrice('iron_sword');
+    for (let i = 0; i < 3; i++) { const [it] = A.svc.addItem('iron_sword'); const l = m.list(A.svc, it!.uid, 900n); m.buy(B.svc, l.id); } const [p2] = A.svc.addItem('frost_sword'); m.buy(B.svc, m.list(A.svc, p2!.uid, 100n).id);
+    const bs = m.bestSellers(24); expect(bs[0]!.defId).toBe('iron_sword'); expect(bs[0]!.sales).toBe(3); expect(m.refPrice('iron_sword')).toBe(900); expect(before).not.toBe(900);
+  });
+  it('L300 L322 exchange fills are recorded in history and aggregated into OHLC candles', () => {
+    const { A, m } = two(); const L = A.p.wallet; L.mint(`p:${A.p.id}`, 'gold', 100000n, 't'); L.mint('sim:mm', 'crystal', 100n, 't'); L.reserve('sim:mm', 'crystal', 20n); m.book.place({ id: 's1', owner: 'sim:mm', side: 'sell', price: 150n, qty: 10n, ts: 0 }); m.book.place({ id: 's2', owner: 'sim:mm', side: 'sell', price: 160n, qty: 10n, ts: 0 });
+    m.exchangePlace(A.svc, 'buy', 160n, 15n); expect(m.exchangeHistory.length).toBeGreaterThanOrEqual(2); const prices = m.exchangeHistory.map((x) => x.price); expect(prices).toContain(150); expect(prices).toContain(160);
+    const c = m.candles(60_000).at(-1)!; expect(c.l).toBe(150); expect(c.h).toBe(160); expect(c.v).toBe(15);
+  });
+  it('L251 a world boss spawn is announced to the whole map', () => {
+    const clock = { t: 1_800_000_000_000 }; const w = new World({ mapId: 'sunken_crater', rng: new Rng(5), bots: 0, now: () => clock.t }); w.addPlayer(mk().svc); w.drainFx(); w.spawnWorldBoss();
+    expect(w.drainFx().some((f) => f.t === 'notice' && /World Boss .* has appeared/.test(f.msg) && !(f as any).to)).toBe(true);
+  });
+});
+
+describe('partial closures (L065 S19 L269 S31 S21 S32 L026)', () => {
+  it('L065 rare+ party drops go through need/greed: a member who can equip it (need) beats greed; rolls are announced', () => {
+    const clock = { t: 1_800_000_000_000 }; const w = new World({ mapId: 'whisperwood', rng: new Rng(21), bots: 0, now: () => clock.t }); const a = mk('blade_sentinel'); const b = mk('dawn_priest'); b.p.id = 'pb2'; lvl(a.svc, 40); lvl(b.svc, 40);
+    const ea = w.addPlayer(a.svc, { x: 20 * TILE, y: 20 * TILE }); const eb = w.addPlayer(b.svc, { x: 20 * TILE + 60, y: 20 * TILE }); ea.partyId = eb.partyId = 'p'; w.parties.set('p', [ea.id, eb.id]);
+    const staff = Object.values(ITEMS).find((i) => i.type === 'weapon' && i.weapon && ['rare', 'epic'].includes(i.rarity) && CLASSES.dawn_priest!.weapons.includes(i.weapon) && !CLASSES.blade_sentinel!.weapons.includes(i.weapon) && (i.reqLevel ?? 0) <= 40)!;
+    let bWins = 0; for (let k = 0; k < 10; k++) { w.drainFx(); if (w.rollNeedGreed(staff.id, [ea.id, eb.id], ea.id) === eb.id) bWins++; } expect(bWins).toBe(10); // priest needs it every time
+    const fx = w.drainFx(); void fx; w.rollNeedGreed(staff.id, [ea.id, eb.id], ea.id); expect(w.drainFx().some((f) => f.t === 'notice' && /Roll for .*need.*greed|Roll for .*greed.*need/.test(f.msg))).toBe(true);
+    expect(w.rollNeedGreed('slime_gel', [ea.id, eb.id], ea.id)).toBe(ea.id); // common drops stay with the top contributor
+  });
+  it('L269 offline auto-play pays 30% rewards for time away (needs the setting, ≥5 min, capped at 8 h) and mails a summary', () => {
+    const { svc, p, clock } = mk(); lvl(svc, 30); svc.touchActive(); clock.t += 60 * 60_000; expect(svc.settleOfflineAuto().data!.minutes).toBe(0); // setting off
+    p.settings.offlineAuto = true; svc.touchActive(); clock.t += 2 * 60_000; expect(svc.settleOfflineAuto().data!.minutes).toBe(0); // under 5 min
+    clock.t += 24 * 3600_000; const g0 = svc.gold(); const r = svc.settleOfflineAuto(); expect(r.data!.minutes).toBe(480); expect(svc.gold() - g0).toBe(BigInt(r.data!.gold)); expect(r.data!.exp).toBeGreaterThan(0); expect(p.mail[0]!.subject).toMatch(/Offline adventure/);
+    expect(svc.settleOfflineAuto().data!.minutes).toBe(0); // no double pay
+  });
+  it('S21 equipment presets save the equipped set and restore it (reporting missing items)', () => {
+    const { svc, p } = mk(); lvl(svc, 12); const [w1] = svc.addItem('iron_sword'); expect(svc.equip(w1!.uid).ok).toBe(true); expect(svc.savePreset(0).ok).toBe(true); const [w2] = svc.addItem('iron_sword'); expect(svc.equip(w2!.uid).ok).toBe(true); expect(p.equipment.main!.uid).toBe(w2!.uid);
+    const r = svc.loadPreset(0); expect(r.ok).toBe(true); expect(p.equipment.main!.uid).toBe(w1!.uid); expect(svc.loadPreset(2).err).toBe('EMPTY');
+  });
+  it('S32 gathering tools wear out (2% per use) and break after 50 uses', () => {
+    const { svc } = mk(); svc.addItem('tool_pickaxe'); for (let i = 0; i < 49; i++) expect(svc.gather('ore', 1).ok).toBe(true); expect(svc.countItem('tool_pickaxe')).toBe(1); svc.gather('ore', 1); expect(svc.countItem('tool_pickaxe')).toBe(0); expect(svc.gather('ore', 1).err).toBe('NEED_TOOL');
+  });
+  it('L026 Lantern (mastery) milestones grant titles at 10/25/50', () => {
+    const { svc, p } = mk(); svc.masteryMilestone(10); svc.masteryMilestone(25); svc.masteryMilestone(11); expect(p.titles).toContain('title_lantern_10'); expect(p.titles).toContain('title_lantern_25'); expect(p.titles).not.toContain('title_lantern_50');
+  });
+  it('settings command only accepts whitelisted boolean flags', () => {
+    const { svc, p } = mk(); const w = new World({ mapId: 'emberglen', rng: new Rng(1), bots: 0 }); const e = w.addPlayer(svc); executeCommand(ctxFor(w, svc, e.id), 'settings', { settings: { offlineAuto: true, fastWedding: true, autoLoot: 'yes' } });
+    expect(p.settings.offlineAuto).toBe(true); expect(p.settings.fastWedding).toBeUndefined(); expect(p.settings.autoLoot).not.toBe('yes');
+  });
+});

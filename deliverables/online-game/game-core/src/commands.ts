@@ -72,7 +72,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   hotbar: (c, a) => c.svc.setHotbar(Number(a.i), a.id ?? null),
   ascend: (c) => c.svc.ascend(),
   setTitle: (c, a) => { const r = c.svc.setTitle(a.id ?? null); c.world.refreshPlayer(c.entityId); return r; },
-  settings: (c, a) => { Object.assign(c.svc.p.settings, a.settings ?? {}); return ok(); },
+  settings: (c, a) => { for (const k of ['autoLoot', 'offlineAuto'] as const) if (typeof a.settings?.[k] === 'boolean') c.svc.p.settings[k] = a.settings[k]; return ok(); }, // whitelist: clients cannot write arbitrary flags
   heal: (c) => { if (!near(c, 'healer')) return fail('NEED_HEALER'); const e = c.world.entities.get(c.entityId)!; e.hp = e.maxHp; e.mp = e.maxMp; e.effects = e.effects.filter((x) => !['poison', 'burn', 'bleed', 'curse'].includes(x.id)); return ok(); },
   // --- enhancement ---
   repair: (c) => (near(c, 'blacksmith') ? (() => { const r = c.svc.repairAll(); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_BLACKSMITH', 'Visit Brunhild the blacksmith, or use a Tinker Kit')),
@@ -151,6 +151,8 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   tcgChallenge: (c, a) => { const t = c.world.entities.get(String(a.target)); if (!t || t.kind !== 'bot') return fail('INVALID_TARGET', 'Select a player to challenge'); const r = COMMANDS.tcgStart!(c, { mode: 'casual' }); if (r.ok && c.session.tcg) c.session.tcg.oppName = `${t.name} [sim]`; return r; },
   friendsStatus: (c) => ok(c.svc.p.friends.map((f) => { const e = [...c.world.entities.values()].find((x) => (x.kind === 'bot' || x.kind === 'player') && x.name === f.name); return { name: f.name, online: !!e, map: e ? c.world.mapId : null, simulated: e?.kind === 'bot' }; })),
   tcgView: (c) => (c.session.tcg ? ok({ ...viewFor(c.session.tcg.state, 0), hint: c.session.tcg.mode === 'tutorial' ? tcgHint(c.session.tcg.state) : undefined }) : fail('NO_MATCH')),
+  presetSave: (c, a) => c.svc.savePreset(Number(a.i)),
+  presetLoad: (c, a) => { const r = c.svc.loadPreset(Number(a.i)); c.world.refreshPlayer(c.entityId); return r; },
   claimCardSet: (c, a) => c.svc.claimCardSet(String(a.element)),
   changeAppearance: (c, a) => { const r = c.svc.changeAppearance(a.appearance ?? {}); if (r.ok) c.world.refreshPlayer(c.entityId); return r; },
   exchangeInstant: (c, a) => wrapEco(() => { const r = c.market.exchangeInstant(c.svc, a.side === 'sell' ? 'sell' : 'buy', big(a.qty)); return { filled: String(r.filled), avgPrice: String(r.avgPrice), cancelled: String(r.cancelled) }; }),

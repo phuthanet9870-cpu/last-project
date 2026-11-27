@@ -324,6 +324,14 @@ export class World {
     else if (t.kind === 'bot') { this.checkArena(); }
     else if (t.kind === 'pet' || t.kind === 'summon') { /* returns later */ }
   }
+  /** Need/greed (§19): rare+ drops are rolled among party members who earned the kill. "Need" = can equip it (slot + class weapon); need beats greed, then the higher roll (1–100). Lower drops stay with the top contributor. */
+  rollNeedGreed(itemId: string, party: string[], fallback: string): string {
+    const d = ITEMS[itemId]; if (!d || !['rare', 'epic', 'legendary', 'mythic'].includes(d.rarity)) return fallback;
+    const rolls = party.map((pid) => { const svc = this.services.get(pid)!; const need = !!d.slot && (d.type !== 'weapon' || !d.weapon || CLASSES[svc.p.classId]!.weapons.includes(d.weapon)) && svc.p.level >= (d.reqLevel ?? 0); return { pid, need, roll: this.rng.int(1, 100) }; });
+    rolls.sort((a, b) => (a.need === b.need ? b.roll - a.roll : a.need ? -1 : 1)); const win = rolls[0]!;
+    const msg = `Roll for ${d.name.en}: ${rolls.map((r) => `${this.entities.get(r.pid)?.name ?? '?'} ${r.roll} (${r.need ? 'need' : 'greed'})`).join(', ')} → ${this.entities.get(win.pid)?.name ?? '?'}`;
+    for (const r of rolls) this.fx.push({ t: 'notice', msg, to: r.pid }); return win.pid;
+  }
   private onMonsterDeath(t: Entity, killer: Entity) {
     const def = MONSTERS[t.defId!]!;
     // reward attribution: everyone who dealt damage (players) gets EXP share; loot ownership to top contributor (party-aware)
@@ -343,7 +351,7 @@ export class World {
       svc.onKill(def.id, def.level, Math.floor(def.baseExp * share * partyBonus), 0, [], this.eventMult, `${this.instanceId}:${t.id}:${t.deadAt}`);
       if (isTop) {
         svc.earn('gold', gold, 'monster');
-        if (drops.length) { const bag: Entity = this.baseEntity(eid('l'), 'loot', t.x + this.rng.int(-6, 6), t.y + this.rng.int(-6, 6), 'Loot', 0, { loot: drops.map((d) => ({ ...d, owner: id, until: this.now() + 30000 })), expiresAt: this.now() + 90000 }); this.entities.set(bag.id, bag); }
+        if (drops.length) { const party = [...recipients].filter((r) => this.services.has(r)); const bag: Entity = this.baseEntity(eid('l'), 'loot', t.x + this.rng.int(-6, 6), t.y + this.rng.int(-6, 6), 'Loot', 0, { loot: drops.map((d) => ({ ...d, owner: party.length > 1 ? this.rollNeedGreed(d.itemId, party, id) : id, until: this.now() + 30000 })), expiresAt: this.now() + 90000 }); this.entities.set(bag.id, bag); }
         this.fx.push({ t: 'notice', msg: `+${gold} Gold`, to: id });
       }
       if (svc.p.level > before) { const pe = this.entities.get(id)!; this.refreshPlayer(id); pe.hp = pe.maxHp; pe.mp = pe.maxMp; this.fx.push({ t: 'level', id, level: svc.p.level }); }

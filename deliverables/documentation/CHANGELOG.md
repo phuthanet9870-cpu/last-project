@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0 — 2026-11-27 — Registry gap pass 2
+- New: need/greed rolls for rare+ party drops (need = can equip; rolls announced), offline auto-play (opt-in, 30% EXP/Gold, 5 min–8 h, mailed summary), 3 equipment presets, gathering tool durability (breaks after 50 uses), Lantern Level titles at 10/25/50.
+- Fix (found by test): auto-battle never collected loot for ranged classes (pick-up radius 40px); it now walks to nearby bags first.
+- Fix (security hardening): the `settings` command copied arbitrary client keys into player settings; now whitelisted booleans only.
+- Tests: coverage suite +10 (market analytics, buy-now, exchange history/candles, world-boss announcement, new systems); E2E step 39 (Forge refine reveal, presets, offline setting, auto-loot, login event reminder). Raid E2E flake root-caused (test targeted summons; party wiped) and fixed.
+- Registry: COMPLETE 472 → 485, TESTING 11 → 2, PARTIAL 56 → 52. Unit 120, E2E 39/39, multiplayer 29/29.
+
 ## 0.13.0 — 2026-11-27 — Registry gap pass
 - New coverage test suite (`packages/game-core/test/coverage.test.ts`, 36 tests) plus E2E steps 37–38: 90 systems that were implemented but untested (TESTING) now have tests that assert their behaviour. The 11 remaining TESTING systems have no such assertion yet and stay TESTING.
 - Fix (found by test): level milestone mail (every 10 levels) was skipped when one EXP gain crossed several levels (raid/quest rewards). Every crossed milestone is now mailed.

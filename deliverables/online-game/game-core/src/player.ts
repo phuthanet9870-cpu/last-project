@@ -368,7 +368,7 @@ export class PlayerService {
     this.p.jobExp += Math.floor(gained * 0.6);
     while (this.p.jobLevel < 70 && this.p.jobExp >= requiredJobExp(this.p.jobLevel)) { this.p.jobExp -= requiredJobExp(this.p.jobLevel); this.p.jobLevel++; this.p.skillPoints++; }
     if (this.p.level >= capLvl) {
-      if (this.p.ascension >= CONFIG.ascensionTiers) { this.p.masteryExp += gained; while (this.p.mastery < CONFIG.extendedMasteryCap && this.p.masteryExp >= requiredMasteryExp(this.p.mastery)) { this.p.masteryExp -= requiredMasteryExp(this.p.mastery); this.p.mastery++; this.emit({ type: 'mastery', level: this.p.mastery }); } }
+      if (this.p.ascension >= CONFIG.ascensionTiers) { this.p.masteryExp += gained; while (this.p.mastery < CONFIG.extendedMasteryCap && this.p.masteryExp >= requiredMasteryExp(this.p.mastery)) { this.p.masteryExp -= requiredMasteryExp(this.p.mastery); this.p.mastery++; this.emit({ type: 'mastery', level: this.p.mastery }); this.masteryMilestone(this.p.mastery); } }
       return gained;
     }
     this.p.exp += gained;
@@ -482,6 +482,19 @@ export class PlayerService {
     this.p.marriage = { partner, since: this.now(), anniversary: 0, stage: 'married' }; if (!this.p.titles.includes('title_hearthbound')) this.p.titles.push('title_hearthbound'); this.addItem('costume_festival', 1); this.bump('weddings'); this.emit({ type: 'wedded', partner } as any); return true;
   }
   isMarried() { const m = this.p.marriage; return !!m && m.stage !== 'engaged'; }
+  /** Mastery (Lantern Level) milestones: titles + an aura cosmetic at 10/25/50. */
+  masteryMilestone(lv: number) { const t = ({ 10: 'title_lantern_10', 25: 'title_lantern_25', 50: 'title_lantern_50' } as Record<number, string>)[lv]; if (!t) return; if (!this.p.titles.includes(t)) this.p.titles.push(t); if (lv === 50) this.addItem('wings_fairy', 1); this.sendMail('Elder Rowan', `Lantern Level ${lv}`, 'Your lantern burns brighter. A new title awaits.', [], 0); }
+  /** Equipment presets: save the equipped set; loading re-equips whatever of it is still owned. */
+  savePreset(i: number): Result { if (!(i >= 0 && i < 3)) return fail('INVALID'); const ps = ((this.p as any).presets ??= [null, null, null]) as (Record<string, string> | null)[]; ps[i] = Object.fromEntries(Object.entries(this.p.equipment).filter(([, v]) => v).map(([k, v]) => [k, (v as ItemInstance).uid])); return ok(); }
+  loadPreset(i: number): Result<{ equipped: number; missing: number }> { const ps = (this.p as any).presets as (Record<string, string> | null)[] | undefined; const pr = ps?.[i]; if (!pr) return fail('EMPTY'); let equipped = 0, missing = 0; for (const uidv of Object.values(pr)) { if (Object.values(this.p.equipment).some((e) => e?.uid === uidv)) { equipped++; continue; } if (!this.findInv(uidv)) { missing++; continue; } if (this.equip(uidv).ok) equipped++; else missing++; } return ok({ equipped, missing }); }
+  /** Offline auto-play (§31): with the setting on, time away (≥5 min, capped 8 h) yields EXP and Gold at 30% of on-level grinding; mailed summary. */
+  settleOfflineAuto(): Result<{ minutes: number; exp: number; gold: number }> {
+    const now = this.now(); const last = (this.p as any).lastActiveAt as number | undefined; (this.p as any).lastActiveAt = now; if (!this.p.settings.offlineAuto || !last) return ok({ minutes: 0, exp: 0, gold: 0 });
+    const minutes = Math.min(8 * 60, Math.floor((now - last) / 60000)); if (minutes < 5) return ok({ minutes: 0, exp: 0, gold: 0 });
+    const exp = Math.floor(requiredExp(Math.min(this.p.level, CONFIG.levelCap)) / 240 * minutes * 0.3); const gold = Math.floor(this.p.level * 3 * minutes * 0.3);
+    this.gainExp(exp, 'offline_auto'); this.earn('gold', gold, 'offline_auto', `offline:${this.p.id}:${now}`); this.sendMail('Auto-play', `Offline adventure (${minutes} min)`, `While you were away: +${exp} EXP, +${gold} Gold (30% rate, max 8 h).`, [], 0); return ok({ minutes, exp, gold });
+  }
+  touchActive() { (this.p as any).lastActiveAt = this.now(); }
   hasMembership(id: string) { const m = this.p.memberships?.[id]; return !!m && (m.until === null || m.until > this.now()); }
   /** Memberships (§47): simulated Crystal only; time-limited ones extend when bought again; no auto-renewal. */
   buyMembership(id: string): Result<{ until: number | null }> {
@@ -589,6 +602,7 @@ export class PlayerService {
   gather(type: 'ore' | 'tree' | 'herb' | 'fish', tier: number): Result<{ itemId: string; qty: number }> {
     const tool = { ore: 'tool_pickaxe', tree: 'tool_axe', herb: 'tool_sickle', fish: 'tool_rod' }[type];
     if (this.countItem(tool) < 1) return fail('NEED_TOOL', `Need a ${ITEMS[tool]!.name.en}`);
+    const ti = this.p.inventory.find((x) => x.defId === tool)!; ti.durability = (ti.durability ?? 100) - 2; if (ti.durability <= 0) { this.removeItem(tool, 1); ti.durability = 100; this.note(`Your ${ITEMS[tool]!.name.en} broke!`); } // next tool in the stack starts fresh // tool durability: 50 uses
     const g = this.p.gathering[type];
     const tables = { ore: [['copper_ore', 'iron_ore', 'refine_ore'], ['iron_ore', 'silver_ore', 'refine_ore'], ['silver_ore', 'star_ore', 'refine_ore_hi']], tree: [['oak_log', 'oak_log', 'pine_log'], ['oak_log', 'pine_log', 'moon_log'], ['pine_log', 'moon_log', 'moon_log']], herb: [['herb_green', 'herb_blue', 'berry'], ['herb_green', 'herb_blue', 'herb_gold'], ['herb_blue', 'herb_gold', 'wheat']], fish: [['fish_carp', 'fish_carp', 'fish_trout'], ['fish_carp', 'fish_trout', 'fish_koi'], ['fish_trout', 'fish_koi', 'fish_koi']] }[type][Math.min(2, tier - 1)]!;
     const roll = this.rng.next() + g.lvl * 0.01; const itemId = roll > 0.92 ? tables[2]! : roll > 0.55 ? tables[1]! : tables[0]!;
