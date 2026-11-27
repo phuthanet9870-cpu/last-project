@@ -6,8 +6,8 @@ Reference site `lanternhearth.mendoka.com` is **not reachable from the build con
 ## Phase plan (spec §19) and status
 | Phase | Scope | Status |
 |---|---|---|
-| A | Audit + HB registry + reference matrix | in progress — skill system audited (below) |
-| B | P0 Skill V4: data model, 468 authored skills, tree/prereqs, job level/skill points, ascension (3 stages), pending/confirm/undo, gauges, combat integration, stones, hotbar 8 + normal attack, auto combat, GUI, 52 builds, migration | not started |
+| A | Audit + HB registry + reference matrix | in progress — skill system audited and reworked; full HB-001…133 registry still to do |
+| B | P0 Skill V4: data model, 468 authored skills, tree/prereqs, job level/skill points, ascension (3 stages), pending/confirm/undo, gauges, combat integration, stones, hotbar 8 + normal attack, auto combat, GUI, 52 builds, migration | **done in 0.15.0** — see docs/skills/SKILL_IMPLEMENTATION_STATUS.md (open: unique icons, per-class gauge assertions for 22 classes, drag gesture E2E, production migration approval) |
 | C | Dungeons (HB-036…045), pet farm (057…064), mastery (007), gems/cards/equipment (016…024) | not started |
 | D | World boss/arena/ranking/scheduler/social (046…056, 099…110) | not started |
 | E | Market/exchange/wallet/entitlements/payment sandbox (065…077, 087…098, 121…122) | not started |

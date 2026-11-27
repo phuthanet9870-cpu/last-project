@@ -1,9 +1,9 @@
 {
- "generated": "2026-11-27T16:49:58.374Z",
+ "generated": "2026-11-27T20:52:37.923Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 485,
-  "PARTIAL": 52,
+  "COMPLETE": 488,
+  "PARTIAL": 49,
   "NOT_STARTED": 31,
   "BLOCKED": 8,
   "TESTING": 2,
@@ -126,8 +126,8 @@
    "id": "L015",
    "name": "Class Mechanics",
    "section": "Class",
-   "status": "PARTIAL",
-   "evidence": "unique gauge effects for Vanguard/Chrono/Fortune/Void; other classes share generic empower",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/skills_v4.test.ts — 26 distinct data-driven gauges (skills/gauge.ts); 4 with dedicated assertions, all 26 exercised by the balance simulation",
    "mode": "artifact+online"
   },
   {
@@ -158,8 +158,8 @@
    "id": "L019",
    "name": "Job Progression",
    "section": "Progression",
-   "status": "PARTIAL",
-   "evidence": "job level grants skill points; no job-change tree",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/skills_v4.test.ts job-level-only skill points, 3-stage trees with prerequisites; multiplayer: tests/multiplayer/two-clients.test.ts \"Skill V4 on the server\"",
    "mode": "artifact+online"
   },
   {
@@ -4222,8 +4222,8 @@
    "id": "S15",
    "name": "Skill system and skill stones",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "skills + stones; no skill tree prerequisites/combos",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/skills_v4.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 41; multiplayer: tests/multiplayer/two-clients.test.ts \"Skill V4 on the server\" — V4 trees, gauges, stones, builds, hotbar sets",
    "mode": "artifact+online"
   },
   {

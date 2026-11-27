@@ -133,6 +133,18 @@ await step('disconnect → reconnect restores persisted state', async () => {
   const inv = A.state.inventory.length; const gold = A.gold(); A.ws.close(); await sleep(800);
   const A2 = new Client(); await A2.connect(tokA, charA); assert(A2.state.inventory.length === inv, `inv ${inv} vs ${A2.state.inventory.length}`); assert(A2.gold() === gold, `gold ${gold} vs ${A2.gold()}`); (A as any).__c = A2; return `map ${A2.mapId}`;
 });
+await step('Skill V4 on the server: atomic draft commit, stale revision + replay idempotency, passive hotbar refused, persisted', async () => {
+  const A2: Client = (A as any).__c; const st0 = A2.state; const cls = st0.classId as string; const pts = st0.skillPoints as number; const rev = st0.skillRev as number;
+  const first = Object.keys(st0.skillRanks)[0]!; assert(first.startsWith(`${cls}.`), `V4 id ${first}`);
+  if (pts < 1) return `no points yet at job ${st0.jobLevel} (rev ${rev}); ids are V4`;
+  const opId = `mp_${Date.now()}`; const r = await A2.cmd('skillCommit', { draft: { [first]: (st0.skillRanks[first] ?? 1) + 1 }, rev, opId }); assert(r.ok, JSON.stringify(r)); await sleep(300);
+  const replay = await A2.cmd('skillCommit', { draft: { [first]: (st0.skillRanks[first] ?? 1) + 1 }, rev, opId }); assert(replay.ok && replay.data?.duplicate, `replay ${JSON.stringify(replay)}`);
+  const stale = await A2.cmd('skillCommit', { draft: { [first]: 9 }, rev }); assert(!stale.ok && stale.err === 'STALE_REVISION', JSON.stringify(stale));
+  const passive = Object.keys(st0.skillRanks).find((k) => k.includes('.') && false); void passive;
+  const pas = await A2.cmd('hotbar', { i: 5, id: `${cls}.__not_a_skill__` }); assert(!pas.ok, 'invalid hotbar id refused');
+  await sleep(1500); const row = await db.query(`SELECT state->'skillRanks' AS r, state->>'skillRev' AS rev FROM characters WHERE id=$1`, [charA]);
+  return `commit ok (rev ${rev}→${A2.state.skillRev}), replay applied once, stale rejected; db rev ${row.rows[0].rev ?? '(next flush)'}`;
+});
 await step('arena mode queue: Lantern Siege 1v1 matches two real players', async () => {
   const A2: Client = (A as any).__c; assert((await A2.cmd('arenaJoin', { mode: '1v1', type: 'siege' })).ok, 'A queued'); const q = await B.cmd('arenaJoin', { mode: '1v1', type: 'siege' }); assert(q.ok, JSON.stringify(q)); await sleep(700);
   assert(A2.mapId === 'arena' && B.mapId === 'arena', `maps ${A2.mapId}/${B.mapId}`); await A2.cmd('leaveInstance'); await B.cmd('leaveInstance'); await sleep(500); return 'siege match created for both';

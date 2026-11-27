@@ -23,7 +23,7 @@ export function elementMultiplier(att: Element, def: Element): number {
 }
 
 export const CONFIG = {
-  version: '0.14.0-seed',
+  version: '0.15.0-seed',
   /** Wedding ceremony phase length (gathering → vows → rings → celebration). Server may override via WEDDING_PHASE_MS. */
   weddingPhaseMs: 12_000, weddingCost: 5000,
   /** Online world boss schedule (Asia/Bangkok). The artifact and tests use a short interval instead. */
