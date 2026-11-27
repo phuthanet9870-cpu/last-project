@@ -3,8 +3,8 @@ import { MAPS, NPCS, type MapDef } from './content.js';
 import { Rng } from './rng.js';
 
 export const TILE = 32;
-export enum T { Grass, DarkGrass, Path, Water, Sand, Snow, Stone, Wall, Wood, Plaza, Soil, Ice, Cliff, DeepWater, Bridge, Lava, Ruin, Ash, Coral }
-export const BLOCKING_TILES = new Set([T.Water, T.Wall, T.Cliff, T.DeepWater, T.Lava]);
+export enum T { Grass, DarkGrass, Path, Water, Sand, Snow, Stone, Wall, Wood, Plaza, Soil, Ice, Cliff, DeepWater, Bridge, Lava, Ruin, Ash, Coral, Cloud, Void, Rift }
+export const BLOCKING_TILES = new Set([T.Water, T.Wall, T.Cliff, T.DeepWater, T.Lava, T.Void]);
 export type ObjKind = 'tree' | 'pine' | 'snowpine' | 'rock' | 'bush' | 'flower' | 'house' | 'fence' | 'lamp' | 'well' | 'crystal' | 'pillar' | 'stall' | 'banner' | 'crop' | 'mushroom' | 'stump' | 'torch' | 'bed' | 'table' | 'shelf' | 'rug' | 'carpet' | 'arch' | 'bench';
 export interface MapObj { kind: ObjKind; x: number; y: number; w: number; h: number; blocks: boolean; variant: number }
 export interface ResourceNode { id: string; type: 'ore' | 'tree' | 'herb' | 'fish'; x: number; y: number; tier: number }
@@ -36,7 +36,7 @@ function generate(def: MapDef): GenMap {
   const set = (x: number, y: number, t: T) => { if (x >= 0 && y >= 0 && x < w && y < h) tiles[y * w + x] = t; };
   const get = (x: number, y: number) => tiles[y * w + x] as T;
   const n1 = noise(def.seed * 7 + 1, w, h, 7), n2 = noise(def.seed * 13 + 5, w, h, 4);
-  const base: Record<string, T> = { town: T.Grass, forest: T.DarkGrass, hills: T.Grass, snow: T.Snow, cave: T.Stone, arena: T.Sand, farm: T.Grass, house: T.Wood, crater: T.Sand, plaza: T.Grass, coast: T.Sand, ruins: T.Ruin, volcano: T.Ash };
+  const base: Record<string, T> = { town: T.Grass, forest: T.DarkGrass, hills: T.Grass, snow: T.Snow, cave: T.Stone, arena: T.Sand, farm: T.Grass, house: T.Wood, crater: T.Sand, plaza: T.Grass, coast: T.Sand, ruins: T.Ruin, volcano: T.Ash, sky: T.Cloud, rift: T.Rift };
   tiles.fill(base[def.biome]!);
   // biome terrain
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -48,6 +48,8 @@ function generate(def: MapDef): GenMap {
     if (def.biome === 'coast') { if (x > w * 0.72 + Math.sin(y / 4) * 2) set(x, y, x > w * 0.8 + Math.sin(y / 4) * 2 ? T.DeepWater : T.Water); else if (v > 0.74) set(x, y, T.Coral); }
     if (def.biome === 'ruins') { if (v > 0.7) set(x, y, T.Grass); else if (v2 < 0.14) set(x, y, T.Stone); else if (v > 0.66 && v2 > 0.8) set(x, y, T.Cliff); }
     if (def.biome === 'volcano') { if (v > 0.76 && x > 3 && y > 3 && x < w - 4 && y < h - 4) set(x, y, T.Lava); else if (v2 < 0.18) set(x, y, T.Stone); }
+    if (def.biome === 'sky') { if (v > 0.72 && x > 3 && y > 3 && x < w - 4 && y < h - 4) set(x, y, T.Void); }
+    if (def.biome === 'rift') { if (v > 0.74 && x > 3 && y > 3 && x < w - 4 && y < h - 4) set(x, y, T.Void); else if (v2 < 0.15) set(x, y, T.Stone); }
     if (def.biome === 'cave') { if (v > 0.7 && x > 2 && y > 2 && x < w - 3 && y < h - 3) set(x, y, T.Wall); }
   }
   // river (forest/town/farm/snow)
@@ -124,7 +126,8 @@ function generate(def: MapDef): GenMap {
     cave: [['pillar', 0.03, true], ['crystal', 0.02, true], ['mushroom', 0.02, false]],
     crater: [['rock', 0.03, true], ['crystal', 0.015, true]],
     farm: [['tree', 0.03, true], ['flower', 0.08, false]], arena: [['pillar', 0.01, true]], house: [], plaza: [],
-    coast: [['rock', 0.02, true], ['bush', 0.015, true], ['flower', 0.02, false]], ruins: [['pillar', 0.035, true], ['rock', 0.02, true], ['bush', 0.02, true], ['flower', 0.02, false]], volcano: [['rock', 0.04, true], ['crystal', 0.012, true], ['stump', 0.01, true]],
+    coast: [['rock', 0.02, true], ['bush', 0.015, true], ['flower', 0.02, false]], sky: [['bush', 0.015, true], ['flower', 0.03, false], ['crystal', 0.006, true]], rift: [['crystal', 0.03, true], ['pillar', 0.015, true], ['rock', 0.015, true]],
+    ruins: [['pillar', 0.035, true], ['rock', 0.02, true], ['bush', 0.02, true], ['flower', 0.02, false]], volcano: [['rock', 0.04, true], ['crystal', 0.012, true], ['stump', 0.01, true]],
   };
   for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++) {
     for (const [kind, p, b] of dens[def.biome]!) {

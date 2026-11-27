@@ -61,6 +61,11 @@ export class LocalAdapter implements Adapter {
     const me = this.world.addPlayer(this.svc, pos);
     if (!def.instanced) this.svc.p.savedMap = mapId;
     if (pid && carried.length) { me.partyId = pid; carried.forEach((b, i) => { b.x = pos.x + 30 * (i + 1); b.y = pos.y + 10; b.path = undefined; b.targetId = null; b.dead = false; b.hp = b.maxHp; b.partyId = pid; this.world.entities.set(b.id, b); }); this.world.parties.set(pid, [me.id, ...carried.map((b) => b.id)]); }
+    if (opts.dungeon && DUNGEONS[opts.dungeon]?.raid) { // artifact raid: fill the group to raidMax with SIMULATED allies (labelled ·sim); online raids are real players
+      const p2 = me.partyId ?? `party_raid_${Date.now()}`; const list = this.world.parties.get(p2) ?? [me.id]; me.partyId = p2; this.world.raidParties.add(p2);
+      while (list.length < CONFIG.raidMax) { const b = this.world.spawnBot(); b.level = this.svc.p.level; b.maxHp = b.hp = Math.floor(me.maxHp * (0.7 + Math.random() * 0.3)); b.x = pos.x + 24 * ((list.length % 4) - 2); b.y = pos.y - 20 * Math.floor(list.length / 4); b.partyId = p2; list.push(b.id); }
+      this.world.parties.set(p2, list);
+    }
     if (opts.dungeon) this.world.startDungeon(opts.dungeon, `run_${Date.now()}`, [me.id]);
     if (opts.arena) {
       const [size, type] = opts.arena.split(':'); const n = Number(size?.[0]) || 1; const lvl = this.svc.p.level; const mk = () => { const b = this.world.spawnBot(); b.level = lvl; b.maxHp = b.hp = Math.floor(me.maxHp * (0.8 + Math.random() * 0.3)); b.botProfile!.aggressive = true; return b.id; };

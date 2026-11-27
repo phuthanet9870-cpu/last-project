@@ -32,6 +32,7 @@ const TIERS: { key: string; en: string; th: string; lvl: number; r: Rarity; mul:
   { key: 'frost', en: 'Frostsilver', th: 'เงินน้ำแข็ง', lvl: 35, r: 'epic', mul: 6, color: '#a0e0ff' },
   { key: 'dawn', en: 'Dawnsteel', th: 'เหล็กรุ่งอรุณ', lvl: 55, r: 'legendary', mul: 9, color: '#ffe080' },
   { key: 'astral', en: 'Astral', th: 'ดารา', lvl: 80, r: 'mythic', mul: 14, color: '#ff80c0' },
+  { key: 'origin', en: 'Primordial', th: 'ปฐมกาล', lvl: 100, r: 'mythic', mul: 20, color: '#ff6040' },
 ];
 const WEAPONS: { w: WeaponType; en: string; th: string; atk: number; matk: number; extra: [StatKey, number][] }[] = [
   { w: 'sword', en: 'Sword', th: 'ดาบ', atk: 12, matk: 0, extra: [['def', 2]] },
@@ -103,6 +104,7 @@ const MATS: [string, string, string, string, string, Rarity?][] = [
   ['herb_green', 'Greenleaf', 'ใบเขียว', 'herb', '#50c050'], ['herb_blue', 'Bluebell', 'ระฆังฟ้า', 'herb', '#5080e0'], ['herb_gold', 'Sunpetal', 'กลีบสุริยา', 'herb', '#f0d040', 'uncommon'],
   ['fish_carp', 'River Carp', 'ปลาตะเพียน', 'fish', '#c0a060'], ['fish_trout', 'Silver Trout', 'ปลาเทราต์', 'fish', '#c0d0e0'], ['fish_koi', 'Lantern Koi', 'ปลาคาร์ปโคมไฟ', 'fish', '#ff8040', 'rare'],
   ['berry', 'Wild Berry', 'เบอร์รีป่า', 'berry', '#c03060'], ['wheat', 'Wheat', 'ข้าวสาลี', 'wheat', '#e0c060'], ['cloth', 'Linen Cloth', 'ผ้าลินิน', 'cloth', '#e0e0d0'],
+  ['sky_feather', 'Skyreach Feather', 'ขนนกเวหา', 'feather', '#e0f0ff', 'rare'], ['void_essence', 'Void Essence', 'แก่นความว่างเปล่า', 'dust', '#8040c0', 'epic'], ['flame_relic', 'Relic of the First Flame', 'วัตถุโบราณแห่งเปลวแรก', 'crystal', '#ff5020', 'mythic'],
   ['coral_shard', 'Coral Shard', 'เศษปะการัง', 'crystal', '#ff9a8a', 'uncommon'], ['brine_pearl', 'Brine Pearl', 'ไข่มุกน้ำเค็ม', 'gem', '#e0f0ff', 'rare'], ['star_fragment', 'Star Fragment', 'เศษดาว', 'crystal', '#d0c0ff', 'rare'], ['magma_core', 'Magma Core', 'แกนแมกมา', 'ore', '#ff6020', 'epic'],
   ['refine_ore', 'Lumen Ore', 'แร่ลูเมน', 'ore', '#80ffe0', 'uncommon'], ['refine_ore_hi', 'Radiant Ore', 'แร่เปล่งประกาย', 'ore', '#ffff80', 'rare'], ['stone_dust', 'Stone Dust', 'ผงศิลา', 'dust', '#b0a090'], ['star_dust', 'Star Dust', 'ผงดาว', 'dust', '#ffe0ff', 'uncommon'],
   ['card_dust', 'Card Dust', 'ผงการ์ด', 'dust', '#80c0ff'], ['gem_dust', 'Gem Dust', 'ผงอัญมณี', 'dust', '#ff80ff'],

@@ -23,7 +23,7 @@ export function elementMultiplier(att: Element, def: Element): number {
 }
 
 export const CONFIG = {
-  version: '0.10.0-seed',
+  version: '0.11.0-seed',
   /** Wedding ceremony phase length (gathering → vows → rings → celebration). Server may override via WEDDING_PHASE_MS. */
   weddingPhaseMs: 12_000, weddingCost: 5000,
   levelCap: 120,
@@ -57,7 +57,7 @@ export const CONFIG = {
   feederBaseSlots: 4, feederMaxSlots: 20,
   farmMaxAccumulationMs: 12 * 3600_000,
   farmExpPerMinute: 4,
-  partyMax: 6,
+  partyMax: 6, raidMax: 8, // a party converted to a raid group (partyRaid) holds up to raidMax
   inventoryBaseSlots: 60,
   gachaPity: 50,
   gachaRates: [ { rarity: 'mythic', weight: 0.6 }, { rarity: 'legendary', weight: 2.4 }, { rarity: 'epic', weight: 12 }, { rarity: 'rare', weight: 35 }, { rarity: 'uncommon', weight: 50 } ],
