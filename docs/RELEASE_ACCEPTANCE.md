@@ -1,10 +1,10 @@
-# Release Acceptance — §69 gate review (v0.13.0-seed, 2026-11-27)
+# Release Acceptance — §69 gate review (v0.14.0-seed, 2026-11-27)
 
 **Verdict: NOT production-ready. GAME COMPLETE is not declared.** Several §69 gates fail or were not run. This file records the evidence for each gate and what would close it.
 
 | §69 gate | Status | Evidence / gap |
 |---|---|---|
-| All required system IDs COMPLETE with proof | **FAIL** | Registry (581 IDs): COMPLETE 472 · TESTING 11 (implemented, no dedicated test) · PARTIAL 56 · NOT_STARTED 31 · BLOCKED 8 · SIMULATED 3. See `docs/SYSTEM_REGISTRY.md`. |
+| All required system IDs COMPLETE with proof | **FAIL** | Registry (581 IDs): COMPLETE 485 · TESTING 2 (implemented, no dedicated test) · PARTIAL 52 · NOT_STARTED 31 · BLOCKED 8 · SIMULATED 3. See `docs/SYSTEM_REGISTRY.md`. |
 | Optional systems complete or explicitly deferred/disabled with approval | **PARTIAL** | Paid shop/top-up/payments are disabled by feature flag (BLOCKED: need a payment provider plus legal review). Creator program, Discord link, licensed lyrics and donor ranking are NOT_STARTED and have **not** been approved as deferred. |
 | No critical/high unresolved security or integrity issue | **PASS (internal review only)** | Found and fixed in this phase: IP spoofing via an unconditional `trustProxy` (could bypass the login rate limit). The ledger reconciles with 0 unbalanced transactions. Admin TOTP MFA, CSP/HSTS and the production config guard are in place. **No external penetration test or threat-model review.** |
 | Approved final assets and localization | **FAIL** | All art and audio are procedural placeholders (original, not production art). UI is Thai/English; content text is partly bilingual. Nothing has been approved. |
@@ -18,8 +18,8 @@
 
 ## Automated evidence in this release
 - **Type and lint:** typecheck 0 errors; lint 0 errors (3 warnings).
-- **Unit tests:** 110 (104 game-core incl. the coverage suite + 6 server security tests, including RFC 6238/4226 vectors).
-- **Artifact E2E:** 38/38 steps with real UI in headless Chromium, 0 browser errors.
+- **Unit tests:** 120 (114 game-core incl. the coverage suite + 6 server security tests, including RFC 6238/4226 vectors).
+- **Artifact E2E:** 39/39 steps with real UI in headless Chromium, 0 browser errors.
 - **Multiplayer integration:** 29/29 steps with real WebSocket clients, PostgreSQL and Redis. Covers:
   - auth, MFA and trade
   - market, PvP, guild/war, wedding and raid entry
@@ -51,5 +51,5 @@
    - deploy Prometheus/Alertmanager and log shipping
 4. Run a soak test (4–8 h with combat and economy activity) on production-sized hardware. Measure RTO on a production-size dump.
 5. Get an external security review/pen test, then a legal/privacy/payment review.
-6. Write dedicated tests for the 11 remaining TESTING systems and finish the 56 PARTIAL ones (see the registry evidence column).
+6. Write dedicated tests for the 2 remaining TESTING systems and finish the 52 PARTIAL ones (see the registry evidence column).
 7. Staging signoff, then explicit production authorization.

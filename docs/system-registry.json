@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-27T16:47:31.786Z",
+ "generated": "2026-11-27T16:49:58.077Z",
  "total": 581,
  "counts": {
   "COMPLETE": 485,
@@ -4647,7 +4647,7 @@
    "name": "Testing strategy",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "110 unit (incl. RFC 6238 vectors + coverage suite) + 38 E2E + 29 multiplayer + online browser + load (250 players) tests; no soak test, no external security test",
+   "evidence": "120 unit (incl. RFC 6238 vectors + coverage suite) + 39 E2E + 29 multiplayer + online browser + load (250 players) tests; no soak test, no external security test",
    "mode": "artifact+online"
   },
   {
