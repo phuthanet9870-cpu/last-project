@@ -5,7 +5,7 @@ import { Rng } from './rng.js';
 export const TILE = 32;
 export enum T { Grass, DarkGrass, Path, Water, Sand, Snow, Stone, Wall, Wood, Plaza, Soil, Ice, Cliff, DeepWater, Bridge }
 export const BLOCKING_TILES = new Set([T.Water, T.Wall, T.Cliff, T.DeepWater]);
-export type ObjKind = 'tree' | 'pine' | 'snowpine' | 'rock' | 'bush' | 'flower' | 'house' | 'fence' | 'lamp' | 'well' | 'crystal' | 'pillar' | 'stall' | 'banner' | 'crop' | 'mushroom' | 'stump' | 'torch' | 'bed' | 'table' | 'shelf' | 'rug';
+export type ObjKind = 'tree' | 'pine' | 'snowpine' | 'rock' | 'bush' | 'flower' | 'house' | 'fence' | 'lamp' | 'well' | 'crystal' | 'pillar' | 'stall' | 'banner' | 'crop' | 'mushroom' | 'stump' | 'torch' | 'bed' | 'table' | 'shelf' | 'rug' | 'carpet' | 'arch' | 'bench';
 export interface MapObj { kind: ObjKind; x: number; y: number; w: number; h: number; blocks: boolean; variant: number }
 export interface ResourceNode { id: string; type: 'ore' | 'tree' | 'herb' | 'fish'; x: number; y: number; tier: number }
 export interface GenMap { def: MapDef; w: number; h: number; tiles: Uint8Array; solid: Uint8Array; objects: MapObj[]; nodes: ResourceNode[]; spawnAreas: [number, number][] }
@@ -36,7 +36,7 @@ function generate(def: MapDef): GenMap {
   const set = (x: number, y: number, t: T) => { if (x >= 0 && y >= 0 && x < w && y < h) tiles[y * w + x] = t; };
   const get = (x: number, y: number) => tiles[y * w + x] as T;
   const n1 = noise(def.seed * 7 + 1, w, h, 7), n2 = noise(def.seed * 13 + 5, w, h, 4);
-  const base: Record<string, T> = { town: T.Grass, forest: T.DarkGrass, hills: T.Grass, snow: T.Snow, cave: T.Stone, arena: T.Sand, farm: T.Grass, house: T.Wood, crater: T.Sand };
+  const base: Record<string, T> = { town: T.Grass, forest: T.DarkGrass, hills: T.Grass, snow: T.Snow, cave: T.Stone, arena: T.Sand, farm: T.Grass, house: T.Wood, crater: T.Sand, plaza: T.Grass };
   tiles.fill(base[def.biome]!);
   // biome terrain
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -86,6 +86,14 @@ function generate(def: MapDef): GenMap {
   if (def.biome === 'house') {
     objects.push({ kind: 'bed', x: 2, y: 3, w: 2, h: 2, blocks: true, variant: 0 }, { kind: 'table', x: 9, y: 6, w: 2, h: 1, blocks: true, variant: 0 }, { kind: 'shelf', x: 15, y: 2, w: 3, h: 1, blocks: true, variant: 0 }, { kind: 'rug', x: 8, y: 9, w: 4, h: 3, blocks: false, variant: 0 });
   }
+  if (def.biome === 'plaza') { // wedding plaza: stone square, central aisle, benches, flower beds, arch over the altar
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) set(x, y, T.Plaza);
+    for (let y = 6; y < h - 1; y++) for (let x = 14; x <= 16; x++) objects.push({ kind: 'carpet', x, y, w: 1, h: 1, blocks: false, variant: x - 14 });
+    objects.push({ kind: 'arch', x: 13, y: 2, w: 5, h: 3, blocks: false, variant: 0 });
+    for (let y = 9; y <= 17; y += 2) for (const x of [9, 19]) { objects.push({ kind: 'bench', x, y, w: 2, h: 1, blocks: true, variant: 0 }); reserve(x, y, 2, 1); }
+    for (const [x, y] of [[3, 3], [26, 3], [3, 20], [26, 20], [11, 4], [19, 4]]) objects.push({ kind: 'lamp', x: x!, y: y!, w: 1, h: 1, blocks: true, variant: 0 });
+    for (let i = 0; i < 26; i++) { const x = i < 13 ? 2 + (i % 6) : 22 + (i % 6), y = 6 + Math.floor((i % 13) / 6) * 6 + (i % 3); objects.push({ kind: 'flower', x, y, w: 1, h: 1, blocks: false, variant: i % 4 }); }
+  }
   if (def.biome === 'cave') for (let i = 0; i < 10; i++) objects.push({ kind: 'torch', x: rng.int(3, w - 4), y: rng.int(3, h - 4), w: 1, h: 1, blocks: false, variant: 0 });
 
   // carve paths spawn↔portals & NPC positions so world is reachable
@@ -112,7 +120,7 @@ function generate(def: MapDef): GenMap {
     snow: [['snowpine', 0.1, true], ['rock', 0.03, true], ['crystal', 0.01, true]],
     cave: [['pillar', 0.03, true], ['crystal', 0.02, true], ['mushroom', 0.02, false]],
     crater: [['rock', 0.03, true], ['crystal', 0.015, true]],
-    farm: [['tree', 0.03, true], ['flower', 0.08, false]], arena: [['pillar', 0.01, true]], house: [],
+    farm: [['tree', 0.03, true], ['flower', 0.08, false]], arena: [['pillar', 0.01, true]], house: [], plaza: [],
   };
   for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++) {
     for (const [kind, p, b] of dens[def.biome]!) {

@@ -87,12 +87,20 @@ await step('friend presence: online for friends, location only when mutual', asy
   await A.cmd('friendAdd', { name: `Bo${tag}` }); let r = await A.cmd('friendsStatus'); const f1 = r.data.find((x: any) => x.name === `Bo${tag}`); assert(f1.online && f1.map === null && f1.mutual === false, JSON.stringify(f1));
   await B.cmd('friendAdd', { name: `Al${tag}` }); r = await A.cmd('friendsStatus'); const f2 = r.data.find((x: any) => x.name === `Bo${tag}`); assert(f2.online && f2.map === 'emberglen' && f2.mutual, JSON.stringify(f2)); return 'one-sided: online only; mutual: map visible';
 });
-await step('marriage requires the partner to accept', async () => {
+await step('engagement requires the partner to accept', async () => {
   await db.query(`UPDATE accounts SET role='admin' WHERE id=$1`, [accA]); const adm = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken; const gr = await api('/api/admin/grant', { charId: charA, what: 'gold', qty: 20000, reason: 'test: wedding funds' }, adm); assert(gr.status === 200, JSON.stringify(gr.j)); await sleep(200);
   await walkTo(A, 16 * 32 + 16, 17 * 32 + 16); const g0 = A.gold();
   const p = await A.cmd('propose', { name: `Bo${tag}` }); assert(p.ok && p.data.pending, JSON.stringify(p)); assert(!A.state.marriage, 'not married before acceptance');
   const acc = await B.cmd('marriageAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(400);
-  assert(A.state.marriage?.partner === `Bo${tag}` && B.state.marriage?.partner === `Al${tag}`, 'both married'); assert(A.gold() <= g0, 'proposer paid'); return `gold ${g0}→${A.gold()}`;
+  assert(A.state.marriage?.partner === `Bo${tag}` && B.state.marriage?.partner === `Al${tag}`, 'both engaged'); assert(A.state.marriage.stage === 'engaged' && B.state.marriage.stage === 'engaged', 'engaged, not yet married'); assert(A.gold() <= g0, 'proposer paid'); return `engaged; gold ${g0}→${A.gold()}`;
+});
+await step('wedding ceremony at the plaza: both partners present → phases → married (persisted)', async () => {
+  for (const c of [A, B]) { await walkTo(c, 28 * 32 + 16, 42 * 32 + 24); const r = await c.cmd('portal', { i: 3 }); assert(r.ok, `portal ${JSON.stringify(r)}`); } await sleep(400); assert(A.mapId === 'wedding_plaza' && B.mapId === 'wedding_plaza', `maps ${A.mapId}/${B.mapId}`);
+  const early = await A.cmd('weddingStart'); assert(!early.ok && early.err === 'BOTH_AT_ALTAR', JSON.stringify(early));
+  for (const c of [A, B]) await walkTo(c, 15 * 32 + 16, 8 * 32 + 16); const g0 = A.gold(); const s = await A.cmd('weddingStart'); assert(s.ok, JSON.stringify(s));
+  let st: any = null; for (let i = 0; i < 40; i++) { await sleep(250); st = (await B.cmd('weddingStatus')).data; if (st?.phase === 'celebration' || st?.phase === 'done') break; } assert(st && ['celebration', 'done'].includes(st.phase), JSON.stringify(st)); await sleep(300);
+  assert(A.state.marriage?.stage === 'married' && B.state.marriage?.stage === 'married', `stages ${A.state.marriage?.stage}/${B.state.marriage?.stage}`); assert(A.state.titles.includes('title_hearthbound'), 'title'); assert(A.gold() === g0 - 5000n, `cost ${g0}→${A.gold()}`);
+  for (const c of [A, B]) { await walkTo(c, 15 * 32 + 16, 22 * 32 + 24); const r = await c.cmd('portal', { i: 0 }); assert(r.ok, `exit ${JSON.stringify(r)}`); } await sleep(300); assert(A.mapId === 'emberglen', A.mapId); return `phases → ${st.phase}; both married; 5000G paid`;
 });
 await step('visit a real friend\'s farm and like it (persists to owner)', async () => {
   const before = B.state.farm.likes; const v = await A.cmd('visitFarm', { name: `Bo${tag}` }); assert(v.ok, JSON.stringify(v)); await sleep(400); assert(A.mapId === 'pet_farm', A.mapId);
@@ -155,6 +163,23 @@ await step('Hearthcards card trade (bound cards refused), rankings API kinds, we
   await db.query(`INSERT INTO weekly_champions(week,kind,character_id,name,value) VALUES ($1,'pvp',$2,$3,1) ON CONFLICT (week,kind) DO UPDATE SET character_id=EXCLUDED.character_id, awarded_at=now()`, [`test-${tag}`, charB, B.state.name]);
   let got = false; for (let i = 0; i < 30 && !got; i++) { await sleep(200); got = B.state.titles.includes('title_weekly'); } assert(got, 'champion title granted to B');
   return `card ${card} A→B for 50G; bound card refused; rankings ${sizes.join(' ')}; title_weekly → B`;
+});
+await step('guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds', async () => {
+  const A2: Client = (A as any).__c; const tok = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken;
+  for (const id of [charA, charB]) assert((await api('/api/admin/grant', { charId: id, what: 'gold', qty: 30000, reason: 'guild test funds' }, tok)).status === 200, 'gold'); await sleep(200);
+  for (const c of [A2, B]) if (c.state.guild) await c.cmd('guildLeave');
+  const gA = `Lan${tag}`.slice(0, 16), gB = `Ash${tag}`.slice(0, 16); assert((await A2.cmd('guildCreate', { name: gA })).ok, 'create A'); assert((await A2.cmd('guildInvite', { name: B.state.name })).ok, 'invite'); assert((await B.cmd('guildAccept')).ok, 'accept'); await sleep(200);
+  const it = B.state.inventory.find((i: any) => !i.bound && !i.locked); assert(it, 'B has a storable item'); const dep = await B.cmd('guildStorage', { deposit: true, uid: it.uid }); assert(dep.ok, JSON.stringify(dep)); await sleep(200); assert(!B.state.inventory.some((i: any) => i.uid === it.uid), 'left B bag');
+  const list = await A2.cmd('guildStorage', { list: true }); assert(list.ok && list.data.items.some((x: any) => x.item.uid === it.uid), 'A sees the shared item'); const sid = list.data.items.find((x: any) => x.item.uid === it.uid).id;
+  const deny = await B.cmd('guildStorage', { withdraw: true, id: sid }); assert(!deny.ok && deny.err === 'NO_PERMISSION', JSON.stringify(deny));
+  assert((await A2.cmd('guildPromote', { name: B.state.name, role: 'officer' })).ok, 'promote'); await sleep(200); assert(B.state.guild.role === 'officer', `role ${B.state.guild.role}`);
+  const wd = await B.cmd('guildStorage', { withdraw: true, id: sid }); assert(wd.ok, JSON.stringify(wd)); await sleep(200); assert(B.state.inventory.some((i: any) => i.uid === it.uid), 'back in B bag'); assert(!(await B.cmd('guildStorage', { withdraw: true, id: sid })).ok, 'double withdraw refused');
+  assert((await B.cmd('guildAnnounce', { text: 'Raid at 8 <b>pm</b>' })).ok, 'announce'); const info = await A2.cmd('guildInfo'); assert(info.data.guild.announcement === 'Raid at 8 pm', `sanitised: ${info.data.guild.announcement}`);
+  const lead = await A2.cmd('guildLeave'); assert(!lead.ok && lead.err === 'TRANSFER_FIRST', JSON.stringify(lead)); const logs = (await db.query('SELECT count(*) FROM guild_logs WHERE guild_id=$1', [A2.state.guild.id])).rows[0].count; assert(Number(logs) >= 4, `logs ${logs}`);
+  assert((await B.cmd('guildLeave')).ok, 'B leaves'); await sleep(200); assert(!B.state.guild, 'B guildless'); assert((await B.cmd('guildCreate', { name: gB })).ok, 'create B');
+  const ch = await A2.cmd('guildWarChallenge', { guild: gB }); assert(ch.ok, JSON.stringify(ch)); const acc = await B.cmd('guildWarAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(500); assert(A2.mapId === 'arena' && B.mapId === 'arena', `maps ${A2.mapId}/${B.mapId}`);
+  let row: any = null; for (let i = 0; i < 40; i++) { await sleep(250); row = (await db.query('SELECT winner, score FROM guild_wars WHERE match_id=$1', [acc.data.match])).rows[0]; if (row?.winner) break; } assert(row?.winner, `war settled ${JSON.stringify(row)}`);
+  await A2.cmd('leaveInstance'); await B.cmd('leaveInstance'); return `storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner ${row.winner === A2.state.guild?.id ? gA : gB} score ${JSON.stringify(row.score)}`;
 });
 const passed = results.filter((r) => r.ok).length; mkdirSync('tests/multiplayer', { recursive: true });
 writeFileSync('tests/multiplayer/last-run.json', JSON.stringify({ when: new Date().toISOString(), server: BASE, durationMs: Date.now() - t0, passed, total: results.length, results }, null, 2));

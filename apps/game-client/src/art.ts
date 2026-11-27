@@ -190,6 +190,10 @@ export function objectSprite(kind: string, variant: number, w: number, h: number
       case 'bed': p(x, 0, 2, 32, 28, o); p(x, 1, 3, 30, 26, '#8a5a30'); p(x, 3, 4, 26, 7, '#ffffff'); p(x, 3, 11, 26, 17, '#4a7ac0'); p(x, 3, 11, 26, 2, '#6a9ae0'); break;
       case 'table': p(x, 0, 2, 32, 12, o); p(x, 1, 3, 30, 8, '#a87850'); p(x, 2, 11, 3, 5, '#6a4424'); p(x, 27, 11, 3, 5, '#6a4424'); p(x, 12, 4, 6, 3, '#ffffff'); break;
       case 'shelf': p(x, 0, 0, 48, 16, o); p(x, 1, 1, 46, 14, '#7a5030'); for (let i = 3; i < 45; i += 4) p(x, i, 3, 3, 5, ['#c03030', '#3060c0', '#30a050', '#e0b030'][i % 4]!); p(x, 1, 8, 46, 1, '#5a3a20'); break;
+      case 'carpet': p(x, 0, 0, 16, 16, '#b02840'); p(x, variant === 0 ? 0 : variant === 2 ? 14 : 0, 0, variant === 1 ? 0 : 2, 16, '#ffd060'); if (variant === 1) p(x, 7, 0, 2, 16, '#c83a52'); break;
+      case 'arch': { const W = 80; for (let i = 0; i < W; i++) { const yy = Math.round(10 - Math.sin((i / (W - 1)) * Math.PI) * 10); p(x, i, yy, 1, 4, '#f0f0f0'); if (i % 6 === 0) p(x, i - 1, yy - 1, 3, 3, ['#ff90b0', '#ffffff', '#ffd0e0'][i % 3]!); }
+        p(x, 2, 10, 4, 38, '#f0f0f0'); p(x, W - 6, 10, 4, 38, '#f0f0f0'); for (let j = 12; j < 46; j += 5) { p(x, 0, j, 3, 3, '#ff90b0'); p(x, W - 3, j + 2, 3, 3, '#ffd0e0'); } break; }
+      case 'bench': p(x, 0, 6, 32, 5, o); p(x, 1, 7, 30, 3, '#c08850'); p(x, 0, 2, 32, 3, '#a87040'); p(x, 2, 11, 3, 5, '#6a4424'); p(x, 27, 11, 3, 5, '#6a4424'); break;
       case 'rug': p(x, 0, 0, 64, 48, '#a03a3a'); p(x, 4, 4, 56, 40, '#c05050'); p(x, 8, 8, 48, 32, '#e0b040'); p(x, 12, 12, 40, 24, '#c05050'); break;
       case 'house': {
         const roof = ['#b84a3a', '#3a6ab0', '#5a8a3a', '#8a4aa0'][variant]!; const W = w * 16, H = h * 16 + 16;

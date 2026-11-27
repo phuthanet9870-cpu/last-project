@@ -1,10 +1,10 @@
 {
- "generated": "2026-11-27T14:11:11.274Z",
+ "generated": "2026-11-27T14:31:10.540Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 359,
-  "PARTIAL": 74,
-  "NOT_STARTED": 36,
+  "COMPLETE": 366,
+  "PARTIAL": 70,
+  "NOT_STARTED": 33,
   "BLOCKED": 8,
   "TESTING": 101,
   "SIMULATED": 3
@@ -2710,16 +2710,16 @@
    "id": "L338",
    "name": "Guild",
    "section": "Social",
-   "status": "PARTIAL",
-   "evidence": "online: DB guild create/invite/accept/donate/info; artifact: single-player guild with storage/log",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"guild\"; e2e: tests/e2e/artifact.e2e.mjs step 34 — online: shared DB storage, ranks, announcement, transfer, disband, war; artifact: single-player guild + simulated rival war",
    "mode": "artifact+online"
   },
   {
    "id": "L339",
    "name": "Guild Membership",
    "section": "Social",
-   "status": "PARTIAL",
-   "evidence": "online membership via guild_members",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"guild\"",
    "mode": "artifact+online"
   },
   {
@@ -2759,39 +2759,39 @@
    "name": "Marriage Proposal",
    "section": "Social",
    "status": "COMPLETE",
-   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"marriage requires the partner to accept\" (artifact partner simulated)",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"engagement requires the partner to accept\" (artifact partner simulated)",
    "mode": "artifact+online"
   },
   {
    "id": "L345",
    "name": "Engagement",
    "section": "Social",
-   "status": "NOT_STARTED",
-   "evidence": "engagement stage",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; multiplayer: tests/multiplayer/two-clients.test.ts \"engagement requires the partner to accept\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L346",
    "name": "Wedding Ceremony",
    "section": "Social",
-   "status": "NOT_STARTED",
-   "evidence": "ceremony",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 34; multiplayer: tests/multiplayer/two-clients.test.ts \"wedding ceremony\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L347",
    "name": "Wedding Plaza",
    "section": "Social",
-   "status": "NOT_STARTED",
-   "evidence": "wedding plaza",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 34; multiplayer: tests/multiplayer/two-clients.test.ts \"wedding ceremony\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L348",
    "name": "Marriage Requirements",
    "section": "Social",
    "status": "COMPLETE",
-   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"marriage\": mutual friends, officiant, ring or 10,000G",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"engagement\": mutual friends, officiant, ring or 10,000G",
    "mode": "artifact+online"
   },
   {
@@ -2799,7 +2799,7 @@
    "name": "Marriage Status",
    "section": "Social",
    "status": "COMPLETE",
-   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"marriage\"",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"engagement\"",
    "mode": "artifact+online"
   },
   {
@@ -4422,16 +4422,16 @@
    "id": "S40",
    "name": "Party and guild",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "party real online; guild DB-backed basic",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"guild\"; e2e: tests/e2e/artifact.e2e.mjs step 34 — party online; guild: DB-backed shared storage, ranks, announcements, leadership transfer, guild war (real guild vs guild online; simulated rival in artifact)",
    "mode": "artifact+online"
   },
   {
    "id": "S41",
    "name": "Mail and marriage",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "mail + claim; marriage with consent online; no engagement/ceremony/plaza",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"wedding ceremony\"; e2e: tests/e2e/artifact.e2e.mjs step 34 — mail; consent engagement → plaza ceremony with phases and guests → marriage; couple teleport online",
    "mode": "artifact+online"
   },
   {

@@ -62,7 +62,7 @@ export const MONSTERS: Record<string, MonsterDef> = Object.fromEntries([
 export const WORLD_BOSS_ROTATION = ['wb_pyre', 'wb_tidal', 'wb_quarry', 'wb_squall', 'wb_rime', 'wb_aurora', 'wb_umbra'];
 
 // ---------------- Maps (§16) ----------------
-export type Biome = 'town' | 'forest' | 'hills' | 'snow' | 'cave' | 'arena' | 'farm' | 'house' | 'crater';
+export type Biome = 'town' | 'forest' | 'hills' | 'snow' | 'cave' | 'arena' | 'farm' | 'house' | 'crater' | 'plaza';
 export interface MapDef {
   id: string; name: L10n; biome: Biome; w: number; h: number; seed: number; safe: boolean; pvp: boolean; instanced: boolean; levelReq: number;
   spawn: [number, number]; portals: { x: number; y: number; to: string; tx: number; ty: number; label: L10n }[];
@@ -70,7 +70,7 @@ export interface MapDef {
 }
 export const MAPS: Record<string, MapDef> = Object.fromEntries(([
   { id: 'emberglen', name: { en: 'Emberglen Village', th: 'หมู่บ้านเอมเบอร์เกลน' }, biome: 'town', w: 56, h: 44, seed: 11, safe: true, pvp: false, instanced: false, levelReq: 1, spawn: [28, 24],
-    portals: [{ x: 54, y: 22, to: 'whisperwood', tx: 2, ty: 22, label: { en: 'Whisperwood', th: 'ป่ากระซิบ' } }, { x: 28, y: 1, to: 'amber_hills', tx: 30, ty: 46, label: { en: 'Amber Hills', th: 'เนินอำพัน' } }, { x: 1, y: 22, to: 'pet_farm', tx: 18, ty: 14, label: { en: 'Your Farm', th: 'ฟาร์มของคุณ' } }],
+    portals: [{ x: 54, y: 22, to: 'whisperwood', tx: 2, ty: 22, label: { en: 'Whisperwood', th: 'ป่ากระซิบ' } }, { x: 28, y: 1, to: 'amber_hills', tx: 30, ty: 46, label: { en: 'Amber Hills', th: 'เนินอำพัน' } }, { x: 1, y: 22, to: 'pet_farm', tx: 18, ty: 14, label: { en: 'Your Farm', th: 'ฟาร์มของคุณ' } }, { x: 28, y: 43, to: 'wedding_plaza', tx: 15, ty: 20, label: { en: 'Wedding Plaza', th: 'ลานวิวาห์' } }],
     monsters: [], npcs: ['elder_rowan', 'merchant_pip', 'smith_brunhild', 'enchanter_isolde', 'healer_mae', 'teleporter_quill', 'banker_oswin', 'petkeeper_luma', 'stablemaster_hale', 'guild_clerk', 'dungeon_warden', 'arena_master', 'duelist_kit', 'crafter_juno', 'broker_vance', 'event_host', 'officiant_sol', 'board_quest'], resources: [{ type: 'fish', count: 4 }], bgm: 'town', weather: ['clear', 'clear', 'rain', 'leaves'] },
   { id: 'whisperwood', name: { en: 'Whisperwood', th: 'ป่ากระซิบ' }, biome: 'forest', w: 70, h: 46, seed: 23, safe: false, pvp: false, instanced: false, levelReq: 1, spawn: [3, 22],
     portals: [{ x: 0, y: 22, to: 'emberglen', tx: 52, ty: 22, label: { en: 'Emberglen', th: 'เอมเบอร์เกลน' } }, { x: 68, y: 8, to: 'mossy_hollow', tx: 15, ty: 28, label: { en: 'Mossy Hollow (Dungeon)', th: 'โพรงมอส (ดันเจี้ยน)' } }],
@@ -92,12 +92,14 @@ export const MAPS: Record<string, MapDef> = Object.fromEntries(([
     portals: [], monsters: [], npcs: [], resources: [], bgm: 'boss', weather: ['clear'] },
   { id: 'pet_farm', name: { en: 'Cozy Farm', th: 'ฟาร์มแสนสุข' }, biome: 'farm', w: 36, h: 28, seed: 83, safe: true, pvp: false, instanced: true, levelReq: 1, spawn: [18, 14],
     portals: [{ x: 35, y: 14, to: 'emberglen', tx: 3, ty: 22, label: { en: 'Emberglen', th: 'เอมเบอร์เกลน' } }, { x: 18, y: 1, to: 'house', tx: 10, ty: 12, label: { en: 'Your House', th: 'บ้านของคุณ' } }], monsters: [], npcs: [], resources: [{ type: 'tree', count: 3 }, { type: 'herb', count: 4 }], bgm: 'farm', weather: ['clear', 'rain', 'leaves'] },
+  { id: 'wedding_plaza', name: { en: 'Blossom Wedding Plaza', th: 'ลานวิวาห์บุปผา' }, biome: 'plaza', w: 30, h: 24, seed: 97, safe: true, pvp: false, instanced: false, levelReq: 1, spawn: [15, 20],
+    portals: [{ x: 15, y: 23, to: 'emberglen', tx: 28, ty: 41, label: { en: 'Emberglen', th: 'เอมเบอร์เกลน' } }], monsters: [], npcs: [], resources: [], bgm: 'farm', weather: ['clear', 'leaves'] },
   { id: 'house', name: { en: 'Your House', th: 'บ้านของคุณ' }, biome: 'house', w: 20, h: 15, seed: 91, safe: true, pvp: false, instanced: true, levelReq: 1, spawn: [10, 12],
     portals: [{ x: 10, y: 14, to: 'pet_farm', tx: 18, ty: 3, label: { en: 'Farm', th: 'ฟาร์ม' } }], monsters: [], npcs: [], resources: [], bgm: 'farm', weather: ['clear'] },
 ] as MapDef[]).map((m) => [m.id, m]));
 
 // ---------------- NPCs (§18) ----------------
-export type NpcRole = 'quest' | 'shop' | 'blacksmith' | 'enchanter' | 'healer' | 'teleport' | 'storage' | 'pet' | 'mount' | 'guild' | 'dungeon' | 'arena' | 'card' | 'crafting' | 'exchange' | 'event' | 'marriage' | 'board';
+export type NpcRole = 'quest' | 'shop' | 'blacksmith' | 'enchanter' | 'healer' | 'teleport' | 'storage' | 'pet' | 'mount' | 'guild' | 'dungeon' | 'arena' | 'card' | 'crafting' | 'exchange' | 'event' | 'marriage' | 'board' | 'wedding';
 export interface NpcDef { id: string; name: L10n; title: L10n; roles: NpcRole[]; map: string; x: number; y: number; palette: [string, string, string]; lines: L10n[]; shop?: string }
 export const NPCS: Record<string, NpcDef> = Object.fromEntries(([
   ['elder_rowan', 'Elder Rowan', 'ผู้เฒ่าโรวัน', 'Village Elder', 'ผู้ใหญ่บ้าน', ['quest'], 'emberglen', 26, 20, ['#e0e0e0', '#6a4a8a', '#e0c060'], ['Welcome to Emberglen, traveler. The hearth-lanterns have been flickering…', 'ยินดีต้อนรับสู่เอมเบอร์เกลน นักเดินทาง โคมไฟเตาผิงเริ่มริบหรี่แล้ว…']],
@@ -117,6 +119,7 @@ export const NPCS: Record<string, NpcDef> = Object.fromEntries(([
   ['broker_vance', 'Vance', 'แวนซ์', 'Market Broker', 'นายหน้าตลาด', ['exchange'], 'emberglen', 36, 32, ['#e0e0a0', '#2a5a3a', '#ffd040'], ['The market never sleeps — and neither do I.', 'ตลาดไม่เคยหลับ ข้าก็เช่นกัน']],
   ['event_host', 'Festa', 'เฟสต้า', 'Festival Host', 'ผู้จัดเทศกาล', ['event'], 'emberglen', 28, 32, ['#ff80a0', '#ff6040', '#ffe060'], ['Festivals, prizes and daily gifts!', 'เทศกาล ของรางวัล และของขวัญรายวัน!']],
   ['officiant_sol', 'Officiant Sol', 'ผู้ประกอบพิธีโซล', 'Wedding Officiant', 'ผู้ประกอบพิธีแต่งงาน', ['marriage'], 'emberglen', 16, 16, ['#ffffff', '#f0f0f0', '#ffc0e0'], ['Two hearts, one hearth.', 'สองหัวใจ หนึ่งเตาผิง']],
+  ['planner_rosa', 'Planner Rosa', 'ผู้จัดงานโรซา', 'Wedding Planner', 'ผู้จัดงานแต่งงาน', ['wedding'], 'wedding_plaza', 15, 5, ['#ffd0e0', '#ff90b0', '#fff0f0'], ['Every love story deserves a beautiful day.', 'ทุกเรื่องราวความรักควรมีวันที่งดงาม']],
   ['board_quest', 'Quest Board', 'กระดานเควสต์', 'Daily Bounties', 'ค่าหัวประจำวัน', ['board'], 'emberglen', 30, 22, ['#8a5a2a', '#8a5a2a', '#f0e0b0'], ['Notices flutter in the breeze.', 'ประกาศพลิ้วไหวตามลม']],
   ['ranger_fen', 'Ranger Fen', 'เรนเจอร์เฟน', 'Forest Ranger', 'ผู้พิทักษ์ป่า', ['quest'], 'whisperwood', 8, 20, ['#3a5a2a', '#4a7a3a', '#c0a060'], ['Watch your step — the slimes are restless.', 'ระวังตัวด้วย สไลม์ช่วงนี้กระสับกระส่าย']],
   ['miner_dorn', 'Dorn', 'ดอร์น', 'Prospector', 'นักสำรวจแร่', ['quest'], 'amber_hills', 32, 42, ['#5a3a1a', '#6a6a3a', '#e0a040'], ['These hills hide amber and danger alike.', 'เนินเขานี้ซ่อนทั้งอำพันและอันตราย']],

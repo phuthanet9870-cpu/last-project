@@ -135,6 +135,7 @@ add({ id: 'dungeon_ticket', name: { en: 'Dungeon Pass', th: 'บัตรดั�
 add({ id: 'card_pack', name: { en: 'Duel Card Pack', th: 'ซองการ์ดดวล' }, type: 'card_pack', icon: 'pack', color: '#4080ff', stack: 99, price: 300, rarity: 'uncommon' });
 for (const [id, en, th, color] of [['deco_lantern', 'Paper Lantern', 'โคมกระดาษ', '#ff8040'], ['deco_bench', 'Wooden Bench', 'ม้านั่งไม้', '#a07040'], ['deco_flowers', 'Flower Pot', 'กระถางดอกไม้', '#ff80c0'], ['deco_fountain', 'Small Fountain', 'น้ำพุเล็ก', '#80c0ff']] as const) add({ id, name: { en, th }, type: 'decoration', icon: 'deco', color, stack: 20, price: 400 });
 add({ id: 'quest_letter', name: { en: 'Sealed Letter', th: 'จดหมายผนึก' }, type: 'quest', icon: 'scroll', color: '#f0e0b0', tradeable: false, price: 0 });
+add({ id: 'wedding_cake', name: { en: 'Wedding Cake Slice', th: 'เค้กแต่งงานหนึ่งชิ้น' }, type: 'consumable', icon: 'potion', color: '#fff0f8', stack: 99, price: 1, rarity: 'uncommon', tradeable: false, use: { hp: 600, mp: 200 } });
 add({ id: 'wedding_ring', name: { en: 'Hearthbound Ring', th: 'แหวนผูกใจ' }, type: 'accessory', slot: 'ring2', icon: 'ring', color: '#ffc0e0', price: 10000, rarity: 'epic', tradeable: false, stats: [{ stat: 'maxHp', kind: 'pct', value: 3 }, { stat: 'expBonus', kind: 'flat', value: 5 }] });
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(D.map((d) => [d.id, d]));

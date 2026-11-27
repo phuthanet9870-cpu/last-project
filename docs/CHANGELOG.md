@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 — 2026-11-27 — Guild & wedding
+- Wedding: proposal now creates an **engagement** (partner consent online); the marriage completes at the new **Blossom Wedding Plaza** (portal south of Emberglen) with Planner Rosa: both partners at the altar, 5,000 Gold, ceremony phases (guests gather → vows → rings → celebration with petals), HUD banner, friends notified online, guests receive a cake slice once. The ceremony is cancelled if a partner leaves before the celebration. Couple bonus applies only after the wedding. Online couple teleport (10 min cooldown, not in instances). Artifact: simulated partner and guests.
+- Guild (online, DB-backed): shared guild storage table (anyone deposits, officers/leader withdraw; capacity 50 + 10/level; atomic with the player save; activity log), promote/demote, remove member (rank-checked), leadership transfer, announcements (HTML stripped), disband (storage must be empty), leaders must transfer before leaving; membership re-synced from the DB at login.
+- Guild war: leader/officer declares on another guild; that guild's leader/officer accepts; up to 5 online members per side play Lantern Siege; result stored in `guild_wars`; winner +2000 guild EXP and 50 guild tokens each (loser +300/10). Artifact: 3v3 vs a simulated rival guild.
+- Fix (found by test): `inMatch` treated abandoned, unfinished arena matches as active, which would have blocked guild wars for anyone who had left an arena early.
+- Fix (found by test): guild announcement sanitiser left tag fragments (`<b>pm</b>` → `bpm/b`).
+- Tests: unit 63, E2E 34/34, multiplayer 23/23, online browser E2E 3/3.
+
 ## 0.8.0 — 2026-11-27 — Task 7: LiveOps / rankings / Hearthcards
 - Memberships (simulated Crystal only, no auto-renew): Weekly (60 free Crystal/day), Monthly (50/day + 5% EXP), Festival (×2 event mission rewards and Event Tokens), Permanent Hearth (500 Gold/day + 3% drop), Grand Lantern (+5% EXP/Gold). Time-limited passes extend when re-bought; daily claims once per Asia/Bangkok day.
 - Gacha: 4 banners — Standard, Seasonal Wishes (monthly featured mythic), Fashion Box, Gem Box — each with its own pity counter; odds shown in UI. Paid random rewards remain disabled.

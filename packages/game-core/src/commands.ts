@@ -20,7 +20,7 @@ import { applyStatus } from './effects.js';
 export interface Session {
   tcg?: { state: TcgState; mode: 'ai' | 'tower' | 'ranked' | 'casual' | 'tutorial'; oppName: string; oppRating: number; settled: boolean } | null;
   trade?: ReturnType<MarketService['openTrade']> | null; tradePartner?: string;
-  duel?: { opp: string; startedAt: number } | null; arena?: { mode: string; settled: boolean; prevMap: string; prevX: number; prevY: number } | null;
+  duel?: { opp: string; startedAt: number } | null; arena?: { mode: string; settled: boolean; prevMap: string; prevX: number; prevY: number; war?: string } | null;
   prevMap?: { map: string; x: number; y: number } | null; visit?: FarmVisit | null; lastCmdAt?: number; cmdCount?: number;
 }
 export interface CommandContext {
@@ -182,9 +182,12 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   enterDungeon: (c, a) => { const d = DUNGEONS[String(a.id)]; if (!d) return fail('INVALID'); if (d.type === 'daily' && !near(c, 'dungeon') && !c.dev) return fail('NEED_WARDEN'); const r = c.svc.startDungeon(d.id); if (!r.ok) return r; return c.changeMap(d.map, undefined, undefined, { dungeon: d.id }); },
   leaveInstance: (c) => { const back = c.session.prevMap ?? { map: 'emberglen', x: 28 * TILE + 16, y: 24 * TILE + 16 }; c.session.prevMap = null; return c.changeMap(back.map, back.x, back.y); },
   arenaJoin: (c, a) => { if (!near(c, 'arena') && !c.dev) return fail('NEED_ARENA_MASTER'); const size = ['1v1', '2v2', '3v3', '5v5'].includes(a.mode) ? a.mode : '1v1'; const type = ['deathmatch', 'siege', 'rush'].includes(a.type) ? a.type : 'deathmatch'; return c.changeMap('arena', undefined, undefined, { arena: `${size}:${type}` }); },
+  // Guild war in the artifact: your guild (you + simulated members) vs a SIMULATED rival guild in Lantern Siege 3v3. Online wars are guild-vs-guild between real players (server).
+  guildWar: (c) => { const g = c.svc.p.guild; if (!g) return fail('NO_GUILD'); if (g.role === 'member') return fail('NO_PERMISSION', 'Leader or officer only'); if (c.mode === 'server') return fail('USE_GUILD_WAR_CHALLENGE');
+    const rival = ['Thornpact', 'Mistveil Order', 'Copper Crows', 'Silverbough'][c.svc.rng.int(0, 3)]!; const r = c.changeMap('arena', undefined, undefined, { arena: '3v3:siege' }); if (r.ok && c.session.arena) c.session.arena.war = `${rival} [sim]`; return r.ok ? ok({ rival: `${rival} [sim]` }) : r; },
   arenaSettle: (c) => {
     const ar = c.world.arena; const s = c.session.arena; if (!ar || !ar.done || !s || s.settled) return fail('NOT_FINISHED'); s.settled = true;
-    const myTeam = c.world.teamOf(c.world.entities.get(c.entityId)!); const win = ar.winner === myTeam; const delta = c.svc.recordPvp(win, 'Arena', 1000 + c.svc.rng.int(-100, 150)); const mvp = ar.mvp === c.entityId; if (mvp) c.svc.awardMvp(); return ok({ win, delta, mvp, mvpName: ar.mvp ? c.world.entities.get(ar.mvp)?.name : null, stats: ar.stats[c.entityId], score: ar.score, mode: ar.mode });
+    const myTeam = c.world.teamOf(c.world.entities.get(c.entityId)!); const win = ar.winner === myTeam; const delta = c.svc.recordPvp(win, 'Arena', 1000 + c.svc.rng.int(-100, 150)); const mvp = ar.mvp === c.entityId; if (mvp) c.svc.awardMvp(); if (s.war && c.svc.p.guild) { const g = c.svc.p.guild; g.exp += win ? 2000 : 300; while (g.exp >= guildLevelExp(g.level)) { g.exp -= guildLevelExp(g.level); g.level++; } c.svc.earn('guild_token', win ? 50 : 10, 'guild_war'); g.log.unshift(`${win ? 'Won' : 'Lost'} a guild war vs ${s.war}`); } return ok({ war: s.war ?? null, win, delta, mvp, mvpName: ar.mvp ? c.world.entities.get(ar.mvp)?.name : null, stats: ar.stats[c.entityId], score: ar.score, mode: ar.mode });
   },
   // --- economy (§35–38) ---
   marketList: (c, a) => wrapEco(() => c.market.list(c.svc, String(a.uid), big(a.price), a.qty ? Number(a.qty) : undefined)),
@@ -235,8 +238,23 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
     if (c.svc.p.marriage) return fail('ALREADY_MARRIED'); if (!near(c, 'marriage')) return fail('NEED_OFFICIANT'); const f = c.svc.p.friends.find((x) => x.name === a.name); if (!f) return fail('MUST_BE_FRIENDS');
     if (c.world.now() - f.since < (c.dev ? 0 : 3 * 60_000)) return fail('FRIENDSHIP_TOO_NEW', 'Be friends for at least 3 minutes'); if (!c.svc.removeItem('wedding_ring', 1) && !c.svc.spend('gold', 10000, 'wedding')) return fail('NEED_RING', 'Need a Hearthbound Ring or 10,000 Gold');
     // in artifact the partner is simulated and always consents; server requires mutual acceptance
-    c.svc.p.marriage = { partner: f.name, since: c.world.now(), anniversary: 0 }; if (!c.svc.p.titles.includes('title_hearthbound')) c.svc.p.titles.push('title_hearthbound'); c.svc.addItem('costume_festival', 1); c.world.fx.push({ t: 'notice', msg: `${c.svc.p.name} and ${f.name} are now wed!` }); return ok();
+    c.svc.engage(f.name); c.world.fx.push({ t: 'notice', msg: `${c.svc.p.name} and ${f.name} are now engaged! Book your ceremony at the Wedding Plaza (south of Emberglen).` }); return ok({ engaged: true });
   },
+  weddingStart: (c) => {
+    const m = c.svc.p.marriage; if (!m || m.stage !== 'engaged') return fail('NOT_ENGAGED', 'Get engaged first (propose at Officiant Sol)'); if (c.world.mapId !== 'wedding_plaza' || !near(c, 'wedding')) return fail('NEED_PLANNER', 'Talk to Planner Rosa at the Wedding Plaza');
+    if (c.world.wedding && !['done', 'cancelled'].includes(c.world.wedding.phase)) return fail('CEREMONY_IN_PROGRESS');
+    if (c.mode === 'server') return fail('SERVER_HANDLES'); // server pairs the two real partners
+    if (c.svc.gold() < BigInt(CONFIG.weddingCost)) return fail('NOT_ENOUGH_GOLD', `The ceremony costs ${CONFIG.weddingCost} Gold`);
+    const me = c.world.entities.get(c.entityId)!; const partner = c.world.spawnBot(); partner.name = `${m.partner} [sim]`; partner.x = me.x + 30; partner.y = me.y; // simulated partner (artifact)
+    for (let i = 0; i < 4; i++) { const g = c.world.spawnBot(); g.x = (i < 2 ? 9 : 19) * TILE + 16 + 8; g.y = (9 + 2 * (i % 2)) * TILE + 16 - 14; g.botProfile = undefined as any; g.name = `${g.name}`; } // simulated guests on the benches
+    c.svc.spend('gold', CONFIG.weddingCost, 'wedding_ceremony'); const w = c.world.startWedding(c.entityId, partner.id, c.dev && c.svc.p.settings.fastWedding ? 1500 : CONFIG.weddingPhaseMs); return w ? ok({ phase: w.phase }) : fail('CANNOT_START');
+  },
+  weddingAttend: (c) => {
+    const w = c.world.wedding; if (!w || ['done', 'cancelled'].includes(w.phase)) return fail('NO_CEREMONY'); if (w.couple.includes(c.entityId)) return fail('YOU_ARE_THE_COUPLE');
+    if (w.guests.includes(c.entityId)) return fail('ALREADY_ATTENDED'); const me = c.world.entities.get(c.entityId)!; if (Math.hypot(me.x - 15 * TILE - 16, me.y - 12 * TILE) > 420) return fail('TOO_FAR', 'Come closer to the aisle');
+    w.guests.push(c.entityId); c.svc.addItem('wedding_cake', 1); c.svc.bump('wedding_guest'); return ok({ couple: w.names });
+  },
+  weddingStatus: (c) => ok(c.world.wedding ? { ...c.world.wedding, guests: c.world.wedding.guests.length } : null),
   divorce: (c) => { if (!c.svc.p.marriage) return fail('NOT_MARRIED'); c.svc.p.marriage = null; c.svc.p.titles = c.svc.p.titles.filter((t) => t !== 'title_hearthbound'); if (c.svc.p.title === 'title_hearthbound') c.svc.p.title = null; return ok(); },
   report: (c, a) => { c.svc.note(`Report filed against ${String(a.name).slice(0, 20)} (${String(a.reason).slice(0, 40)}). Moderators will review.`); return ok({ ticket: uid('rpt') }); },
   // --- developer / testing panel (dev mode only) ---

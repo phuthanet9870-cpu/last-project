@@ -1,9 +1,9 @@
 {
-  "when": "2026-11-27T14:09:58.293Z",
+  "when": "2026-11-27T14:29:24.522Z",
   "server": "http://localhost:2567",
-  "durationMs": 58825,
-  "passed": 21,
-  "total": 21,
+  "durationMs": 94499,
+  "passed": 23,
+  "total": 23,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwz24pcr18yj1, ch_mwz24pd2bea48"
+      "detail": "ch_mwz2sxoi1226p, ch_mwz2sxs5bda5z"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -28,7 +28,7 @@
     {
       "name": "server-authoritative movement replicated (collision-checked)",
       "ok": true,
-      "detail": "912→1008"
+      "detail": "912→1009"
     },
     {
       "name": "chat local + world + whisper delivered; malformed packet rejected",
@@ -61,9 +61,14 @@
       "detail": "one-sided: online only; mutual: map visible"
     },
     {
-      "name": "marriage requires the partner to accept",
+      "name": "engagement requires the partner to accept",
       "ok": true,
-      "detail": "gold 20610→10610"
+      "detail": "engaged; gold 20610→10610"
+    },
+    {
+      "name": "wedding ceremony at the plaza: both partners present → phases → married (persisted)",
+      "ok": true,
+      "detail": "phases → celebration; both married; 5000G paid"
     },
     {
       "name": "visit a real friend's farm and like it (persists to owner)",
@@ -73,7 +78,7 @@
     {
       "name": "Hearthcards PvP duel between the two players to completion",
       "ok": true,
-      "detail": "A sees winner 1, B sees 0 (perspective-correct); 2 results recorded"
+      "detail": "A sees winner 0, B sees 1 (perspective-correct); 2 results recorded"
     },
     {
       "name": "party dungeon: party enters the same instance together",
@@ -98,17 +103,22 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwz24pcr18yj1\":16,\"ch_mwz24pd2bea48\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwz2sxoi1226p\":16,\"ch_mwz2sxs5bda5z\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
       "ok": true,
-      "detail": "online=2 p95 tick=0.99ms ledger ok=true"
+      "detail": "online=2 p95 tick=0.69ms ledger ok=true"
     },
     {
       "name": "Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title",
       "ok": true,
-      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:19; title_weekly → B"
+      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:23; title_weekly → B"
+    },
+    {
+      "name": "guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds",
+      "ok": true,
+      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lan0wi7x score [0,0]"
     }
   ]
 }

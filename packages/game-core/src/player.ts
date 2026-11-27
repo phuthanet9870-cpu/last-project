@@ -40,7 +40,7 @@ export interface PlayerState {
   events: { progress: Record<string, number>; claimed: string[] };
   mail: Mail[]; friends: { name: string; note: string; since: number }[]; blocked: string[];
   guild: { id: string; name: string; role: 'leader' | 'officer' | 'member'; contribution: number; level: number; exp: number; storage: ItemInstance[]; log: string[] } | null;
-  marriage: { partner: string; since: number; anniversary: number } | null;
+  marriage: { partner: string; since: number; anniversary: number; stage?: 'engaged' | 'married'; engagedAt?: number } | null; // stage missing = married (pre-0.9 saves)
   house: { furniture: { itemId: string; x: number; y: number; rot: number }[]; theme: number };
   refinePity: Record<string, number>; settings: Record<string, any>; storageSlots?: number; memberships?: Record<string, { until: number | null; lastClaim: string }>; wishlist?: { defId: string; maxPrice: number }[]; wallet: Ledger;
   log: { ts: number; msg: string }[];
@@ -142,7 +142,7 @@ export function playerModifiers(p: PlayerState, extra: Modifier[] = []): Modifie
   if (p.title) for (const m of TITLES[p.title]?.mods ?? []) mods.push({ ...m, source: `title:${p.title}` });
   if (p.ascension > 0) mods.push({ stat: 'maxHp', kind: 'pct', value: p.ascension * 5, source: 'ascension' }, { stat: 'atk', kind: 'pct', value: p.ascension * 4, source: 'ascension' }, { stat: 'matk', kind: 'pct', value: p.ascension * 4, source: 'ascension' });
   if (p.mastery > 0) mods.push({ stat: 'maxHp', kind: 'flat', value: Math.floor(30 * Math.sqrt(p.mastery)), source: 'mastery' });
-  if (p.marriage) mods.push({ stat: 'expBonus', kind: 'flat', value: 5, source: 'marriage' });
+  if (p.marriage && p.marriage.stage !== 'engaged') mods.push({ stat: 'expBonus', kind: 'flat', value: 5, source: 'marriage' });
   for (const [id, m] of Object.entries(p.memberships ?? {})) if (m.until === null || m.until > Date.now()) for (const b of MEMBERSHIPS[id]?.bonus ?? []) mods.push({ stat: b.stat as any, kind: 'flat', value: b.value, source: `membership:${id}` });
   return mods.concat(extra);
 }
@@ -473,6 +473,13 @@ export class PlayerService {
   }
   /** MVP reward for an arena match (called once per match by the settlement code). */
   awardMvp(): void { this.earn('arena_token', 10, 'arena_mvp'); if (!this.p.titles.includes('title_mvp')) this.p.titles.push('title_mvp'); this.bump('arena_mvp'); this.note('You were the match MVP!'); }
+  /** Engagement (§41): consent given; the wedding ceremony at the plaza completes the marriage. */
+  engage(partner: string) { this.p.marriage = { partner, since: 0, anniversary: 0, stage: 'engaged', engagedAt: this.now() }; this.emit({ type: 'engaged', partner } as any); }
+  completeWedding(partner: string) {
+    const m = this.p.marriage; if (!m || m.partner !== partner || m.stage === 'married') return false;
+    this.p.marriage = { partner, since: this.now(), anniversary: 0, stage: 'married' }; if (!this.p.titles.includes('title_hearthbound')) this.p.titles.push('title_hearthbound'); this.addItem('costume_festival', 1); this.bump('weddings'); this.emit({ type: 'wedded', partner } as any); return true;
+  }
+  isMarried() { const m = this.p.marriage; return !!m && m.stage !== 'engaged'; }
   hasMembership(id: string) { const m = this.p.memberships?.[id]; return !!m && (m.until === null || m.until > this.now()); }
   /** Memberships (§47): simulated Crystal only; time-limited ones extend when bought again; no auto-renewal. */
   buyMembership(id: string): Result<{ until: number | null }> {

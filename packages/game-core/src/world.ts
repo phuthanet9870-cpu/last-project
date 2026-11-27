@@ -38,7 +38,12 @@ export type Fx =
   | { t: 'telegraph'; id: string; x: number; y: number; r: number; ms: number }
   | { t: 'chat'; ch: string; from: string; msg: string; x?: number; y?: number }
   | { t: 'notice'; msg: string; to?: string }
-  | { t: 'status'; id: string; s: string };
+  | { t: 'status'; id: string; s: string }
+  | { t: 'petals'; x: number; y: number };
+
+export type WeddingPhase = 'gathering' | 'vows' | 'rings' | 'celebration' | 'done' | 'cancelled';
+/** Wedding ceremony (§41): couple entity ids; partner may be a simulated bot in the artifact. Guests receive one cake slice per ceremony. */
+export interface WeddingState { couple: [string, string]; names: [string, string]; phase: WeddingPhase; phaseEndsAt: number; phaseMs: number; guests: string[]; startedAt: number }
 
 export type ArenaMode = 'deathmatch' | 'siege' | 'rush';
 export interface ArenaState {
@@ -61,7 +66,7 @@ const BOT_LINES = ['Anyone up for Mossy Hollow?', 'LF party for slimes~', 'Selli
 export class World {
   map: GenMap; mapId: string; instanceId: string; entities = new Map<string, Entity>(); services = new Map<string, PlayerService>();
   fx: Fx[] = []; rng: Rng; now: () => number; nodesDepleted = new Map<string, number>(); dungeon: DungeonRun | null = null; boss: BossSession | null = null;
-  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number; gold?: number }; arena: ArenaState | null = null;
+  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number; gold?: number }; wedding: WeddingState | null = null; arena: ArenaState | null = null;
   private lastTick = 0; private opts: WorldOptions;
 
   constructor(opts: WorldOptions) {
@@ -91,6 +96,24 @@ export class World {
   }
 
   // ---------------- players ----------------
+  /** Start a ceremony; caller validates engagement, location and payment. */
+  startWedding(aId: string, bId: string, phaseMs: number): WeddingState | null {
+    if (this.wedding && !['done', 'cancelled'].includes(this.wedding.phase)) return null; const a = this.entities.get(aId), b = this.entities.get(bId); if (!a || !b) return null;
+    const altar = { x: 15 * TILE + 16, y: 7 * TILE + 16 }; a.x = altar.x - 26; a.y = altar.y; b.x = altar.x + 26; b.y = altar.y; if (b.kind === 'bot') { b.botProfile = undefined as any; b.input = { dx: 0, dy: 0 }; }
+    this.wedding = { couple: [aId, bId], names: [a.name, b.name], phase: 'gathering', phaseEndsAt: this.now() + phaseMs, phaseMs, guests: [], startedAt: this.now() };
+    this.fx.push({ t: 'notice', msg: `The wedding of ${a.name} & ${b.name} is about to begin at the Wedding Plaza! Guests are welcome.` }); return this.wedding;
+  }
+  private weddingTick(now: number) {
+    const w = this.wedding!; if (w.phase === 'done' || w.phase === 'cancelled') return;
+    if (w.couple.some((id) => !this.entities.get(id)) && w.phase !== 'celebration') { w.phase = 'cancelled'; this.fx.push({ t: 'notice', msg: 'The wedding was called off — the couple left the plaza.' }); return; }
+    if (w.phase === 'celebration' && now % 1000 < 60) for (const id of w.couple) { const e = this.entities.get(id); if (e) this.fx.push({ t: 'petals', x: e.x, y: e.y - 20 }); }
+    if (now < w.phaseEndsAt) return;
+    const next: Record<string, WeddingPhase> = { gathering: 'vows', vows: 'rings', rings: 'celebration', celebration: 'done' }; w.phase = next[w.phase]!; w.phaseEndsAt = now + w.phaseMs;
+    const say: Record<string, string> = { vows: `${w.names[0]} and ${w.names[1]} exchange their vows…`, rings: 'The rings are exchanged. ♥', celebration: `${w.names[0]} & ${w.names[1]} are now wed! Let the celebration begin!`, done: 'The celebration winds down. Thank you for coming!' };
+    this.fx.push({ t: 'notice', msg: say[w.phase]! });
+    if (w.phase === 'done') for (const e of [...this.entities.values()]) if (e.kind === 'bot' && !e.botProfile) this.entities.delete(e.id); // simulated guests/partner leave
+    if (w.phase === 'celebration') for (let k = 0; k < 2; k++) { const svc = this.services.get(w.couple[k]!); if (svc) { svc.completeWedding(w.names[1 - k]!.replace(/ \[sim\]$/, '')); this.refreshPlayer(w.couple[k]!); } }
+  }
   addPlayer(svc: PlayerService, at?: { x: number; y: number }): Entity {
     const p = svc.p; const st = playerStats(p).derived;
     let x = at?.x ?? p.x, y = at?.y ?? p.y;
@@ -393,9 +416,9 @@ export class World {
   }
   // ---------------- arena (§30) ----------------
   /** Arena modes (§30): deathmatch = Last Light (elimination); siege = Lantern Siege (3 capture points); rush = Ember Rush (carry crystals to base). */
-  startArena(teamA: string[], teamB: string[], durationMs = 120_000, mode: ArenaMode = 'deathmatch') {
+  startArena(teamA: string[], teamB: string[], durationMs = 120_000, mode: ArenaMode = 'deathmatch', exactDuration = false) {
     const w = this.map.def.w * TILE, h = this.map.def.h * TILE;
-    this.arena = { mode, teams: [teamA, teamB], endsAt: this.now() + (mode === 'deathmatch' ? durationMs : Math.max(durationMs, 180_000)), done: false, score: [0, 0], target: mode === 'siege' ? 100 : mode === 'rush' ? 5 : 0,
+    this.arena = { mode, teams: [teamA, teamB], endsAt: this.now() + (mode === 'deathmatch' || exactDuration ? durationMs : Math.max(durationMs, 180_000)), done: false, score: [0, 0], target: mode === 'siege' ? 100 : mode === 'rush' ? 5 : 0,
       points: mode === 'siege' ? [{ x: w * 0.22, y: h * 0.3, owner: -1, progress: 0 }, { x: w * 0.5, y: h * 0.5, owner: -1, progress: 0 }, { x: w * 0.78, y: h * 0.7, owner: -1, progress: 0 }] : [],
       crystals: [], carriers: [], stats: {}, nextCrystal: this.now() + 3000 };
     teamA.forEach((id, i) => { const e = this.entities.get(id); if (e) { const [x, y] = this.arenaBase(0, i); e.x = x; e.y = y; e.team = 0; } });
@@ -452,6 +475,7 @@ export class World {
   tick(dtMs: number) {
     this.gridAt = -1;
     const now = this.now(); dtMs = Math.min(dtMs, 250); const dt = dtMs / 1000; this.lastTick = now;
+    if (this.wedding) this.weddingTick(now);
     for (const e of [...this.entities.values()]) {
       if (e.expiresAt && now > e.expiresAt) { this.entities.delete(e.id); continue; }
       if (e.kind === 'projectile') { this.moveProjectile(e, dt); continue; }
@@ -558,7 +582,7 @@ export class World {
   }
   /** Simulated players (artifact only, labelled SIMULATED). Same combat rules as players. */
   private botAI(e: Entity, dt: number, now: number) {
-    const prof = e.botProfile!;
+    const prof = e.botProfile; if (!prof) { e.moving = false; return; } // seated wedding guests / partner: idle
     if (!this.arena && now > prof.chatAt) { prof.chatAt = now + this.rng.int(25000, 90000); if (this.rng.chance(0.5)) this.fx.push({ t: 'chat', ch: 'world', from: `${e.name} [sim]`, msg: this.rng.pick(BOT_LINES) }); }
     if (hasCC(e.effects, 'stun', 'freeze', 'sleep')) return;
     let t = e.targetId ? this.entities.get(e.targetId) : undefined; if (t && (t.dead || !this.hostile(e, t))) { t = undefined; e.targetId = null; }

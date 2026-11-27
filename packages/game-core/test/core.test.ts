@@ -315,3 +315,29 @@ describe('LiveOps / rankings / TCG additions (v0.8)', () => {
     expect((executeCommand(ctx, 'rankings', { kind: 'class:dawn_priest' }).data as any[]).some((x) => x.name === p.name)).toBe(false);
   });
 });
+
+describe('wedding & guild additions (v0.9)', () => {
+  const plaza = (now: { t: number }) => new World({ mapId: 'wedding_plaza', rng: new Rng(5), bots: 0, now: () => now.t });
+  it('engagement gives no couple bonus; ceremony phases complete the marriage; guests get one cake', () => {
+    const clock = { t: 1_800_000_000_000 }; const w = plaza(clock); const A = mk('blade_sentinel', clock.t); const exp0 = playerStats(A.p).derived.expBonus;
+    A.svc.engage('Juniper'); expect(A.p.marriage!.stage).toBe('engaged'); expect(playerStats(A.p).derived.expBonus).toBe(exp0); expect(A.svc.isMarried()).toBe(false);
+    const e = w.addPlayer(A.svc, { x: 15 * TILE + 16, y: 7 * TILE + 16 }); A.svc.earn('gold', 10000, 't'); A.p.settings.fastWedding = true;
+    const ctx = { world: w, svc: A.svc, session: {}, market: new MarketService(A.p.wallet), mode: 'local' as const, dev: true, entityId: e.id } as any;
+    const g0 = A.svc.gold(); const r = executeCommand(ctx, 'weddingStart'); expect(r.ok).toBe(true); expect(A.svc.gold()).toBe(g0 - BigInt(CFG.weddingCost)); expect(w.wedding!.phase).toBe('gathering');
+    expect(executeCommand(ctx, 'weddingStart').err).toBe('CEREMONY_IN_PROGRESS'); expect(executeCommand(ctx, 'weddingAttend').err).toBe('YOU_ARE_THE_COUPLE');
+    const G = mk('dawn_priest', clock.t); G.p.id = 'guest1'; const ge = w.addPlayer(G.svc, { x: 15 * TILE + 16, y: 12 * TILE }); const gctx = { ...ctx, svc: G.svc, entityId: ge.id, session: {} };
+    expect(executeCommand(gctx, 'weddingAttend').ok).toBe(true); expect(executeCommand(gctx, 'weddingAttend').err).toBe('ALREADY_ATTENDED'); expect(G.svc.countItem('wedding_cake')).toBe(1);
+    const phases: string[] = []; for (let i = 0; i < 80 && w.wedding!.phase !== 'done'; i++) { clock.t += 100; w.tick(100); if (phases.at(-1) !== w.wedding!.phase) phases.push(w.wedding!.phase); }
+    expect(phases).toEqual(['gathering', 'vows', 'rings', 'celebration', 'done']); expect(A.p.marriage!.stage).toBe('married'); expect(A.p.titles).toContain('title_hearthbound'); expect(playerStats(A.p).derived.expBonus).toBe(exp0 + 5);
+    expect([...w.entities.values()].filter((x) => x.kind === 'bot').length).toBe(0); // simulated partner and guests leave
+  });
+  it('a ceremony is cancelled when one of the couple leaves before the celebration; no marriage happens', () => {
+    const clock = { t: 1_800_000_000_000 }; const w = plaza(clock); const A = mk('blade_sentinel', clock.t); const B = mk('dawn_priest', clock.t); B.p.id = 'bb'; A.svc.engage(B.p.name); B.svc.engage(A.p.name);
+    const ea = w.addPlayer(A.svc), eb = w.addPlayer(B.svc); expect(w.startWedding(ea.id, eb.id, 500)).not.toBeNull(); expect(w.startWedding(ea.id, eb.id, 500)).toBeNull();
+    clock.t += 600; w.tick(100); expect(w.wedding!.phase).toBe('vows'); w.removePlayer(eb.id); clock.t += 50; w.tick(50); expect(w.wedding!.phase).toBe('cancelled'); expect(A.p.marriage!.stage).toBe('engaged');
+  });
+  it('wedding plaza is reachable from Emberglen and the planner is placed there', () => {
+    const m = getMap('wedding_plaza'); expect(MAPS.emberglen!.portals.some((p) => p.to === 'wedding_plaza')).toBe(true); expect(m.objects.some((o) => o.kind === 'arch')).toBe(true);
+    const path = findPath(m, MAPS.wedding_plaza!.spawn[0], MAPS.wedding_plaza!.spawn[1], 15, 6, 20000); expect(path && path.length > 0).toBe(true);
+  });
+});
