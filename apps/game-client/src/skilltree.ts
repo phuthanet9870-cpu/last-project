@@ -118,6 +118,11 @@ export function openSkillTree() { openWindow({ id: 'skills', title: `${T('Skills
   det.append(tbl);
   det.append(h('div', { class: 'sk-row' }, h('button', { class: 'btn sm', disabled: nodeState(p, s, d) === 'locked' || rank >= s.maxRank || free <= 0 || undefined, onclick: () => addRank(p, s) }, T('+1 rank', '+1 แรงก์')), h('button', { class: 'btn sm', disabled: rank <= crank || undefined, onclick: () => removeRank(p, s) }, T('−1 rank', '−1 แรงก์'))));
   if (s.type !== 'passive' && crank > 0) det.append(h('div', { class: 'sk-row' }, h('span', {}, T('Hotbar: ', 'ช่องลัด: ')), Array.from({ length: 8 }, (_, i) => h('button', { class: `btn sm ${p.hotbar[i] === s.id ? 'on' : ''}`, onclick: () => send('hotbar', { i, id: s.id }) }, String(i + 1)))));
+  if (s.type !== 'passive' && crank > 0) { const sockUid = p.skillSockets?.[s.id]; const inv = p.inventory.filter((x) => x.stone?.skillId === s.id); const cur = inv.find((x) => x.uid === sockUid);
+    det.append(h('div', { class: 'sk-row' }, h('span', {}, `${T('Stone socket', 'ช่องศิลา')}: ${cur ? `${cur.stone!.mods.map((m) => `${m.key} ${m.value}%`).join(', ')} +${cur.stone!.refine}${cur.stone!.behavior ? ` ★${cur.stone!.behavior}` : ''}` : T('empty', 'ว่าง')} `),
+      cur ? h('button', { class: 'btn sm', onclick: () => send('socketStone', { skill: s.id, uid: null }, T('Removed', 'ถอดแล้ว')) }, T('Remove', 'ถอด')) : null,
+      ...inv.filter((x) => x.uid !== sockUid).slice(0, 3).map((x) => h('button', { class: 'btn sm', onclick: () => send('socketStone', { skill: s.id, uid: x.uid }, T('Embedded', 'ฝังแล้ว')) }, `${T('Embed', 'ฝัง')} ${x.stone!.mods.map((m) => `${m.key} ${m.value}%`).join('/')}`)),
+      !inv.length ? h('span', { class: 'dim small' }, T('(inscribe a stone for this skill at Isolde)', '(จารึกศิลาสำหรับสกิลนี้ที่อิโซลด์)')) : null)); }
   else if (s.type === 'passive') det.append(h('p', { class: 'dim small' }, T('Passives work automatically once confirmed and cannot be placed on the hotbar.', 'สกิลติดตัวทำงานเองหลังยืนยัน ใส่ช่องลัดไม่ได้')));
   // builds
   const builds = cls.builds; const bd = builds[S.build] ?? builds[0]!;

@@ -101,7 +101,10 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
     return c.changeMap('pet_farm');
   },
   likeFarm: (c) => { const v = c.session.visit; if (!v) return fail('NOT_VISITING'); const k = `like:${v.owner}:${new Date(c.world.now()).toISOString().slice(0, 10)}`; if (c.svc.p.counters[k]) return fail('ALREADY_LIKED', 'You already liked this farm today'); c.svc.p.counters[k] = 1; v.likes++; c.svc.earn('gold', 50, 'farm_like_reward'); return ok({ likes: v.likes }); },
-  slotStone: (c, a) => { const it = c.svc.findInv(String(a.uid)); if (!it?.stone?.skillId) return fail('NOT_INSCRIBED'); if (!it.locked && c.svc.equippedStones().length >= 4) return fail('STONE_SLOTS_FULL'); it.locked = !it.locked; return ok({ slotted: it.locked }); },
+  /** Toggle a stone in/out of the socket of the skill it is inscribed for (free). */
+  slotStone: (c, a) => { const it = c.svc.findInv(String(a.uid)); if (!it?.stone?.skillId) return fail('NOT_INSCRIBED'); const inSock = c.svc.p.skillSockets?.[it.stone.skillId] === it.uid; const r = c.svc.socketStone(it.stone.skillId, inSock ? null : it.uid); c.world.refreshPlayer(c.entityId); return r.ok ? ok({ slotted: !inSock }) : r; },
+  socketStone: (c, a) => { const r = c.svc.socketStone(String(a.skill), a.uid ? String(a.uid) : null); c.world.refreshPlayer(c.entityId); return r; },
+  chooseInscription: (c, a) => c.svc.chooseInscription(String(a.uid), a.keep === 'new' ? 'new' : 'old'),
   // --- quests & NPCs ---
   interact: (c, a) => { const n = NPCS[String(a.npc)]; const me = c.world.entities.get(c.entityId)!; if (!n || n.map !== c.world.mapId) return fail('INVALID'); if (!c.dev && Math.hypot(n.x * TILE + 16 - me.x, n.y * TILE + 16 - me.y) > 160) return fail('TOO_FAR'); c.svc.talkTo(n.id); return ok({ npc: n.id, quests: npcQuests(n.id) }); },
   acceptQuest: (c, a) => c.svc.acceptQuest(String(a.id)),

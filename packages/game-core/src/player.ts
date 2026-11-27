@@ -6,6 +6,7 @@
 import { CONFIG, requiredExp, requiredJobExp, requiredMasteryExp, type Element } from './config.js';
 import { ALL_SKILLS, CLASSES, type SkillDef } from './classes.js';
 import { valuesAt } from './skills/v4.js';
+import { STONE_RULES, applyStone, rollBehavior, rollStoneMods } from './skills/stones.js';
 import { MEMBERSHIPS, TCG_COSMETICS, seasonalFeatured, activeEventAt, WEEK_MS, ACHIEVEMENTS, CARD_SET_BONUS, EGG_POOL, LOGIN_CALENDAR, MISSIONS_DAILY, ACTIVITY_CHESTS, MONSTER_CARDS, MOUNTS, PASS, PETS, QUESTS, RECIPES, SHOPS, TITLES, NPCS, EVENTS, GACHA_BANNERS, DUNGEONS, type Objective, type Profession } from './content.js';
 import { EconomyError, Ledger, feeOf, type Currency } from './economy.js';
 import { EQUIP_SLOTS, ITEMS, OPTION_POOL, RARITIES, SET_BONUS, type ItemInstance, type Rarity, type Slot } from './items.js';
@@ -23,6 +24,7 @@ export interface PlayerState {
   level: number; exp: number; jobLevel: number; jobExp: number; ascension: number; mastery: number; masteryExp: number;
   statPoints: number; skillPoints: number; allocated: Primary; skillRanks: Record<string, number>; hotbar: (string | null)[];
   /** Skill System V4: save schema of skills (4), server revision for atomic commits, recent idempotency keys */ skillV?: number; skillRev?: number; skillOps?: string[]; skillMigration?: { at: number; refunded: number; fromV: number };
+  /** V4: one stone socket per active skill (skillId → stone uid). */ skillSockets?: Record<string, string>;
   hp: number; mp: number; gauge: number; map: string; x: number; y: number; savedMap: string;
   inventory: ItemInstance[]; invSlots: number; storage: ItemInstance[]; equipment: Partial<Record<Slot, ItemInstance>>;
   quests: { active: QuestProgress[]; done: string[]; lastDaily: string; lastWeekly: string };
@@ -342,24 +344,51 @@ export class PlayerService {
     const idx = it.cards.findIndex((x) => x === null); if (idx < 0) return fail('NO_CARD_SLOT', it.refine < 10 ? 'Second card slot unlocks at +10' : 'All card slots used');
     it.cards[idx] = cardId; this.p.monsterCards[cardId]!--; if (this.p.monsterCards[cardId]! <= 0) this.p.monsterCards[cardId] = 0; return ok();
   }
-  // ---- skill stones (§15) ----
+  // ---- skill stones (V4 §24): one socket per active skill ----
+  /** First inscription is free (STONE_RULES.firstInscriptionFree). A stone is bound to one active skill of your class. */
   inscribeStone(stoneUid: string, skillId: string): Result {
     const st = this.findInv(stoneUid); if (!st?.stone) return fail('NOT_STONE'); const sk = ALL_SKILLS[skillId]; if (!sk || sk.classId !== this.p.classId || sk.type === 'passive') return fail('INCOMPATIBLE');
-    if (!this.spend('gold', 1000, 'stone_inscribe')) return fail('NOT_ENOUGH_GOLD');
-    const keys = ['power', 'cd', 'mp', 'radius'] as const;
-    st.stone.skillId = skillId; st.stone.mods = this.rng.shuffle([...keys]).slice(0, 2).map((key) => ({ key, value: key === 'power' ? this.rng.int(5, 15) : key === 'cd' ? this.rng.int(5, 12) : key === 'mp' ? this.rng.int(5, 20) : this.rng.int(5, 20) }));
-    return ok();
+    if (st.stone.skillId || st.stone.inscribed) return fail('ALREADY_INSCRIBED', 'Use re-inscription');
+    st.stone.skillId = skillId; st.stone.inscribed = true; st.stone.mods = rollStoneMods(this.rng); st.stone.pending = null;
+    st.stone.behavior = ITEMS[st.defId]?.rarity === 'legendary' ? rollBehavior(this.rng, sk) : null;
+    return ok({ mods: st.stone.mods, behavior: st.stone.behavior });
   }
-  /** Re-inscription (§15): keep the skill, reroll the two modifiers. */
-  reinscribeStone(stoneUid: string): Result { const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.locked) return fail('UNSLOT_FIRST', 'Unslot the stone first'); if (!this.removeItem('stone_dust', 5)) return fail('NEED_STONE_DUST', 'Need 5 Stone Dust'); if (!this.spend('gold', 500, 'stone_reinscribe')) { this.addItem('stone_dust', 5); return fail('NOT_ENOUGH_GOLD'); } const keys = ['power', 'cd', 'mp', 'radius'] as const; st.stone.mods = this.rng.shuffle([...keys]).slice(0, 2).map((key) => ({ key, value: key === 'power' ? this.rng.int(5, 15) : key === 'cd' ? this.rng.int(5, 12) : this.rng.int(5, 20) })); return ok({ mods: st.stone.mods }); }
-  refineStone(stoneUid: string): Result { const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.refine >= 10) return fail('MAX'); if (this.countItem('stone_dust') < 5 + st.stone.refine * 3) return fail('NOT_ENOUGH_DUST'); this.removeItem('stone_dust', 5 + st.stone.refine * 3); if (this.rng.chance(Math.max(0.3, 1 - st.stone.refine * 0.07))) { st.stone.refine++; return ok({ success: true }); } return ok({ success: false }); }
-  equippedStones(): ItemInstance[] { return this.p.inventory.filter((i) => i.stone?.skillId && i.locked); }
+  /** Re-inscription: costs Stone Dust + gold, rolls a NEW set that is held as `pending` until the player keeps old or new. */
+  reinscribeStone(stoneUid: string): Result {
+    const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.pending) return fail('CHOOSE_FIRST', 'Keep the old or the new inscription first');
+    const c = STONE_RULES.reinscribe; if (this.countItem('stone_dust') < c.dust) return fail('NEED_STONE_DUST', `Need ${c.dust} Stone Dust`); if (!this.spend('gold', c.gold, 'stone_reinscribe')) return fail('NOT_ENOUGH_GOLD');
+    this.removeItem('stone_dust', c.dust);
+    st.stone.pending = rollStoneMods(this.rng); st.stone.pendingBehavior = st.stone.behavior ? rollBehavior(this.rng, ALL_SKILLS[st.stone.skillId]!) : null;
+    return ok({ old: st.stone.mods, new: st.stone.pending, oldBehavior: st.stone.behavior, newBehavior: st.stone.pendingBehavior });
+  }
+  /** Resolve a pending re-inscription. The choice persists (saved on the item) until made. */
+  chooseInscription(stoneUid: string, keep: 'old' | 'new'): Result {
+    const st = this.findInv(stoneUid); if (!st?.stone?.pending) return fail('NOTHING_PENDING');
+    if (keep === 'new') { st.stone.mods = st.stone.pending; if (st.stone.behavior) st.stone.behavior = st.stone.pendingBehavior ?? st.stone.behavior; }
+    st.stone.pending = null; st.stone.pendingBehavior = null; return ok({ mods: st.stone.mods, behavior: st.stone.behavior });
+  }
+  refineStone(stoneUid: string): Result {
+    const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); const R = STONE_RULES.refine; if (st.stone.refine >= R.max) return fail('MAX');
+    const dust = R.dust(st.stone.refine); if (this.countItem('stone_dust') < dust) return fail('NOT_ENOUGH_DUST', `Need ${dust} Stone Dust`); this.removeItem('stone_dust', dust);
+    if (this.rng.chance(R.chance(st.stone.refine))) { st.stone.refine++; return ok({ success: true, refine: st.stone.refine }); } return ok({ success: false, refine: st.stone.refine });
+  }
+  /** Embed (free) a stone into its skill's socket, replacing any stone already there; `stoneUid=null` removes (free). */
+  socketStone(skillId: string, stoneUid: string | null): Result {
+    const sk = ALL_SKILLS[skillId]; if (!sk || sk.classId !== this.p.classId || sk.type === 'passive') return fail('INCOMPATIBLE');
+    this.p.skillSockets ??= {}; const cur = this.p.skillSockets[skillId];
+    if (cur) { const old = this.findInv(cur); if (old) old.locked = false; delete this.p.skillSockets[skillId]; }
+    if (!stoneUid) return ok({ socketed: null });
+    const st = this.findInv(stoneUid); if (!st?.stone?.skillId) return fail('NOT_INSCRIBED'); if (st.stone.skillId !== skillId) return fail('WRONG_SKILL', `Inscribed for ${ALL_SKILLS[st.stone.skillId]?.name.en ?? '?'}`);
+    for (const [k, u] of Object.entries(this.p.skillSockets)) if (u === stoneUid) delete this.p.skillSockets[k];
+    this.p.skillSockets[skillId] = stoneUid; st.locked = true; return ok({ socketed: stoneUid });
+  }
+  equippedStones(): ItemInstance[] { const s = this.p.skillSockets ?? {}; return Object.values(s).map((u) => this.findInv(u)).filter((x): x is ItemInstance => !!x?.stone?.skillId); }
   /** Skill modified by rank + slotted (locked) skill stones; values clamped so no negative cost/cooldown. */
   effectiveSkill(id: string): SkillDef & { rank: number } | null {
     const s = ALL_SKILLS[id]; const rank = this.p.skillRanks[id] ?? 0; if (!s || rank <= 0) return null;
     const rv = valuesAt(s.src, rank); // single source: same table the skill detail UI shows
     const e = { ...s, rank, power: rv.power, mp: rv.mp, cdMs: rv.cdMs, hits: rv.hits };
-    for (const st of this.equippedStones()) if (st.stone!.skillId === id) for (const m of st.stone!.mods) { const v = m.value * (1 + st.stone!.refine * 0.1) / 100; if (m.key === 'power') e.power *= 1 + v; if (m.key === 'cd') e.cdMs = Math.max(500, Math.floor(e.cdMs * (1 - v))); if (m.key === 'mp') e.mp = Math.max(0, Math.floor(e.mp * (1 - v))); if (m.key === 'radius') e.radius = Math.floor(e.radius * (1 + v)); }
+    const sockUid = this.p.skillSockets?.[id]; const stone = sockUid ? this.findInv(sockUid)?.stone : undefined; if (stone?.skillId === id) applyStone(e, stone);
     return e;
   }
 
@@ -833,6 +862,6 @@ export function migrateSkillsV4(p: PlayerState, now = Date.now()): boolean {
   p.skillRanks = starterRanks(cls.id); p.skillPoints = skillPointBudget(p) - 1;
   p.hotbar = (p.hotbar ?? []).map((h) => (h && !ALL_SKILLS[h] && ITEMS[h] ? h : null)); while (p.hotbar.length < 8) p.hotbar.push(null); p.hotbar[0] = cls.skills[0]!.id;
   for (const it of [...(p.inventory ?? []), ...(p.storage ?? [])]) if (it.stone?.skillId && !ALL_SKILLS[it.stone.skillId]) { it.stone.skillId = null as unknown as string; it.stone.mods = []; it.locked = false; }
-  p.gauge = 0; p.skillV = 4; p.skillRev = (p.skillRev ?? 0) + 1; p.skillOps = []; p.skillMigration = { at: now, refunded: oldSpent, fromV: 3 };
+  p.gauge = 0; p.skillV = 4; p.skillRev = (p.skillRev ?? 0) + 1; p.skillOps = []; p.skillSockets = {}; p.skillMigration = { at: now, refunded: oldSpent, fromV: 3 };
   return true;
 }

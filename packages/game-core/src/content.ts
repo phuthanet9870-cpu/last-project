@@ -287,6 +287,7 @@ export const RECIPES: Record<string, RecipeDef> = Object.fromEntries([
   r('rc_gun', 'engineering', 2, [['iron_ore', 4], ['ember_core', 1], ['pine_log', 2]], 220, ['iron_gun', 1], 0.85),
   r('rc_enchant', 'enchanting', 1, [['wisp_dust', 2], ['stone_dust', 3]], 60, ['enchant_stone', 1]),
   r('rc_skillstone', 'runecrafting', 2, [['stone_dust', 10], ['star_dust', 2]], 300, ['skill_stone', 1], 0.8),
+  r('rc_skillstone_leg', 'runecrafting', 6, [['skill_stone', 3], ['star_dust', 10], ['boss_heart', 1]], 5000, ['skill_stone_legendary', 1], 0.35, 4000),
   r('rc_food_forest', 'cooking', 2, [['berry', 2], ['herb_green', 1]], 10, ['food_forest', 3]),
   r('rc_food_hills', 'cooking', 2, [['soft_fur', 1], ['wheat', 2]], 10, ['food_hills', 3]),
   r('rc_food_snow', 'cooking', 3, [['fish_trout', 1], ['frost_shard', 1]], 15, ['food_snow', 3]),

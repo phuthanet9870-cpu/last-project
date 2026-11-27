@@ -89,6 +89,21 @@ describe('V4 builds', () => {
   });
 });
 
+describe('V4 skill stones', () => {
+  it('first inscription free; one socket per skill (free swap/remove); re-inscribe keeps old unless the player takes new; legendary behaviour changes the skill', () => {
+    const { svc, p } = mk('storm_caller'); p.jobLevel = 10; p.skillPoints = 9; const sk = CLASSES.storm_caller!.skills.find((s) => s.key === 'chain_lightning')!; svc.commitSkills({ [sk.id]: 1 }); svc.earn('gold', 10000, 't'); svc.addItem('stone_dust', 30);
+    const [a] = svc.addItem('skill_stone'); const [b] = svc.addItem('skill_stone'); const g0 = svc.gold();
+    expect(svc.inscribeStone(a!.uid, sk.id).ok).toBe(true); expect(svc.gold()).toBe(g0); expect(svc.inscribeStone(a!.uid, sk.id).err).toBe('ALREADY_INSCRIBED');
+    svc.inscribeStone(b!.uid, sk.id);
+    expect(svc.socketStone(sk.id, a!.uid).ok).toBe(true); expect(svc.socketStone(sk.id, b!.uid).ok).toBe(true); expect(a!.locked).toBe(false); expect(p.skillSockets![sk.id]).toBe(b!.uid);
+    const old = JSON.stringify(b!.stone!.mods); const r = svc.reinscribeStone(b!.uid); expect(r.ok).toBe(true); expect(JSON.stringify(b!.stone!.mods)).toBe(old); expect(b!.stone!.pending).toBeTruthy();
+    expect(svc.gold()).toBe(g0 - 500n); svc.chooseInscription(b!.uid, 'old'); expect(JSON.stringify(b!.stone!.mods)).toBe(old); expect(b!.stone!.pending).toBeNull();
+    const [L] = svc.addItem('skill_stone_legendary'); svc.inscribeStone(L!.uid, sk.id); expect(L!.stone!.behavior).toBeTruthy(); svc.socketStone(sk.id, L!.uid);
+    L!.stone!.behavior = 'fork'; L!.stone!.mods = []; expect(svc.effectiveSkill(sk.id)!.chain).toBe((sk.chain ?? 0) + 2);
+    expect(svc.socketStone(sk.id, null).ok).toBe(true); expect(svc.effectiveSkill(sk.id)!.chain).toBe(sk.chain);
+  });
+});
+
 describe('V4 migration', () => {
   it('old generic skill ids are refunded, never remapped; hotbar items kept; idempotent', () => {
     const { p } = mk('fortune_dealer'); p.jobLevel = 25; delete (p as any).skillV; p.skillRanks = { fortune_dealer_s01: 5, fortune_dealer_s02: 3 }; p.skillPoints = 0; p.hotbar = ['fortune_dealer_s01', 'potion_hp_s', null, null, null, null, null, null];

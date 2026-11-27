@@ -17,7 +17,7 @@ export interface ItemDef {
 }
 export interface ItemInstance {
   uid: string; defId: string; qty: number; refine: number; options: Omit<Modifier, 'source'>[]; sockets: (string | null)[];
-  cards: (string | null)[]; gemRefine?: number[]; cosmetic?: number; stone?: { skillId: string | null; mods: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[]; refine: number }; locked: boolean; bound: boolean; durability: number;
+  cards: (string | null)[]; gemRefine?: number[]; cosmetic?: number; stone?: { skillId: string | null; mods: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[]; refine: number; inscribed?: boolean; pending?: { key: 'power' | 'cd' | 'mp' | 'radius'; value: number }[] | null; behavior?: 'echo' | 'swift' | 'frugal' | 'expanse' | 'fork' | null; pendingBehavior?: 'echo' | 'swift' | 'frugal' | 'expanse' | 'fork' | null }; locked: boolean; bound: boolean; durability: number;
 }
 
 const D: ItemDef[] = [];
@@ -122,6 +122,7 @@ for (const [id, en, th, color, stat, v] of GEMS) for (let g = 1; g <= 3; g++) ad
 
 // ---- Skill stones, enchant, protection, tools, eggs, mount keys, costumes, tickets, card packs, decorations ----
 add({ id: 'skill_stone', name: { en: 'Blank Skill Stone', th: 'ศิลาสกิลเปล่า' }, type: 'skill_stone', icon: 'stone', color: '#80a0c0', stack: 1, price: 300, rarity: 'rare' });
+add({ id: 'skill_stone_legendary', name: { en: 'Legendary Skill Stone', th: 'ศิลาสกิลตำนาน' }, type: 'skill_stone', icon: 'stone', color: '#ffb040', stack: 1, price: 6000, rarity: 'legendary', desc: { en: 'Inscribing also rolls a behaviour that changes how the skill works.', th: 'การจารึกจะสุ่มพฤติกรรมพิเศษที่เปลี่ยนวิธีทำงานของสกิล' } });
 add({ id: 'enchant_stone', name: { en: 'Enchant Stone', th: 'หินเอนชานต์' }, type: 'enchant', icon: 'crystal', color: '#ff80ff', stack: 99, price: 150, rarity: 'uncommon' });
 add({ id: 'ward_scroll', name: { en: 'Hearthward Charm', th: 'เครื่องรางคุ้มกัน' }, type: 'protection', icon: 'scroll', color: '#80ffff', stack: 99, price: 2000, rarity: 'epic', desc: { en: 'Prevents downgrade on refine failure.', th: 'ป้องกันระดับลดเมื่อตีบวกล้มเหลว' } });
 add({ id: 'tool_pickaxe', name: { en: 'Pickaxe', th: 'จอบขุดแร่' }, type: 'tool', icon: 'pickaxe', color: '#a0a0a0', price: 50 });

@@ -15,3 +15,4 @@ export * from './market.js';
 export * from './commands.js';
 export * from './skills/v4.js';
 export * from './skills/gauge.js';
+export * from './skills/stones.js';
