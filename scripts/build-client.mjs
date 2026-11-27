@@ -14,6 +14,7 @@ const opts = {
 };
 copyFileSync(resolve(root, 'apps/game-client/index.html'), resolve(out, 'index.html'));
 copyFileSync(resolve(root, 'apps/game-client/styles.css'), resolve(out, 'styles.css'));
+copyFileSync(resolve(root, 'apps/game-client/artifact.html'), resolve(out, 'artifact.html'));
 if (process.argv.includes('--serve')) {
   const ctx = await esbuild.context(opts); await ctx.watch();
   const { port } = await ctx.serve({ servedir: out, port: Number(process.env.PORT ?? 5173), host: '0.0.0.0' });

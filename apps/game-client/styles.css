@@ -117,3 +117,5 @@ pre { background: #1a1420; padding: 8px; border-radius: 6px; white-space: pre-wr
 .toasts { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 9998; display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; }
 .toast { background: #1a1420ee; border: 2px solid var(--edge2); border-radius: 8px; padding: 5px 14px; font-size: 13px; transition: opacity .5s, transform .5s; max-width: 90vw; } .toast.ok { border-color: var(--ok); } .toast.err { border-color: var(--err); } .toast.gold { border-color: var(--gold); color: var(--gold); } .toast.out { opacity: 0; transform: translateY(-10px); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.hb-notice { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 10000; background: #3a1a1a; border: 2px solid var(--err); color: var(--text); padding: 8px 14px; border-radius: 8px; max-width: 90vw; }
+textarea { background: #1a1420; color: var(--text); border: 2px solid var(--edge2); border-radius: 6px; font: 12px monospace; }
