@@ -1,10 +1,10 @@
 {
- "generated": "2026-11-27T15:10:47.307Z",
+ "generated": "2026-11-27T15:23:26.221Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 367,
-  "PARTIAL": 69,
-  "NOT_STARTED": 33,
+  "COMPLETE": 370,
+  "PARTIAL": 68,
+  "NOT_STARTED": 31,
   "BLOCKED": 8,
   "TESTING": 101,
   "SIMULATED": 3
@@ -4055,7 +4055,7 @@
    "name": "Logging",
    "section": "Backend",
    "status": "PARTIAL",
-   "evidence": "Fastify structured logs; chat + audit tables",
+   "evidence": "structured JSON logs (pino) + chat/audit tables; no central log shipping configured",
    "mode": "artifact+online"
   },
   {
@@ -4070,8 +4070,8 @@
    "id": "B32",
    "name": "Monitoring",
    "section": "Backend",
-   "status": "PARTIAL",
-   "evidence": "/api/health + admin overview metrics; no Prometheus/Grafana",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"HTTP hardening\" — /metrics (Prometheus), /readyz, alert rules in ops/prometheus/alerts.yml (no Prometheus server run here)",
    "mode": "artifact+online"
   },
   {
@@ -4086,17 +4086,17 @@
    "id": "B34",
    "name": "Backup",
    "section": "Backend",
-   "status": "NOT_STARTED",
-   "evidence": "backup procedure documented only",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "scripts/db-backup.sh (run) + scripts/backup-drill.mjs: dump→restore→verify, docs/backup-drill-last.json ok; off-host copy/scheduling not run",
+   "mode": "artifact+online"
   },
   {
    "id": "B35",
    "name": "Data Recovery",
    "section": "Backend",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "restore drill verified (row counts, migrations, ledger totals, 0 unbalanced tx); production-size RTO not measured",
+   "mode": "artifact+online"
   },
   {
    "id": "B36",
@@ -4247,7 +4247,7 @@
    "name": "NPC, dialogue, story and quests",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "27 NPCs, 47 quests (main chain mq01–mq24 to the Lv115 raid finale, 20 side quests); no branching dialogue/story scenes",
+   "evidence": "26 NPCs, 47 quests (main chain mq01–mq24 to the Lv115 raid finale, 20 side quests); no branching dialogue/story scenes",
    "mode": "artifact+online"
   },
   {
@@ -4439,7 +4439,7 @@
    "name": "Card collection and decks",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "92 cards, deck builder, collection",
+   "evidence": "100 collectible cards, deck builder, collection, exchange, bound starters, cosmetics",
    "mode": "artifact+online"
   },
   {
@@ -4591,7 +4591,7 @@
    "name": "Security model",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "server authority, Argon2id, rate limits, RBAC; no CSRF/WSS/TLS in dev, no threat-model review",
+   "evidence": "server authority, Argon2id, proxy-safe rate limits, RBAC, admin TOTP MFA, CSP/HSTS/security headers, production config guard; TLS via Caddy config (not run); no external penetration test or threat-model review",
    "mode": "artifact+online"
   },
   {
@@ -4599,7 +4599,7 @@
    "name": "Admin dashboard and GM tools",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "admin API + dashboard: overview, players, sanctions, grants, flags, audit; no MFA/content editor",
+   "evidence": "admin API + dashboard with TOTP MFA (required in production): overview, players, sanctions, grants, flags, audit; no content editor",
    "mode": "artifact+online"
   },
   {
@@ -4623,7 +4623,7 @@
    "name": "Deployment and operations",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "docker-compose + README; no CI/CD/TLS/backups",
+   "evidence": "CI workflow (PR/manual, not yet run on GitHub), bundled production build verified, Dockerfile + compose + Caddy TLS written but not built (no Docker daemon), backup/restore drill verified; no deployment performed",
    "mode": "artifact+online"
   },
   {
@@ -4647,7 +4647,7 @@
    "name": "Testing strategy",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "unit + E2E + multiplayer tests; no load/soak/security suite",
+   "evidence": "unit (incl. RFC 6238 vectors) + 36 E2E + 27 multiplayer + online browser + load (250 players) tests; no soak test, no external security test",
    "mode": "artifact+online"
   },
   {
@@ -4655,7 +4655,7 @@
    "name": "Release acceptance gates",
    "section": "Expanded requirement",
    "status": "NOT_STARTED",
-   "evidence": "release gates not met (prototype)",
+   "evidence": "release gates not met: see docs/RELEASE_ACCEPTANCE.md",
    "mode": "-"
   }
  ]

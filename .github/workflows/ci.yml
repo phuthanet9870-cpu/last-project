@@ -1,0 +1,74 @@
+# Continuous integration: static checks, unit tests, then integration (real PostgreSQL + Redis), multiplayer and browser E2E.
+# Triggers are limited to pull requests and manual runs so pushes to feature branches do not consume Actions minutes.
+name: ci
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build:client
+  integration:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: hb, POSTGRES_PASSWORD: hb_dev_pw, POSTGRES_DB: hearthbound }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U hb -d hearthbound" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://hb:hb_dev_pw@localhost:5432/hearthbound
+      REDIS_URL: redis://localhost:6379
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright (kept out of the lockfile)
+        run: npm install --prefix /tmp/pw playwright@1.63.0 && /tmp/pw/node_modules/.bin/playwright install --with-deps chromium
+      - run: pnpm build:client
+      - run: pnpm db:migrate
+      - name: Start game server (test settings, never used in production)
+        run: |
+          DEV_COMMANDS=1 REGISTER_LIMIT_PER_HOUR=5000 MARRIAGE_MIN_FRIEND_MS=0 CHAMPION_SYNC_MS=1000 WEDDING_PHASE_MS=500 GUILD_WAR_MS=3000 pnpm server > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:2567/readyz && break; sleep 1; done
+      - run: pnpm test:multiplayer
+      - run: node tests/e2e/online.e2e.mjs
+      - run: pnpm test:e2e
+      - name: Backup → restore drill
+        run: node scripts/backup-drill.mjs
+      - run: pnpm worker -- --once
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence
+          path: |
+            server.log
+            tests/e2e/last-run.json
+            tests/e2e/online-last-run.json
+            tests/multiplayer/last-run.json
+            tests/e2e/screenshots/
+            docs/backup-drill-last.json

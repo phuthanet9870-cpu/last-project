@@ -1,0 +1,24 @@
+{
+  "when": "2026-11-27T15:17:55.689Z",
+  "ok": true,
+  "dumpBytes": 1345098,
+  "dumpMs": 714,
+  "restoreMs": 1189,
+  "totalMs": 1903,
+  "tables": 30,
+  "rows": 30999,
+  "migrations": [
+    "001_init.sql",
+    "002_weekly_champions.sql",
+    "003_guild_storage_wars.sql",
+    "004_admin_mfa.sql"
+  ],
+  "ledgerTotals": {
+    "arena_token": "0",
+    "card_dust": "0",
+    "gold": "0",
+    "guild_token": "0"
+  },
+  "unbalancedTx": 0,
+  "rowCountMismatches": []
+}

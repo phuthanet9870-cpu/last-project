@@ -1,9 +1,9 @@
 {
-  "when": "2026-11-27T15:08:26.496Z",
+  "when": "2026-11-27T15:27:07.381Z",
   "server": "http://localhost:2567",
-  "durationMs": 96813,
-  "passed": 25,
-  "total": 25,
+  "durationMs": 100210,
+  "passed": 27,
+  "total": 27,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwz472z718j6w, ch_mwz472zhbhweg"
+      "detail": "ch_mwz4v17w1blvq, ch_mwz4v186b3vn8"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -103,22 +103,22 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwz472z718j6w\":16,\"ch_mwz472zhbhweg\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwz4v17w1blvq\":16,\"ch_mwz4v186b3vn8\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
       "ok": true,
-      "detail": "online=2 p95 tick=0.66ms ledger ok=true"
+      "detail": "online=2 p95 tick=0.63ms ledger ok=true"
     },
     {
       "name": "Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title",
       "ok": true,
-      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:25; title_weekly → B"
+      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:29; title_weekly → B"
     },
     {
       "name": "guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds",
       "ok": true,
-      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lanej52v score [0,0]"
+      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lan2gs4a score [0,0]"
     },
     {
       "name": "worker: weekly champion = most PvP rating gained in the last 7 days (not all-time rating)",
@@ -129,6 +129,16 @@
       "name": "raid: raid group of real players enters the Sanctum together (8-cap group, Lv110 gate, shared instance)",
       "ok": true,
       "detail": "2 real raiders in one Sanctum instance; wave of 8 monsters; Lv gate + leader-only conversion enforced"
+    },
+    {
+      "name": "admin MFA (TOTP): enrol → login needs code → admin works → code replay rejected",
+      "ok": true,
+      "detail": "enrol (encrypted secret) → MFA_REQUIRED without code → login with code → admin overview 200 → replay 401"
+    },
+    {
+      "name": "HTTP hardening: CSP + security headers, /metrics, /readyz, spoofed X-Forwarded-For does not bypass the login limit",
+      "ok": true,
+      "detail": "CSP ok; metrics ok; 13/24 spoofed-IP attempts throttled"
     }
   ]
 }

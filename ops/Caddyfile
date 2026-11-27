@@ -1,0 +1,8 @@
+# TLS termination (automatic Let's Encrypt certificates) + reverse proxy for HTTP and WebSocket (wss://DOMAIN/ws).
+{$DOMAIN} {
+	encode zstd gzip
+	@internal path /metrics
+	respond @internal 404 # scrape metrics from the internal network (game:2567/metrics), never publicly
+	reverse_proxy game:2567
+	header -Server
+}

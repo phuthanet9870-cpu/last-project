@@ -1,0 +1,10 @@
+node_modules
+dist
+backups
+releases
+deliverables/*.zip
+tests/e2e/screenshots
+.git
+.env
+.env.*
+*.log

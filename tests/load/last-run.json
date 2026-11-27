@@ -1,38 +1,22 @@
 {
-  "when": "2026-11-27T09:23:18.943Z",
+  "when": "2026-11-27T15:21:29.581Z",
   "note": "server + load generator share one 4-core dev container (CPU contention inflates tick times); all clients in the same town map; movement+chat workload only (no combat); visibility cap 40 nearest players",
   "results": [
     {
-      "clients": 20,
-      "tickP95msMax": "2.90",
-      "tickP95msMedian": "2.84",
-      "tickAvgMs": "1.58",
-      "downKBpsPerClient": "34.1",
-      "rssMB": "93 (test process)"
-    },
-    {
-      "clients": 50,
-      "tickP95msMax": "7.40",
-      "tickP95msMedian": "7.26",
-      "tickAvgMs": "4.88",
-      "downKBpsPerClient": "66.6",
-      "rssMB": "102 (test process)"
-    },
-    {
       "clients": 100,
-      "tickP95msMax": "16.11",
-      "tickP95msMedian": "15.34",
-      "tickAvgMs": "10.43",
-      "downKBpsPerClient": "65.6",
-      "rssMB": "112 (test process)"
+      "tickP95msMax": "27.41",
+      "tickP95msMedian": "25.88",
+      "tickAvgMs": "11.65",
+      "downKBpsPerClient": "65.1",
+      "rssMB": "109 (test process)"
     },
     {
       "clients": 250,
-      "tickP95msMax": "46.59",
-      "tickP95msMedian": "45.75",
-      "tickAvgMs": "28.49",
-      "downKBpsPerClient": "62.6",
-      "rssMB": "133 (test process)"
+      "tickP95msMax": "47.10",
+      "tickP95msMedian": "46.17",
+      "tickAvgMs": "29.02",
+      "downKBpsPerClient": "61.8",
+      "rssMB": "135 (test process)"
     }
   ]
 }

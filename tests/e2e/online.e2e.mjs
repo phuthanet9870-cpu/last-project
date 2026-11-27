@@ -9,7 +9,7 @@ const SHOTS = resolve(root, 'tests/e2e/screenshots'); mkdirSync(SHOTS, { recursi
 const BASE = process.env.SERVER ?? 'http://localhost:2567'; const tag = Math.random().toString(36).slice(2, 6); const out = []; const errors = [];
 const b = await chromium.launch();
 async function player(name) {
-  const pg = await b.newPage({ viewport: { width: 1200, height: 740 } }); pg.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
+  const pg = await b.newPage({ viewport: { width: 1200, height: 740 } }); pg.on('pageerror', (e) => errors.push(`${name}: ${e.message}`)); pg.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(`${name} console: ${m.text()}`); }); // CSP violations surface as console errors
   await pg.goto(BASE + '/'); await pg.click('text=Online Mode'); const inputs = await pg.$$('.panel-box input');
   await inputs[2].fill(`${name}_${tag}`); await inputs[3].fill('hunter2hunter2'); await pg.click('button:has-text("Register")');
   await pg.waitForSelector('text=Server characters'); await pg.fill('input[placeholder="Character name"]', `${name}${tag}`); await pg.click('button:has-text("Create character")');

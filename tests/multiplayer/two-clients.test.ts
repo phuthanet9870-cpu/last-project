@@ -7,6 +7,7 @@ import { aiChooseAction } from '../../packages/game-core/src/index.js';
 import pg from 'pg';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { totp } from '../../apps/game-server/src/totp.js';
 const BASE = process.env.SERVER ?? 'http://localhost:2567'; const WSURL = BASE.replace(/^http/, 'ws') + '/ws';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://hb:hb_dev_pw@localhost:5432/hearthbound' });
 const results: { name: string; ok: boolean; detail: string }[] = [];
@@ -200,6 +201,24 @@ await step('raid: raid group of real players enters the Sanctum together (8-cap 
   assert(C1.mapId === 'flame_sanctum' && D1.mapId === 'flame_sanctum', `maps ${C1.mapId}/${D1.mapId}`); const sameInst = C1.ents.some((x) => x.id === D1.myId); assert(sameInst, 'same raid instance');
   const mons = C1.ents.filter((x) => x.k === 'monster').length; assert(mons >= 5, `raid wave spawned (${mons})`);
   await C1.cmd('leaveInstance'); await D1.cmd('leaveInstance'); C1.ws.close(); D1.ws.close(); return `2 real raiders in one Sanctum instance; wave of ${mons} monsters; Lv gate + leader-only conversion enforced`;
+});
+await step('admin MFA (TOTP): enrol → login needs code → admin works → code replay rejected', async () => {
+  const r = await api('/api/auth/register', { username: `mfa_${tag}`, password: 'correct-horse-7' }); await db.query(`UPDATE accounts SET role='admin' WHERE id=$1`, [r.j.accountId]);
+  const t1 = (await api('/api/auth/login', { username: `mfa_${tag}`, password: 'correct-horse-7' })).j.accessToken; const setup = await api('/api/auth/mfa/setup', {}, t1); assert(setup.status === 200 && /^otpauth:\/\/totp\//.test(setup.j.otpauthUrl), JSON.stringify(setup.j));
+  const stored = (await db.query('SELECT mfa_pending FROM accounts WHERE id=$1', [r.j.accountId])).rows[0].mfa_pending; assert(!String(stored).includes(setup.j.secret), 'secret encrypted at rest');
+  assert((await api('/api/auth/mfa/enable', { code: '000000' }, t1)).status === 400, 'wrong code rejected'); const en = await api('/api/auth/mfa/enable', { code: totp(setup.j.secret) }, t1); assert(en.status === 200, JSON.stringify(en.j));
+  const no = await api('/api/auth/login', { username: `mfa_${tag}`, password: 'correct-horse-7' }); assert(no.status === 401 && no.j.mfaRequired === true, JSON.stringify(no.j));
+  const code = totp(setup.j.secret, Date.now() + 30_000); const yes = await api('/api/auth/login', { username: `mfa_${tag}`, password: 'correct-horse-7', otp: code }); assert(yes.status === 200 && yes.j.mfa === true, JSON.stringify(yes.j));
+  const ov = await api('/api/admin/overview', undefined, yes.j.accessToken); assert(ov.status === 200, `admin with MFA → ${ov.status}`);
+  const replay = await api('/api/auth/login', { username: `mfa_${tag}`, password: 'correct-horse-7', otp: code }); assert(replay.status === 401, `replayed code → ${replay.status}`);
+  return 'enrol (encrypted secret) → MFA_REQUIRED without code → login with code → admin overview 200 → replay 401';
+});
+await step('HTTP hardening: CSP + security headers, /metrics, /readyz, spoofed X-Forwarded-For does not bypass the login limit', async () => {
+  const home = await fetch(BASE + '/'); const csp = home.headers.get('content-security-policy') ?? ''; assert(/script-src 'self'/.test(csp) && /frame-ancestors 'none'/.test(csp), `csp: ${csp}`); assert(home.headers.get('x-frame-options') === 'DENY', 'xfo');
+  const adm = await fetch(BASE + '/admin/'); assert((await adm.text()).includes('src="admin.js"'), 'admin script external (no inline script needed)');
+  const m = await (await fetch(BASE + '/metrics')).text(); for (const k of ['hb_online_players', 'hb_tick_ms_p95', 'hb_db_up 1', 'hb_http_requests_total']) assert(m.includes(k), `metrics missing ${k}`); assert((await fetch(BASE + '/readyz')).status === 200, 'readyz');
+  let blocked = 0; for (let i = 0; i < 24; i++) { const x = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `10.0.${i}.1` }, body: JSON.stringify({ username: `nobody_${tag}`, password: 'wrong-password' }) }); if (x.status === 429) blocked++; }
+  assert(blocked > 0, 'rate limit applied despite spoofed X-Forwarded-For'); return `CSP ok; metrics ok; ${blocked}/24 spoofed-IP attempts throttled`;
 });
 const passed = results.filter((r) => r.ok).length; mkdirSync('tests/multiplayer', { recursive: true });
 writeFileSync('tests/multiplayer/last-run.json', JSON.stringify({ when: new Date().toISOString(), server: BASE, durationMs: Date.now() - t0, passed, total: results.length, results }, null, 2));

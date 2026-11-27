@@ -1,0 +1,43 @@
+# Prometheus alerting rules for Hearthbound (metrics from GET /metrics on each game server).
+groups:
+  - name: hearthbound
+    rules:
+      - alert: GameServerDown
+        expr: up{job="hearthbound"} == 0
+        for: 1m
+        labels: { severity: page }
+        annotations: { summary: "Game server {{ $labels.instance }} is not scrapeable" }
+      - alert: TickBudgetExceeded
+        expr: hb_tick_ms_p95 > 50
+        for: 5m
+        labels: { severity: page }
+        annotations: { summary: "p95 simulation tick {{ $value }}ms exceeds the 50ms budget (20 Hz)" }
+      - alert: DatabaseUnreachable
+        expr: hb_db_up == 0
+        for: 1m
+        labels: { severity: page }
+        annotations: { summary: "PostgreSQL unreachable from the game server" }
+      - alert: StateSaveFailures
+        expr: increase(hb_persist_errors_total[5m]) > 0
+        labels: { severity: page }
+        annotations: { summary: "Player state saves are failing (risk of progress loss)" }
+      - alert: LedgerBacklog
+        expr: hb_ledger_pending > 500
+        for: 2m
+        labels: { severity: warn }
+        annotations: { summary: "Ledger entries are not being flushed" }
+      - alert: Http5xxRate
+        expr: rate(hb_http_5xx_total[5m]) > 0.5
+        for: 5m
+        labels: { severity: warn }
+        annotations: { summary: "Elevated HTTP 5xx responses" }
+      - alert: RedisDown
+        expr: hb_redis_up == 0
+        for: 2m
+        labels: { severity: warn }
+        annotations: { summary: "Redis unavailable (rate limits/presence fall back to memory)" }
+      - alert: MemoryHigh
+        expr: process_resident_memory_bytes > 1.5e9
+        for: 10m
+        labels: { severity: warn }
+        annotations: { summary: "Game server RSS above 1.5 GB" }

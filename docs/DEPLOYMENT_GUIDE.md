@@ -27,5 +27,20 @@ Offline/artifact build only (no database): `pnpm build:client`, then open `deliv
 docker compose up
 ```
 
+## Production-style deployment (written, not yet run)
+See **docs/OPERATIONS_RUNBOOK.md** for the full procedure, and **docs/RELEASE_ACCEPTANCE.md** for why this build is not production-ready.
+```bash
+node scripts/build-server.mjs
+```
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+- TLS/WSS: Caddy (`ops/Caddyfile`), automatic certificates for `$DOMAIN`. The game server runs with `TRUST_PROXY=1` only behind the proxy.
+- The server refuses `NODE_ENV=production` with weak `JWT_SECRET`/`MFA_ENC_KEY`, `CORS_ORIGIN=*`, `DEV_COMMANDS=1` or the development DB password.
+- Admins must enrol TOTP MFA (`/api/auth/mfa/setup` → `/api/auth/mfa/enable`); admin APIs require an MFA session in production.
+- Backups: `scripts/db-backup.sh` (cron), restore drill `node scripts/backup-drill.mjs`.
+- Monitoring: `/metrics`, `/readyz`, alert rules in `ops/prometheus/alerts.yml`.
+- CI: `.github/workflows/ci.yml` runs on pull requests and manual dispatch.
+
 ## Production checklist (all open)
 Set `NODE_ENV=production` and a random `JWT_SECRET`; terminate TLS/WSS at a reverse proxy; restrict `CORS_ORIGIN`; separate DB per environment with least-privilege user; enable backups + PITR and run a restore drill; add metrics/alerts (tick p95, ledger mismatch from worker `security_events`); CI with typecheck/lint/test/e2e; admin MFA; security review; load test at target capacity (current validated ≈50 players per map).
