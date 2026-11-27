@@ -1,10 +1,10 @@
 {
-  "when": "2026-11-27T13:42:49.180Z",
+  "when": "2026-11-27T13:51:03.941Z",
   "results": [
     {
       "name": "two browser clients see each other in online mode",
       "ok": true,
-      "detail": "[\"Ivyfm2s\",\"Oakfm2s\"]"
+      "detail": "[\"Ivyjj7f\",\"Oakjj7f\"]"
     },
     {
       "name": "chat between browsers",

@@ -180,6 +180,9 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   },
   // --- economy (§35–38) ---
   marketList: (c, a) => wrapEco(() => c.market.list(c.svc, String(a.uid), big(a.price), a.qty ? Number(a.qty) : undefined)),
+  collectSales: (c) => wrapEco(() => ({ collected: String(c.market.collectSales(c.svc)) })),
+  wishlistSet: (c, a) => { const d = ITEMS[String(a.defId)]; if (!d || !d.tradeable) return fail('INVALID'); const w = (c.svc.p.wishlist ??= []); if (w.length >= 30 && !w.some((x) => x.defId === d.id)) return fail('WISHLIST_FULL'); const e = w.find((x) => x.defId === d.id); const mp = Math.max(1, Number(a.maxPrice) || d.price); if (e) e.maxPrice = mp; else w.push({ defId: d.id, maxPrice: mp }); return ok(); },
+  wishlistRemove: (c, a) => { c.svc.p.wishlist = (c.svc.p.wishlist ?? []).filter((x) => x.defId !== a.defId); return ok(); },
   marketBuy: (c, a) => wrapEco(() => c.market.buy(c.svc, String(a.id))),
   marketCancel: (c, a) => wrapEco(() => c.market.cancel(c.svc, String(a.id))),
   buyOrder: (c, a) => wrapEco(() => c.market.placeBuyOrder(c.svc, String(a.defId), big(a.price), Number(a.qty) || 1)),

@@ -23,7 +23,7 @@ export function elementMultiplier(att: Element, def: Element): number {
 }
 
 export const CONFIG = {
-  version: '0.6.0-seed',
+  version: '0.7.0-seed',
   levelCap: 120,
   ascensionTiers: 3,
   ascensionLevelReq: [60, 90, 120],
@@ -48,6 +48,7 @@ export const CONFIG = {
   auctionMinIncrementBps: 500,
   auctionAntiSnipeMs: 30_000,
   exchangeFeeBps: 100,
+  crystalHoldMs: 72 * 3600_000, // Crystal bought on the exchange is held before it can be re-sold (§37 holding period)
   exchangeTick: 1,
   exchangeMinLot: 1,
   farmBaseCapacity: 12, farmMaxCapacity: 60,

@@ -14,11 +14,11 @@ const assert = (c: unknown, m: string) => { if (!c) throw new Error(m); };
 async function step(name: string, fn: () => Promise<string | void>) { try { const d = (await fn()) ?? ''; results.push({ name, ok: true, detail: d }); console.log(`PASS ${name} ${d}`); } catch (e: any) { results.push({ name, ok: false, detail: e.message }); console.log(`FAIL ${name}: ${e.message}`); } }
 async function api(path: string, body?: unknown, token?: string, method?: string) { const r = await fetch(BASE + path, { method: method ?? (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j: any = await r.json().catch(() => ({})); return { status: r.status, j }; }
 class Client {
-  ws!: WebSocket; tcg: any = null; map = new Map<string, any>(); myId = ''; mapId = ''; state: any; ents: any[] = []; fx: any[] = []; seq = 0; pending = new Map<number, (r: any) => void>(); closed: { code: number; reason: string } | null = null;
+  ws!: WebSocket; market: any = null; tcg: any = null; map = new Map<string, any>(); myId = ''; mapId = ''; state: any; ents: any[] = []; fx: any[] = []; seq = 0; pending = new Map<number, (r: any) => void>(); closed: { code: number; reason: string } | null = null;
   async connect(token: string, char: string) {
     this.ws = new WebSocket(`${WSURL}?token=${encodeURIComponent(token)}&character=${encodeURIComponent(char)}`);
     await new Promise<void>((res, rej) => {
-      this.ws.on('message', (d) => { const m = JSON.parse(d.toString()); if (m.type === 'welcome' || m.type === 'state') { this.state = JSON.parse(m.player); if (m.myId) this.myId = m.myId; if (m.mapId) this.mapId = m.mapId; if (m.type === 'welcome') res(); } if (m.type === 'tcg') this.tcg = m.tcg; if (m.type === 'fx') this.fx.push(...m.fx); if (m.type === 'snap') { if (m.full) this.map.clear(); for (const u of m.upd ?? []) { const c0 = this.map.get(u.id); if (c0) Object.assign(c0, u); else this.map.set(u.id, u); } for (const id of m.rm ?? []) this.map.delete(id); this.ents = [...this.map.values()]; if (m.mapId) this.mapId = m.mapId; } if (m.type === 'res') { this.pending.get(m.id)?.(m.result); this.pending.delete(m.id); } });
+      this.ws.on('message', (d) => { const m = JSON.parse(d.toString()); if (m.type === 'welcome' || m.type === 'state') { this.state = JSON.parse(m.player); if (m.myId) this.myId = m.myId; if (m.mapId) this.mapId = m.mapId; if (m.type === 'welcome') res(); } if (m.type === 'tcg') this.tcg = m.tcg; if (m.type === 'market') this.market = m.market; if (m.type === 'fx') this.fx.push(...m.fx); if (m.type === 'snap') { if (m.full) this.map.clear(); for (const u of m.upd ?? []) { const c0 = this.map.get(u.id); if (c0) Object.assign(c0, u); else this.map.set(u.id, u); } for (const id of m.rm ?? []) this.map.delete(id); this.ents = [...this.map.values()]; if (m.mapId) this.mapId = m.mapId; } if (m.type === 'res') { this.pending.get(m.id)?.(m.result); this.pending.delete(m.id); } });
       this.ws.on('close', (code, reason) => { this.closed = { code, reason: reason.toString() }; rej(new Error(`closed ${code} ${reason}`)); }); this.ws.on('error', rej);
     });
   }
@@ -77,6 +77,11 @@ await step('marketplace: list (escrow) → buy → double-buy rejected → persi
   const b1 = await B.cmd('marketBuy', { id }); assert(b1.ok, JSON.stringify(b1)); const b2 = await B.cmd('marketBuy', { id }); assert(!b2.ok, 'second buy rejected');
   const unb = await db.query('SELECT tx_id FROM currency_ledger GROUP BY tx_id, currency HAVING sum(amount)<>0'); assert(unb.rowCount === 0, 'all ledger tx balanced in DB');
   const neg = await db.query(`SELECT * FROM wallets WHERE account NOT LIKE 'system:%' AND (available<0 OR reserved<0)`); assert(neg.rowCount === 0, 'no negative wallets'); return 'sold 1 net for 10G (fee burned)';
+});
+await step('market privacy + account sales collection box', async () => {
+  await A.cmd('marketView'); await B.cmd('marketView'); await sleep(300); const coll = BigInt(String(A.market.collectable)); assert(coll > 0n, `A collection ${coll}`);
+  assert((B.market.hist ?? []).every((h: any) => h.account === `p:${B.state.id}`), 'B sees only own history'); assert((A.market.auctions ?? []).every((x: any) => !('maxBids' in x)), 'auction maxima stripped');
+  const g0 = A.gold(); const c = await A.cmd('collectSales'); assert(c.ok, JSON.stringify(c)); await sleep(300); assert(A.gold() === g0 + coll, `gold ${g0}→${A.gold()}`); return `collected ${coll}G; other players' history & auction maxima hidden`;
 });
 await step('friend presence: online for friends, location only when mutual', async () => {
   await A.cmd('friendAdd', { name: `Bo${tag}` }); let r = await A.cmd('friendsStatus'); const f1 = r.data.find((x: any) => x.name === `Bo${tag}`); assert(f1.online && f1.map === null && f1.mutual === false, JSON.stringify(f1));

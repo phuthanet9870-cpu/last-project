@@ -9,7 +9,7 @@ import { ITEMS, type ItemInstance } from './items.js';
 import { newItem, walletId, type PlayerService } from './player.js';
 import { Rng, uid } from './rng.js';
 
-export interface Listing { id: string; seller: string; sellerName: string; item: ItemInstance; price: bigint; ts: number; expiresAt: number; status: 'active' | 'sold' | 'cancelled' | 'expired'; simulated: boolean }
+export interface Listing { payTo?: string; id: string; seller: string; sellerName: string; item: ItemInstance; price: bigint; ts: number; expiresAt: number; status: 'active' | 'sold' | 'cancelled' | 'expired'; simulated: boolean }
 export interface BuyOrder { id: string; buyer: string; defId: string; price: bigint; qty: number; filled: number; status: 'open' | 'filled' | 'cancelled' }
 export interface TradeSession { id: string; a: string; b: string; offerA: { items: string[]; gold: bigint }; offerB: { items: ItemInstance[]; gold: bigint }; lockA: boolean; lockB: boolean; confirmA: boolean; confirmB: boolean; state: 'open' | 'done' | 'cancelled' }
 
@@ -17,6 +17,22 @@ const SIM_SELLERS = ['Marigold', 'Thorn', 'Basil', 'Corvin', 'Elowen', 'Fennick'
 export class MarketService {
   listings: Listing[] = []; buyOrders: BuyOrder[] = []; auctions: Auction[] = []; book = new OrderBook(true); priceHistory: Record<string, { ts: number; price: number }[]> = {};
   exchangeHistory: { ts: number; price: number; qty: number }[] = []; trades: TradeSession[] = []; private lastSim = 0;
+  /** Personal market history (§35): buys/sales/auctions/exchange per wallet account. */
+  history: { ts: number; kind: 'buy' | 'sell' | 'auction_won' | 'auction_sold' | 'xbuy' | 'xsell'; account: string; item: string; qty: number; price: number }[] = [];
+  /** Crystal holding period (§37): exchange purchases are held in `hold:<acct>` until releaseAt. */
+  holds: { id: string; acct: string; amount: bigint; releaseAt: number }[] = [];
+  /** Called for every new listing (wishlist price alerts). */
+  onNewListing?: (l: Listing) => void;
+  log(kind: MarketService['history'][number]['kind'], account: string, item: string, qty: number, price: number) { this.history.push({ ts: this.now(), kind, account, item, qty, price }); if (this.history.length > 2000) this.history.splice(0, this.history.length - 2000); }
+  /** Sales proceeds go to the account-wide collection box (shared by all characters on the account). */
+  static collectionOf(accountId: string) { return `coll:${accountId}`; }
+  collectable(accountId: string): bigint { return this.ledger.available(MarketService.collectionOf(accountId), 'gold'); }
+  collectSales(svc: PlayerService): bigint { const from = MarketService.collectionOf(svc.p.accountId); const amt = this.ledger.available(from, 'gold'); if (amt <= 0n) throw new EconomyError('NOTHING_TO_COLLECT'); this.ledger.transfer(from, walletId(svc.p), 'gold', amt, 'sales_collection', `collect:${from}:${this.now()}:${amt}`); svc.emit({ type: 'currency', c: 'gold', delta: Number(amt) }); return amt; }
+  waitingCrystal(acct: string): bigint { return this.holds.filter((h) => h.acct === acct).reduce((s, h) => s + h.amount, 0n); }
+  releaseHolds() { const now = this.now(); for (const h of [...this.holds]) if (h.releaseAt <= now) { this.ledger.transfer(`hold:${h.acct}`, h.acct, 'crystal', h.amount, 'crystal_hold_release', `hold:${h.id}`); this.holds.splice(this.holds.indexOf(h), 1); } }
+  bestSellers(hours = 24, n = 10) { const since = this.now() - hours * 3600_000; const out: { defId: string; sales: number; avg: number }[] = []; for (const [defId, h] of Object.entries(this.priceHistory)) { const r = h.filter((x) => x.ts >= since); if (r.length) out.push({ defId, sales: r.length, avg: Math.round(r.reduce((s, x) => s + x.price, 0) / r.length) }); } return out.sort((a, b) => b.sales - a.sales).slice(0, n); }
+  /** OHLC candles for the exchange (bucketMs = 1m / 5m / 1h). */
+  candles(bucketMs: number, n = 30) { const m = new Map<number, { o: number; h: number; l: number; c: number; v: number }>(); for (const t of this.exchangeHistory) { const k = Math.floor(t.ts / bucketMs); const c = m.get(k); if (!c) m.set(k, { o: t.price, h: t.price, l: t.price, c: t.price, v: t.qty }); else { c.h = Math.max(c.h, t.price); c.l = Math.min(c.l, t.price); c.c = t.price; c.v += t.qty; } } return [...m.entries()].sort((a, b) => a[0] - b[0]).slice(-n).map(([k, c]) => ({ t: k * bucketMs, ...c })); }
   constructor(public ledger: Ledger, public rng = new Rng(), public now: () => number = Date.now) {}
 
   refPrice(defId: string): number { const h = this.priceHistory[defId]; if (h?.length) return Math.round(h.slice(-10).reduce((s, x) => s + x.price, 0) / Math.min(10, h.length)); return Math.max(5, ITEMS[defId]?.price ?? 10); }
@@ -30,8 +46,8 @@ export class MarketService {
     const n = Math.min(qty ?? it.qty, it.qty); if (n <= 0) throw new EconomyError('INVALID_QTY');
     let escrow: ItemInstance;
     if (n < it.qty) { it.qty -= n; escrow = { ...newItem(it.defId, n) }; } else { svc.p.inventory.splice(svc.p.inventory.indexOf(it), 1); escrow = it; }
-    const l: Listing = { id: uid('lst'), seller: walletId(svc.p), sellerName: svc.p.name, item: escrow, price, ts: this.now(), expiresAt: this.now() + 48 * 3600_000, status: 'active', simulated: false };
-    this.listings.push(l); return l;
+    const l: Listing = { id: uid('lst'), seller: walletId(svc.p), payTo: MarketService.collectionOf(svc.p.accountId), sellerName: svc.p.name, item: escrow, price, ts: this.now(), expiresAt: this.now() + 48 * 3600_000, status: 'active', simulated: false };
+    this.listings.push(l); this.onNewListing?.(l); return l;
   }
   cancel(svc: PlayerService, listingId: string) {
     const l = this.listings.find((x) => x.id === listingId && x.seller === walletId(svc.p)); if (!l || l.status !== 'active') throw new EconomyError('NOT_ACTIVE');
@@ -45,8 +61,8 @@ export class MarketService {
     const total = l.price * BigInt(l.item.qty); if (svc.gold() < total) throw new EconomyError('INSUFFICIENT_FUNDS');
     if (svc.slotsNeeded(l.item.defId, l.item.qty) > svc.freeSlots()) throw new EconomyError('INVENTORY_FULL');
     const fee = feeOf(total, CONFIG.marketFeeBps);
-    this.ledger.post([{ account: walletId(svc.p), currency: 'gold', amount: -total }, { account: l.seller, currency: 'gold', amount: total - fee }, { account: 'system:burn:market_tax', currency: 'gold', amount: fee }], 'market_buy', `buy:${l.id}`);
-    l.status = 'sold'; svc.p.inventory.push(l.item); svc.emit({ type: 'currency', c: 'gold', delta: -Number(total) });
+    this.ledger.post([{ account: walletId(svc.p), currency: 'gold', amount: -total }, { account: l.payTo ?? l.seller, currency: 'gold', amount: total - fee }, { account: 'system:burn:market_tax', currency: 'gold', amount: fee }], 'market_buy', `buy:${l.id}`);
+    l.status = 'sold'; svc.p.inventory.push(l.item); this.log('buy', walletId(svc.p), l.item.defId, l.item.qty, Number(total)); this.log('sell', l.seller, l.item.defId, l.item.qty, Number(total - fee)); svc.emit({ type: 'currency', c: 'gold', delta: -Number(total) });
     (this.priceHistory[l.item.defId] ??= []).push({ ts: this.now(), price: Number(l.price) });
     return l;
   }
@@ -61,20 +77,20 @@ export class MarketService {
   createAuction(svc: PlayerService, itemUid: string, start: bigint, buyNow: bigint | null, durationMs: number): Auction {
     const it = svc.findInv(itemUid); if (!it || it.locked || it.bound) throw new EconomyError('INVALID_ITEM'); if (this.slotsUsed(svc) >= CONFIG.marketSlots) throw new EconomyError('NO_MARKET_SLOT'); if (start <= 0n || (buyNow !== null && buyNow <= start)) throw new EconomyError('INVALID_PRICE');
     svc.p.inventory.splice(svc.p.inventory.indexOf(it), 1);
-    const a: Auction = { id: uid('auc'), seller: walletId(svc.p), itemUid: it.uid, itemDefId: it.defId, start, buyNow, current: 0n, bidder: null, endsAt: this.now() + durationMs, status: 'active', bids: [] };
+    const a: Auction = { payTo: MarketService.collectionOf(svc.p.accountId), id: uid('auc'), seller: walletId(svc.p), itemUid: it.uid, itemDefId: it.defId, start, buyNow, current: 0n, bidder: null, endsAt: this.now() + durationMs, status: 'active', bids: [] };
     (a as any).item = it; this.auctions.push(a); return a;
   }
-  bid(svc: PlayerService, auctionId: string, amount: bigint) { const a = this.auctions.find((x) => x.id === auctionId); if (!a) throw new EconomyError('NOT_FOUND'); placeBid(this.ledger, a, walletId(svc.p), amount, this.now(), CONFIG.auctionMinIncrementBps, CONFIG.auctionAntiSnipeMs); }
+  bid(svc: PlayerService, auctionId: string, maxAmount: bigint) { const a = this.auctions.find((x) => x.id === auctionId); if (!a) throw new EconomyError('NOT_FOUND'); return placeBid(this.ledger, a, walletId(svc.p), maxAmount, this.now(), CONFIG.auctionMinIncrementBps, CONFIG.auctionAntiSnipeMs); }
   buyNowAuction(svc: PlayerService, auctionId: string) {
     const a = this.auctions.find((x) => x.id === auctionId); if (!a || a.status !== 'active' || !a.buyNow) throw new EconomyError('INVALID'); if (a.seller === walletId(svc.p)) throw new EconomyError('SELF_BID');
     const fee = feeOf(a.buyNow, CONFIG.marketFeeBps);
-    this.ledger.post([{ account: walletId(svc.p), currency: 'gold', amount: -a.buyNow }, { account: a.seller, currency: 'gold', amount: a.buyNow - fee }, { account: 'system:burn:auction_fee', currency: 'gold', amount: fee }], 'auction_buynow', `bn:${a.id}`);
-    if (a.bidder) this.ledger.release(a.bidder, 'gold', a.current);
+    this.ledger.post([{ account: walletId(svc.p), currency: 'gold', amount: -a.buyNow }, { account: a.payTo ?? a.seller, currency: 'gold', amount: a.buyNow - fee }, { account: 'system:burn:auction_fee', currency: 'gold', amount: fee }], 'auction_buynow', `bn:${a.id}`);
+    if (a.bidder) this.ledger.release(a.bidder, 'gold', a.maxBids?.[a.bidder] ?? a.current); this.log('auction_won', walletId(svc.p), a.itemDefId, 1, Number(a.buyNow)); this.log('auction_sold', a.seller, a.itemDefId, 1, Number(a.buyNow - fee));
     a.status = 'bought'; a.bidder = walletId(svc.p); a.current = a.buyNow; svc.p.inventory.push((a as any).item);
   }
   /** Settle expired auctions exactly once (worker job in online mode). Delivers items to winner/seller via callbacks. */
   settleAuctions(deliver: (account: string, item: ItemInstance) => void) {
-    for (const a of this.auctions) { const r = settleAuction(this.ledger, a, this.now(), CONFIG.marketFeeBps); if (r === 'sold') deliver(a.bidder!, (a as any).item); if (r === 'expired') deliver(a.seller, (a as any).item); }
+    for (const a of this.auctions) { const r = settleAuction(this.ledger, a, this.now(), CONFIG.marketFeeBps); if (r === 'sold') { deliver(a.bidder!, (a as any).item); this.log('auction_won', a.bidder!, a.itemDefId, 1, Number(a.current)); this.log('auction_sold', a.seller, a.itemDefId, 1, Number(a.current)); } if (r === 'expired') deliver(a.seller, (a as any).item); }
     for (const l of this.listings) if (l.status === 'active' && this.now() > l.expiresAt) { l.status = 'expired'; deliver(l.seller, l.item); }
   }
 
@@ -95,6 +111,8 @@ export class MarketService {
       const gold = f.price * f.qty; const fee = feeOf(gold, CONFIG.exchangeFeeBps);
       this.ledger.settleReserved(f.buyer, [{ to: f.seller, amount: gold - fee }, { to: 'system:burn:exchange_fee', amount: fee }], 'gold', 'exchange', `xf:${f.buyOrder}:${f.sellOrder}:${f.qty}:${f.ts}`);
       this.ledger.settleReserved(f.seller, [{ to: f.buyer, amount: f.qty }], 'crystal', 'exchange', `xc:${f.buyOrder}:${f.sellOrder}:${f.qty}:${f.ts}`);
+      if (f.buyer.startsWith('p:') && CONFIG.crystalHoldMs > 0) { const hid = `${f.buyOrder}:${f.sellOrder}:${f.ts}`; this.ledger.transfer(f.buyer, `hold:${f.buyer}`, 'crystal', f.qty, 'crystal_hold', `holdin:${hid}`); this.holds.push({ id: hid, acct: f.buyer, amount: f.qty, releaseAt: this.now() + CONFIG.crystalHoldMs }); }
+      if (f.buyer.startsWith('p:')) this.log('xbuy', f.buyer, 'crystal', Number(f.qty), Number(gold)); if (f.seller.startsWith('p:')) this.log('xsell', f.seller, 'crystal', Number(f.qty), Number(gold - fee));
       this.exchangeHistory.push({ ts: f.ts, price: Number(f.price), qty: Number(f.qty) }); if (this.exchangeHistory.length > 500) this.exchangeHistory.shift();
     }
   }
@@ -120,7 +138,7 @@ export class MarketService {
 
   // ---- simulation of other traders (artifact only) ----
   simulate(svc: PlayerService) {
-    const now = this.now(); if (now - this.lastSim < 4000) return; this.lastSim = now; const rng = this.rng;
+    const now = this.now(); if (now - this.lastSim < 4000) return; this.lastSim = now; const rng = this.rng; this.releaseHolds();
     // ensure sim traders have funds (minted from a labelled faucet so ledger stays balanced)
     for (const n of SIM_SELLERS) { const a = `sim:${n}`; if (this.ledger.available(a, 'gold') < 50_000n) this.ledger.mint(a, 'gold', 200_000n, 'sim_trader'); if (this.ledger.available(a, 'crystal') < 2_000n) this.ledger.mint(a, 'crystal', 5_000n, 'sim_trader'); }
     // new sim listings
@@ -128,12 +146,12 @@ export class MarketService {
     if (active < 24) for (let i = 0; i < 3; i++) {
       const pool = Object.values(ITEMS).filter((d) => d.tradeable && d.reqLevel <= svc.p.level + 15 && !['quest', 'ticket'].includes(d.type)); const d = rng.pick(pool); const seller = rng.pick(SIM_SELLERS);
       const qty = d.stack > 1 ? rng.int(1, 20) : 1; const price = BigInt(Math.max(1, Math.round(this.refPrice(d.id) * (0.7 + rng.next() * 0.9))));
-      this.listings.push({ id: uid('lst'), seller: `sim:${seller}`, sellerName: `${seller} [sim]`, item: newItem(d.id, qty, rng), price, ts: now, expiresAt: now + 3600_000, status: 'active', simulated: true });
+      const sl: Listing = { id: uid('lst'), seller: `sim:${seller}`, sellerName: `${seller} [sim]`, item: newItem(d.id, qty, rng), price, ts: now, expiresAt: now + 3600_000, status: 'active', simulated: true }; this.listings.push(sl); this.onNewListing?.(sl);
     }
     // sim buyers purchase fairly priced player listings
     for (const l of this.listings) if (l.status === 'active' && !l.simulated && Number(l.price) <= this.refPrice(l.item.defId) * 1.4 && rng.chance(0.25)) {
       const buyer = `sim:${rng.pick(SIM_SELLERS)}`; const total = l.price * BigInt(l.item.qty); const fee = feeOf(total, CONFIG.marketFeeBps);
-      try { this.ledger.post([{ account: buyer, currency: 'gold', amount: -total }, { account: l.seller, currency: 'gold', amount: total - fee }, { account: 'system:burn:market_tax', currency: 'gold', amount: fee }], 'market_buy_sim', `buy:${l.id}`); l.status = 'sold'; svc.bump('market_sales'); svc.note(`Sold ${ITEMS[l.item.defId]!.name.en} ×${l.item.qty} for ${total - fee}G (after ${fee}G tax) to ${buyer.slice(4)} [sim]`); svc.emit({ type: 'currency', c: 'gold', delta: Number(total - fee) }); (this.priceHistory[l.item.defId] ??= []).push({ ts: now, price: Number(l.price) }); } catch { /* sim buyer lacks funds */ }
+      try { this.ledger.post([{ account: buyer, currency: 'gold', amount: -total }, { account: l.payTo ?? l.seller, currency: 'gold', amount: total - fee }, { account: 'system:burn:market_tax', currency: 'gold', amount: fee }], 'market_buy_sim', `buy:${l.id}`); l.status = 'sold'; svc.bump('market_sales'); this.log('sell', l.seller, l.item.defId, l.item.qty, Number(total - fee)); svc.note(`Sold ${ITEMS[l.item.defId]!.name.en} ×${l.item.qty} for ${total - fee}G (after ${fee}G tax) to ${buyer.slice(4)} [sim] — collect it at the market`); svc.emit({ type: 'currency', c: 'gold', delta: 0 }); (this.priceHistory[l.item.defId] ??= []).push({ ts: now, price: Number(l.price) }); } catch { /* sim buyer lacks funds */ }
     }
     // sim sellers fill player buy orders at or below limit
     for (const o of this.buyOrders) if (o.status === 'open' && Number(o.price) >= this.refPrice(o.defId) * 0.8 && rng.chance(0.3)) {
@@ -154,11 +172,11 @@ export class MarketService {
   }
   serialize() {
     const big = (_k: string, v: any) => (typeof v === 'bigint' ? `${v}n` : v);
-    return JSON.parse(JSON.stringify({ listings: this.listings.filter((l) => l.status === 'active'), buyOrders: this.buyOrders.filter((o) => o.status === 'open'), auctions: this.auctions.filter((a) => a.status === 'active').map((a) => ({ ...a, item: (a as any).item })), priceHistory: this.priceHistory, bids: this.book.bids, asks: this.book.asks, xh: this.exchangeHistory.slice(-100) }, big));
+    return JSON.parse(JSON.stringify({ listings: this.listings.filter((l) => l.status === 'active'), buyOrders: this.buyOrders.filter((o) => o.status === 'open'), auctions: this.auctions.filter((a) => a.status === 'active').map((a) => ({ ...a, item: (a as any).item })), priceHistory: this.priceHistory, bids: this.book.bids, asks: this.book.asks, xh: this.exchangeHistory.slice(-300), hist: this.history.slice(-300), holds: this.holds }, big));
   }
   load(o: any) {
     if (!o) return; const rev = (v: any): any => (typeof v === 'string' && /^-?\d+n$/.test(v) ? BigInt(v.slice(0, -1)) : Array.isArray(v) ? v.map(rev) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, rev(x)])) : v);
-    const r = rev(o); this.listings = r.listings ?? []; this.buyOrders = r.buyOrders ?? []; this.auctions = r.auctions ?? []; this.priceHistory = r.priceHistory ?? {}; this.book.bids = r.bids ?? []; this.book.asks = r.asks ?? []; this.exchangeHistory = r.xh ?? [];
+    const r = rev(o); this.listings = r.listings ?? []; this.buyOrders = r.buyOrders ?? []; this.auctions = r.auctions ?? []; this.priceHistory = r.priceHistory ?? {}; this.book.bids = r.bids ?? []; this.book.asks = r.asks ?? []; this.exchangeHistory = r.xh ?? []; this.history = r.hist ?? []; this.holds = r.holds ?? [];
   }
 }
 

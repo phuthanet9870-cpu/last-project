@@ -1,12 +1,12 @@
 {
- "generated": "2026-11-27T13:43:09.299Z",
+ "generated": "2026-11-27T13:52:31.649Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 317,
-  "PARTIAL": 84,
-  "NOT_STARTED": 71,
+  "COMPLETE": 330,
+  "PARTIAL": 82,
+  "NOT_STARTED": 61,
   "BLOCKED": 8,
-  "TESTING": 97,
+  "TESTING": 96,
   "SIMULATED": 4
  },
  "systems": [
@@ -2278,25 +2278,25 @@
    "id": "L284",
    "name": "Open Shards",
    "section": "Economy",
-   "status": "NOT_STARTED",
-   "evidence": "open/waiting/free Crystal sub-balances not separated",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts tradeable vs free vs held",
+   "mode": "artifact+online"
   },
   {
    "id": "L285",
    "name": "Waiting Shards",
    "section": "Economy",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts holding period",
+   "mode": "artifact+online"
   },
   {
    "id": "L286",
    "name": "Free Shards",
    "section": "Economy",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts free crystal spent first",
+   "mode": "artifact+online"
   },
   {
    "id": "L287",
@@ -2382,17 +2382,17 @@
    "id": "L297",
    "name": "Search Filters",
    "section": "Market",
-   "status": "PARTIAL",
-   "evidence": "text search + sort; no stat/class filters",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 32 type/rarity/level/class/stat filters",
    "mode": "artifact+online"
   },
   {
    "id": "L298",
    "name": "Best Seller",
    "section": "Market",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "TESTING",
+   "evidence": "Best Sellers tab (24h sales)",
+   "mode": "artifact+online"
   },
   {
    "id": "L299",
@@ -2414,9 +2414,9 @@
    "id": "L301",
    "name": "Wishlist",
    "section": "Market",
-   "status": "NOT_STARTED",
-   "evidence": "wishlist",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 32 wishlist + price alerts",
+   "mode": "artifact+online"
   },
   {
    "id": "L302",
@@ -2470,9 +2470,9 @@
    "id": "L308",
    "name": "Auto Bid",
    "section": "Market",
-   "status": "NOT_STARTED",
-   "evidence": "auto/max bid",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts proxy bidding; e2e: tests/e2e/artifact.e2e.mjs step 32",
+   "mode": "artifact+online"
   },
   {
    "id": "L309",
@@ -2486,8 +2486,8 @@
    "id": "L310",
    "name": "Anonymous Bidder",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "bidder identity not shown to others",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"market privacy\" maxima hidden",
    "mode": "artifact+online"
   },
   {
@@ -2502,25 +2502,25 @@
    "id": "L312",
    "name": "Market History",
    "section": "Market",
-   "status": "PARTIAL",
-   "evidence": "price history per item; no personal history UI",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 32 personal history",
    "mode": "artifact+online"
   },
   {
    "id": "L313",
    "name": "Sales Collection",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "sales auto-credited",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; multiplayer: tests/multiplayer/two-clients.test.ts \"market privacy\" collection box",
    "mode": "artifact+online"
   },
   {
    "id": "L314",
    "name": "Shared Account Collection",
    "section": "Market",
-   "status": "NOT_STARTED",
-   "evidence": "account-shared collection",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts account-wide collection",
+   "mode": "artifact+online"
   },
   {
    "id": "L315",
@@ -2590,9 +2590,9 @@
    "id": "L323",
    "name": "Price Chart Timeframe",
    "section": "Exchange",
-   "status": "NOT_STARTED",
-   "evidence": "timeframes/candles",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 32 1m/5m/1h candles",
+   "mode": "artifact+online"
   },
   {
    "id": "L324",
@@ -2606,17 +2606,17 @@
    "id": "L325",
    "name": "Shard Eligibility",
    "section": "Exchange",
-   "status": "NOT_STARTED",
-   "evidence": "eligibility/holding period",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts only tradeable Crystal sellable",
+   "mode": "artifact+online"
   },
   {
    "id": "L326",
    "name": "Payment Holding Period",
    "section": "Exchange",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts 72h holding period",
+   "mode": "artifact+online"
   },
   {
    "id": "L327",
@@ -4383,7 +4383,7 @@
    "name": "Central marketplace",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "listings/buy/buy orders/escrow; online buy orders & auction not exposed to real players beyond shared book",
+   "evidence": "listings, filters, wishlist, best sellers, history, collection box, buy orders, auto-bid auctions; no player stalls",
    "mode": "artifact+online"
   },
   {

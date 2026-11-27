@@ -118,11 +118,11 @@ export function updateHud(refs: HudRefs, a: Adapter, target: PubEntity | null, f
   setBar(refs.hp, me.hp, me.mhp, '#e04848', `HP ${Math.ceil(me.hp)}/${me.mhp}`); setBar(refs.mp, me.mp, me.mmp, '#4878e0', `MP ${Math.floor(me.mp)}/${me.mmp}`);
   const req = p.level >= 120 ? 1 : requiredExp(p.level); setBar(refs.exp, p.level >= 120 ? 1 : p.exp, req, '#e0c040', p.level >= 120 ? `Mastery ${p.mastery}` : `EXP ${((p.exp / req) * 100).toFixed(1)}%`);
   setBar(refs.gauge, me.g ?? 0, 100, '#c070ff', `${L(cls.gauge.name)} ${Math.floor(me.g ?? 0)}%`);
-  const key = `${p.name}|${p.level}|${p.classId}|${p.ascension}|${(me.fx ?? []).join(',')}|${a.bal('gold')}|${a.bal('crystal')}|${a.mapId}|${p.title}`;
+  const key = `${p.name}|${p.level}|${p.classId}|${p.ascension}|${(me.fx ?? []).join(',')}|${a.bal('gold')}|${a.bal('crystal')}|${a.bal('crystal_free')}|${a.mapId}|${p.title}`;
   if (key !== lastHud) {
     lastHud = key; { const px = refs.portrait.getContext('2d')!; px.imageSmoothingEnabled = false; px.clearRect(0, 0, 40, 52); px.drawImage(characterSprite(lookOf(p.classId, p.appearance), 0, 0, 'idle'), 0, 0, 40, 52); } refs.name.innerHTML = `<b>${p.name}</b> <span class="dim">Lv ${p.level}${p.ascension ? ` ✦${p.ascension}` : ''} ${L(cls.name)}</span>`;
     refs.buffs.innerHTML = ''; for (const s of me.fx ?? []) { const def = STATUSES[s]; if (!def) continue; refs.buffs.append(h('span', { class: `buff ${def.kind}`, style: { background: def.color }, title: L(def.name) }, L(def.name).slice(0, 2))); }
-    refs.currencies.innerHTML = ''; for (const [c, ic, col] of [['gold', '●', '#ffd040'], ['crystal', '◆', '#80e0ff'], ['arena_token', '⚔', '#ff8080'], ['boss_coin', '☠', '#ff80ff'], ['card_dust', '✧', '#80c0ff']] as const) refs.currencies.append(h('span', { class: 'cur', title: c }, h('i', { style: { color: col } }, ic), ` ${fmt(a.bal(c))}`));
+    refs.currencies.innerHTML = ''; for (const [c, ic, col] of [['gold', '●', '#ffd040'], ['crystal', '◆', '#80e0ff'], ['crystal_free', '◇', '#b0f0ff'], ['arena_token', '⚔', '#ff8080'], ['boss_coin', '☠', '#ff80ff'], ['card_dust', '✧', '#80c0ff']] as const) refs.currencies.append(h('span', { class: 'cur', title: c }, h('i', { style: { color: col } }, ic), ` ${fmt(a.bal(c))}`));
     refs.mapName.textContent = L(MAPS[a.mapId]!.name);
   }
   refs.info.textContent = `${(globalThis as any).__timeLabel ?? ''} · ${(globalThis as any).__weather ?? ''} · ${fps}fps${a.mode === 'online' ? ` · ${a.ping}ms` : ' · local'}`;

@@ -25,7 +25,7 @@ export class GameServer {
   tcgMatches = new Map<string, { id: string; state: TcgState; a: string; b: string; settled: boolean }>();
   arenaQueues = new Map<string, string[]>(); get arenaQueue(): string[] { return [...this.arenaQueues.values()].flat(); } matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
   private timer?: NodeJS.Timeout; private rng = new Rng(Date.now() & 0xffffff); private chatOut: [string, string, string | null, string | null, string][] = [];
-  constructor(public redis: Redis | null) { this.ledger.trackPending = true; this.market = new MarketService(this.ledger, new Rng(7)); }
+  constructor(public redis: Redis | null) { this.ledger.trackPending = true; this.market = new MarketService(this.ledger, new Rng(7)); this.market.onNewListing = (l) => { for (const c of this.conns.values()) { const w = c.svc.p.wishlist?.find((x) => x.defId === l.item.defId); if (w && Number(l.price) <= w.maxPrice && l.seller !== walletId(c.svc.p)) this.notice(c, `Wishlist alert: ${ITEMS[l.item.defId]?.name.en} listed at ${l.price}G (your limit ${w.maxPrice}G)`); } }; }
 
   async load() {
     for (const r of (await pool.query('SELECT account, currency, available, reserved FROM wallets')).rows) { const b = this.ledger.bal(r.account, r.currency); b.available = BigInt(r.available); b.reserved = BigInt(r.reserved); }
@@ -86,7 +86,7 @@ export class GameServer {
     else r = await this.dispatch(c, m.cmd, m.args ?? {});
     if (r.ok && (ECON_CMDS.has(m.cmd) || this.ledger.pending.length > 0)) { try { await this.persist([...this.conns.values()].filter((x) => x.dirty || x === c)); } catch (e) { this.stats.persistErrors++; console.error('persist failed', e); r = fail('PERSIST_FAILED', 'Server could not save; please retry'); } }
     this.send(c, { type: 'res', id: m.id, result: r }); if (!['move', 'moveTo', 'target', 'ping', 'chat', 'whisper', 'marketView', 'tcgView'].includes(m.cmd)) c.dirty = true; // movement/chat don't change durable state → no full state resend
-    if (['marketList', 'marketBuy', 'marketCancel', 'buyOrder', 'cancelBuyOrder', 'auctionCreate', 'auctionBid', 'auctionBuyNow', 'exchangePlace', 'exchangeCancel', 'marketView'].includes(m.cmd)) this.send(c, { type: 'market', market: this.market.serialize() });
+    if (['marketList', 'marketBuy', 'marketCancel', 'buyOrder', 'cancelBuyOrder', 'auctionCreate', 'auctionBid', 'auctionBuyNow', 'exchangePlace', 'exchangeCancel', 'marketView', 'collectSales'].includes(m.cmd)) this.send(c, { type: 'market', market: this.marketView(c) });
     if (m.cmd.startsWith('tcg') && !c.tcgPvp && c.session.tcg && !['tcgChallenge', 'tcgAccept'].includes(m.cmd)) this.send(c, { type: 'tcg', tcg: c.session.tcg ? { view: viewFor(c.session.tcg.state, 0), mode: c.session.tcg.mode, opp: c.session.tcg.oppName } : null });
   }
   private ctx(c: Conn) {
@@ -218,6 +218,13 @@ export class GameServer {
       for (const x of [A, B]) if (x) { x.tcgPvp = null; x.dirty = true; } this.persist([A, B].filter(Boolean) as Conn[]).catch(() => undefined); this.tcgMatches.delete(m.id);
     }
   }
+  /** Per-player market view: other players' trade history, Crystal holds and private auction maxima are never sent. */
+  marketView(c: Conn) {
+    const v = this.market.serialize(); const me = walletId(c.svc.p);
+    v.hist = (v.hist ?? []).filter((h: any) => h.account === me); v.holds = (v.holds ?? []).filter((h: any) => h.acct === me);
+    v.auctions = (v.auctions ?? []).map((a: any) => { const { maxBids, ...rest } = a; return { ...rest, myMax: maxBids?.[me] ?? null }; });
+    v.collectable = String(this.market.collectable(c.svc.p.accountId)); return v;
+  }
   notice(c: Conn, msg: string) { this.sendFx(c, [{ t: 'notice', msg }]); }
   private tradeOf(charId: string) { return [...this.trades.values()].find((t) => !t.done && (t.a === charId || t.b === charId)); }
   private tradeUpdate(tr: Trade) { for (const id of [tr.a, tr.b]) { const x = this.conns.get(id); if (x) this.send(x, { type: 'trade', trade: { id: tr.id, a: tr.a, b: tr.b, offer: tr.offer, lock: tr.lock, confirm: tr.confirm } }); } }
@@ -287,7 +294,7 @@ export class GameServer {
         for (const e of entries) await cl.query('INSERT INTO currency_ledger(tx_id,account,currency,amount,reason,world_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [e.txId, e.account, e.currency, e.amount.toString(), e.reason, CONFIG.worldId]);
         for (const acct of dirty) { const m = this.ledger.balances.get(acct); if (!m) continue; for (const [cur, b] of m) await cl.query('INSERT INTO wallets(account,currency,available,reserved,updated_at) VALUES ($1,$2,$3,$4,now()) ON CONFLICT (account,currency) DO UPDATE SET available=EXCLUDED.available, reserved=EXCLUDED.reserved, updated_at=now()', [acct, cur, b.available.toString(), b.reserved.toString()]); }
         for (const c of conns) { const e = c.world.entities.get(`pl_${c.charId}`); if (e) c.world.persistVitals(e, c.svc); const p = c.svc.p; const st = { ...p, wallet: undefined }; await cl.query('UPDATE characters SET state=$2, level=$3, map_id=$4, pvp_rating=$5, updated_at=now() WHERE id=$1', [c.charId, JSON.stringify(st), p.level, p.map, p.pvp.rating]); c.lastPersist = Date.now(); }
-        if (entries.some((e) => /market|auction|exchange|buy_order/.test(e.reason)) || conns.length === 0) await cl.query('INSERT INTO market_state(world_id,data,version) VALUES ($1,$2,1) ON CONFLICT (world_id) DO UPDATE SET data=EXCLUDED.data, version=market_state.version+1, updated_at=now()', [CONFIG.worldId, JSON.stringify(this.market.serialize())]);
+        if (entries.some((e) => /market|auction|exchange|buy_order|sales_collection|crystal_hold/.test(e.reason)) || conns.length === 0) await cl.query('INSERT INTO market_state(world_id,data,version) VALUES ($1,$2,1) ON CONFLICT (world_id) DO UPDATE SET data=EXCLUDED.data, version=market_state.version+1, updated_at=now()', [CONFIG.worldId, JSON.stringify(this.market.serialize())]);
         if (extra) await extra(cl);
       });
     } catch (e) { this.ledger.pending.unshift(...entries); for (const d of dirty) this.ledger.dirty.add(d); throw e; }
@@ -319,7 +326,7 @@ export class GameServer {
       if (c.dirty && now - c.lastSnap < 60) { c.dirty = false; this.send(c, { type: 'state', player: this.playerJson(c), mapId: c.world.mapId, myId: `pl_${c.charId}` }); }
       if (now - c.lastPersist > CONFIG.saveIntervalMs) { c.lastPersist = now; this.persist([c]).catch(() => { this.stats.persistErrors++; }); }
     }
-    if (this.stats.ticks % 100 === 0) { this.market.settleAuctions((acct, item) => { const c = [...this.conns.values()].find((x) => walletId(x.svc.p) === acct); if (c) { c.svc.p.inventory.push(item); c.dirty = true; } }); }
+    if (this.stats.ticks % 100 === 0) { this.market.releaseHolds(); this.market.settleAuctions((acct, item) => { const c = [...this.conns.values()].find((x) => walletId(x.svc.p) === acct); if (c) { c.svc.p.inventory.push(item); c.dirty = true; } }); }
     if (this.chatOut.length) { const rows = this.chatOut.splice(0); for (const [ch, body, from, to] of rows) pool.query('INSERT INTO chat_messages(world_id,channel,from_char,to_char,body) VALUES ($1,$2,$3,$4,$5)', [CONFIG.worldId, ch, from, to, body]).catch(() => undefined); }
     for (const [k, inv] of this.invites) if (now - inv.at > 60_000) this.invites.delete(k);
   }

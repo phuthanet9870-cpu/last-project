@@ -81,7 +81,8 @@ describe('economy ledger & order matching', () => {
     placeBid(L, a, 'b1', 100n, 0, 500, 30000); placeBid(L, a, 'b2', 200n, 10, 500, 30000);
     expect(L.available('b1', 'gold')).toBe(1000n); expect(L.bal('b2', 'gold').reserved).toBe(200n);
     expect(settleAuction(L, a, a.endsAt + 1, 500)).toBe('sold'); expect(settleAuction(L, a, a.endsAt + 2, 500)).toBeNull();
-    expect(L.available('s', 'gold')).toBe(190n); expect(L.verify().ok).toBe(true);
+    // v0.7 proxy bidding: b2 (max 200) beats b1 (max 100) and pays one increment above it: 105; seller gets 105 − 5% fee = 100; b2's unused 95 is released
+    expect(L.available('s', 'gold')).toBe(100n); expect(L.available('b2', 'gold')).toBe(895n); expect(L.verify().ok).toBe(true);
   });
   it('market service list/buy/cancel race: second buy fails, item has single owner', () => {
     const A = mk(); const B = mk('dawn_priest'); const L = A.p.wallet; B.p.wallet = L; B.p.id = 'other'; L.mint(`p:${B.p.id}`, 'gold', 10000n, 't');
@@ -246,5 +247,29 @@ describe('PvP modes & seasons (v0.6)', () => {
     const r = svc.checkSeasons(); expect(r.pvp).toBe('Diamond'); expect(svc.bal('arena_token')).toBe(t0 + 150n); expect(p.pvp.rating).toBe(1300); expect(p.titles).toContain('title_gladiator'); expect(p.tcg.rank).toBe(2);
     expect(svc.checkSeasons()).toEqual({}); expect(svc.bal('arena_token')).toBe(t0 + 150n); expect(pvpTier(1000).name).toBe('Bronze');
     const n = mk(); n.p.pvp.season = currentSeason(n.svc.now()) - 1; const n0 = n.svc.bal('arena_token'); n.svc.checkSeasons(); expect(n.svc.bal('arena_token')).toBe(n0); // created after that season ended: no reward
+  });
+});
+
+import { CONFIG as CFG } from '../src/index.js';
+describe('market & economy additions (v0.7)', () => {
+  it('auto-bid: a lower challenger is outbid by the leader proxy and fully refunded; maxima stay private', () => {
+    const L = new Ledger(); for (const b of ['b1', 'b2']) L.mint(b, 'gold', 1000n, 't');
+    const a: Auction = { id: 'a2', seller: 's', itemUid: 'i', itemDefId: 'iron_sword', start: 100n, buyNow: null, current: 0n, bidder: null, endsAt: 1e12, status: 'active', bids: [] };
+    expect(placeBid(L, a, 'b1', 500n, 0, 500, 30000).leading).toBe(true); expect(a.current).toBe(100n);
+    const r = placeBid(L, a, 'b2', 300n, 1, 500, 30000); expect(r.leading).toBe(false); expect(a.bidder).toBe('b1'); expect(a.current).toBe(315n); expect(L.available('b2', 'gold')).toBe(1000n); expect(L.bal('b1', 'gold').reserved).toBe(500n);
+    expect(placeBid(L, a, 'b1', 600n, 2, 500, 30000).leading).toBe(true); expect(L.bal('b1', 'gold').reserved).toBe(600n); expect(a.current).toBe(315n); expect(L.verify().ok).toBe(true);
+  });
+  it('sales go to the account collection box; collecting moves them to the character', () => {
+    const A = mk(); const B = mk('dawn_priest'); const L = A.p.wallet; B.p.wallet = L; B.p.id = 'other2'; L.mint(`p:${B.p.id}`, 'gold', 10000n, 't'); const m = new MarketService(L);
+    const [it] = A.svc.addItem('iron_sword'); const g0 = A.svc.gold(); const l = m.list(A.svc, it!.uid, 1000n); m.buy(B.svc, l.id);
+    expect(A.svc.gold()).toBe(g0); expect(m.collectable(A.p.accountId)).toBe(950n); expect(m.collectSales(A.svc)).toBe(950n); expect(A.svc.gold()).toBe(g0 + 950n); expect(() => m.collectSales(A.svc)).toThrow();
+    expect(m.history.filter((h) => h.account === `p:${A.p.id}` && h.kind === 'sell').length).toBe(1); expect(L.verify().ok).toBe(true);
+  });
+  it('exchange purchases are held for the holding period before they can be re-sold; free crystal is spent first', () => {
+    let now = 1_800_000_000_000; const A = mk(); const L = A.p.wallet; const m = new MarketService(L, new Rng(1), () => now); L.mint(`p:${A.p.id}`, 'gold', 100000n, 't'); L.mint('sim:mm', 'crystal', 100n, 't'); L.reserve('sim:mm', 'crystal', 50n);
+    m.book.place({ id: 's1', owner: 'sim:mm', side: 'sell', price: 150n, qty: 50n, ts: 0 });
+    m.exchangePlace(A.svc, 'buy', 150n, 10n); expect(A.svc.bal('crystal')).toBe(0n); expect(m.waitingCrystal(`p:${A.p.id}`)).toBe(10n); expect(() => m.exchangePlace(A.svc, 'sell', 150n, 5n)).toThrow();
+    now += CFG.crystalHoldMs + 1; m.releaseHolds(); expect(A.svc.bal('crystal')).toBe(10n); expect(m.waitingCrystal(`p:${A.p.id}`)).toBe(0n); expect(L.verify().ok).toBe(true);
+    const free0 = A.svc.bal('crystal_free'); expect(A.svc.spendCrystal(100, 't')).toBe(true); expect(A.svc.bal('crystal_free')).toBe(free0 - 100n); expect(A.svc.bal('crystal')).toBe(10n);
   });
 });
