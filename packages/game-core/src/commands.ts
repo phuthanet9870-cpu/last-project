@@ -106,6 +106,8 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   abandonQuest: (c, a) => c.svc.abandonQuest(String(a.id)),
   completeQuest: (c, a) => { const q = QUESTS[String(a.id)]; if (!q) return fail('INVALID'); if (!c.dev && !near(c, 'quest') && !near(c, 'board') && !Object.values(NPCS).some((n) => n.id === q.giver && n.map === c.world.mapId)) return fail('RETURN_TO_GIVER', `Return to ${NPCS[q.giver]?.name.en}`); const r = c.svc.completeQuest(q.id, a.choice); c.world.refreshPlayer(c.entityId); return r; },
   buy: (c, a) => { const npc = Object.values(NPCS).find((n) => n.shop === a.shop); if (!c.dev && npc && !near(c, npc.roles[0]!) && !near(c, 'shop')) return fail('NEED_SHOP_NPC'); return c.svc.buy(String(a.shop), String(a.item), Number(a.qty) || 1); },
+  queueCraft: (c, a) => (near(c, 'crafting') || c.world.mapId === 'house' || c.dev ? c.svc.queueCraft(String(a.recipe), Number(a.times) || 1) : fail('NEED_WORKSTATION', 'Visit a crafting station')),
+  collectCrafts: (c) => c.svc.collectCrafts(),
   craft: (c, a) => (near(c, 'crafting') || c.world.mapId === 'house' ? c.svc.craft(String(a.recipe), Number(a.times) || 1, a.focus ? String(a.focus) : undefined) : fail('NEED_WORKSTATION', 'Visit Juno or use your house workbench')),
   // --- pets / farm / mounts / housing ---
   hatch: (c, a) => c.svc.hatchEgg(String(a.egg), c.dev && !!a.instant),
@@ -221,6 +223,9 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   friendAdd: (c, a) => { const name = String(a.name).slice(0, 20); if (!name || c.svc.p.friends.some((f) => f.name === name)) return fail('INVALID'); if (c.svc.p.blocked.includes(name)) return fail('BLOCKED'); if (c.svc.p.friends.length >= 100) return fail('FRIEND_LIMIT'); c.svc.p.friends.push({ name, note: '', since: c.world.now() }); return ok(); },
   friendRemove: (c, a) => { c.svc.p.friends = c.svc.p.friends.filter((f) => f.name !== a.name); return ok(); },
   block: (c, a) => { const n = String(a.name); if (!c.svc.p.blocked.includes(n)) c.svc.p.blocked.push(n); c.svc.p.friends = c.svc.p.friends.filter((f) => f.name !== n); return ok(); },
+  // personal mute (§39): hides that player's chat only — trading, parties and friendship are unaffected (unlike block)
+  mute: (c, a) => { const n = String(a.name ?? '').trim(); if (!n || n === c.svc.p.name) return fail('INVALID'); const m = ((c.svc.p as any).muted ??= []) as string[]; if (!m.includes(n)) m.push(n); return ok({ muted: m.length }); },
+  unmute: (c, a) => { (c.svc.p as any).muted = (((c.svc.p as any).muted ?? []) as string[]).filter((x) => x !== a.name); return ok(); },
   unblock: (c, a) => { c.svc.p.blocked = c.svc.p.blocked.filter((x) => x !== a.name); return ok(); },
   partyInvite: (c, a) => {
     const me = c.world.entities.get(c.entityId)!; const t = c.world.entities.get(String(a.target)); if (!t || (t.kind !== 'bot' && t.kind !== 'player') || t.id === me.id) return fail('INVALID_TARGET');

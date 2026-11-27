@@ -186,7 +186,7 @@ function startGame(a: Adapter) {
     if (auto) { autoAcc += dt; if (autoAcc > 400) { autoAcc = 0; autoStep(); } }
     const fx = a.drainFx(); const ents = a.entities(); const byId = new Map(ents.map((x) => [x.id, x]));
     for (const f of fx) {
-      if (f.t === 'chat') chatLine(hud, f.ch, f.from, f.msg);
+      if (f.t === 'chat' && !((a.p as any).muted ?? []).includes(String(f.from).replace(/ \[sim\]$/, '')) && !((a.p as any).muted ?? []).includes(f.from)) chatLine(hud, f.ch, f.from, f.msg);
       if (f.t === 'notice' && (!f.to || f.to === a.myId)) { toast(f.msg, f.msg.startsWith('+') ? 'gold' : 'info'); if (!f.to) chatLine(hud, 'system', 'System', f.msg);
         const inv = /\((partyAccept|tradeAccept|duelAccept|guildAccept|marriageAccept|tcgAccept)\)|invites you to a party/.exec(f.msg); if (inv && a.mode === 'online') { const cmd = inv[1] ?? 'partyAccept'; confirmDialog(f.msg.replace(/\(.*?\)/, ''), () => act(cmd, {}, 'Accepted'), 'Accept'); } }
       if (f.t === 'level' && f.id === a.myId) { audio.play('level'); toast(`Level up! ${a.p.level}`, 'gold'); refreshAll(); }

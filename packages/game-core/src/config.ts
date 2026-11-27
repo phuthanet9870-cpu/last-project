@@ -26,6 +26,8 @@ export const CONFIG = {
   version: '0.14.0-seed',
   /** Wedding ceremony phase length (gathering → vows → rings → celebration). Server may override via WEDDING_PHASE_MS. */
   weddingPhaseMs: 12_000, weddingCost: 5000,
+  /** Online world boss schedule (Asia/Bangkok). The artifact and tests use a short interval instead. */
+  worldBossTimesBkk: ['12:30', '20:30'],
   levelCap: 120,
   ascensionTiers: 3,
   ascensionLevelReq: [60, 90, 120],

@@ -55,7 +55,7 @@ export interface DungeonRun { encounterAt?: number; enraged?: boolean; raidSize?
 export interface BossSession { id: string; bossId: string; entityId: string; startedAt: number; contributions: Record<string, { dmg: number; heal: number; tank: number }>; settled: boolean }
 
 const ELEMENT_COLOR: Record<Element, string> = { neutral: '#ffffff', fire: '#ff7a30', water: '#4aa8ff', earth: '#c0a060', wind: '#a0ffb0', ice: '#a0f0ff', light: '#fff0a0', dark: '#b070ff', spirit: '#70ffe0' };
-export interface WorldOptions { mapId: string; instanceId?: string; rng?: Rng; now?: () => number; bots?: number; worldBossIntervalMs?: number; eventMult?: { exp: number; drop: number; gold?: number } }
+export interface WorldOptions { mapId: string; instanceId?: string; rng?: Rng; now?: () => number; bots?: number; worldBossIntervalMs?: number; worldBossTimes?: string[]; eventMult?: { exp: number; drop: number; gold?: number } }
 
 let ENT = 0;
 const eid = (p: string) => `${p}${(++ENT).toString(36)}`;
@@ -76,7 +76,7 @@ export class World {
     for (const m of def.monsters) for (let i = 0; i < m.count; i++) { if (m.at) { const [fx, fy] = this.freeNear(m.at[0], m.at[1]); this.spawnMonster(m.id, fx * TILE + 16, fy * TILE + 16, { fixed: true }); } else this.spawnMonster(m.id); }
     for (const n of Object.values(NPCS)) if (n.map === opts.mapId) this.entities.set(`npc_${n.id}`, this.baseEntity(`npc_${n.id}`, 'npc', n.x * TILE + 16, n.y * TILE + 16, n.name.en, 1, { defId: n.id }));
     for (let i = 0; i < (opts.bots ?? 0); i++) this.spawnBot();
-    if (def.biome === 'crater') this.nextBossAt = this.now() + 15_000;
+    if (def.biome === 'crater') this.nextBossAt = this.opts.worldBossTimes?.length ? nextScheduledBkk(this.now(), this.opts.worldBossTimes) : this.now() + 15_000;
   }
   private baseEntity(id: string, kind: EntityKind, x: number, y: number, name: string, level: number, extra: Partial<Entity> = {}): Entity {
     return { id, kind, x, y, dir: 2, moving: false, name, level, hp: 1, maxHp: 1, mp: 0, maxMp: 0, effects: [], dead: false, deadAt: 0, cds: {}, gcdUntil: 0, castUntil: 0, attackAt: 0, gauge: 0, ...extra };
@@ -403,7 +403,7 @@ export class World {
   // ---------------- world boss (§29) ----------------
   spawnWorldBoss(bossId?: string) {
     if (this.boss && !this.boss.settled) return;
-    const id = bossId ?? WORLD_BOSS_ROTATION[Math.floor(this.now() / 3600_000) % WORLD_BOSS_ROTATION.length]!;
+    const id = bossId ?? dailyWorldBoss(this.now()); // daily rotation (one boss per Asia/Bangkok day)
     const players = [...this.entities.values()].filter((e) => e.kind === 'player' || e.kind === 'bot').length;
     const e = this.spawnMonster(id, this.map.def.w * TILE / 2, this.map.def.h * TILE / 2 - 40);
     const scale = 1 + Math.max(0, players - 1) * 0.35; e.maxHp = e.hp = Math.floor(MONSTERS[id]!.maxHp * scale * 0.25); // fixed at encounter start (artifact scale 25%)
@@ -422,7 +422,7 @@ export class World {
       svc.bump('world_boss'); svc.progressObjective('boss', b.bossId, 1);
       this.fx.push({ t: 'notice', msg: `World boss rank #${i + 1}${i === 0 ? ' (MVP)' : ''}: +${coins} Boss Coins`, to: r.id });
     });
-    this.nextBossAt = this.now() + (this.opts.worldBossIntervalMs ?? 5 * 60_000);
+    this.nextBossAt = this.opts.worldBossTimes?.length ? nextScheduledBkk(this.now() + 60_000, this.opts.worldBossTimes) : this.now() + (this.opts.worldBossIntervalMs ?? 5 * 60_000);
   }
   // ---------------- arena (§30) ----------------
   /** Arena modes (§30): deathmatch = Last Light (elimination); siege = Lantern Siege (3 capture points); rush = Ember Rush (carry crystals to base). */
@@ -649,6 +649,14 @@ export class World {
   drainFx(): Fx[] { const f = this.fx; this.fx = []; return f; }
 }
 /** Fields that change often; static fields (name, appearance, class…) are sent once per entity per client. */
+/** Next scheduled time ("HH:MM" Asia/Bangkok, UTC+7) strictly after `now`. */
+export function nextScheduledBkk(now: number, times: string[]): number {
+  const BKK = 7 * 3600_000; const dayStart = Math.floor((now + BKK) / 86400_000) * 86400_000 - BKK; let best = Infinity;
+  for (const d of [0, 1]) for (const t of times) { const [h, m] = t.split(':').map(Number); const at = dayStart + d * 86400_000 + ((h ?? 0) * 60 + (m ?? 0)) * 60_000; if (at > now && at < best) best = at; }
+  return best;
+}
+/** One world boss per Asia/Bangkok day, cycling through the rotation. */
+export function dailyWorldBoss(now: number): string { return WORLD_BOSS_ROTATION[Math.floor((now + 7 * 3600_000) / 86400_000) % WORLD_BOSS_ROTATION.length]!; }
 export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot', 'cosm', 'app'] as const; // app: appearance can change at the salon
 export function publicEntity(e: Entity) {
   return { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y), d: e.dir, m: e.moving, n: e.name, l: e.level, hp: Math.ceil(e.hp), mhp: e.maxHp, mp: Math.floor(e.mp), mmp: e.maxMp, dead: e.dead, def: e.defId, own: e.ownerId, cls: e.classId, app: e.appearance, fx: e.effects.map((x) => x.id), t: e.title, r: e.riding, mt: e.mount, tg: e.targetId, g: e.gauge, team: e.team, gu: e.guild, cosm: e.cosm, tele: e.ai?.telegraph ? { x: e.ai.telegraph.x, y: e.ai.telegraph.y, r: e.ai.telegraph.r, at: e.ai.telegraph.at } : undefined, loot: e.loot?.length };

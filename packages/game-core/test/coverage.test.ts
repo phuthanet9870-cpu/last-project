@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  ACHIEVEMENTS, aiChooseAction, CLASSES, CONFIG, PETS, getMap, SecureRng, DUNGEONS, ITEMS, MAPS, MONSTERS, MarketService, PASS, PlayerService, Rng, SHOPS, TCG_CARDS, TILE, World, activeEventAt, createCharacter, executeCommand, playerCP, playerStats, validateDeck, WEEK_MS,
+  ACHIEVEMENTS, aiChooseAction, CLASSES, CONFIG, PETS, getMap, SecureRng, RECIPES, nextScheduledBkk, dailyWorldBoss, DUNGEONS, ITEMS, MAPS, MONSTERS, MarketService, PASS, PlayerService, Rng, SHOPS, TCG_CARDS, TILE, World, activeEventAt, createCharacter, executeCommand, playerCP, playerStats, validateDeck, WEEK_MS,
 } from '../src/index.js';
 
 const mk = (cls = 'blade_sentinel', t = 1_800_000_000_000) => { const clock = { t }; const p = createCharacter({ accountId: 'acc', name: 'Cov', classId: cls, appearance: { body: 0, hair: 0, hairColor: '#000', skin: '#fc9', eyes: '#000' }, now: clock.t }); const svc = new PlayerService(p, new Rng(7), () => clock.t); return { p, svc, clock }; };
@@ -260,5 +260,27 @@ describe('partial closures (L065 S19 L269 S31 S21 S32 L026)', () => {
   it('settings command only accepts whitelisted boolean flags', () => {
     const { svc, p } = mk(); const w = new World({ mapId: 'emberglen', rng: new Rng(1), bots: 0 }); const e = w.addPlayer(svc); executeCommand(ctxFor(w, svc, e.id), 'settings', { settings: { offlineAuto: true, fastWedding: true, autoLoot: 'yes' } });
     expect(p.settings.offlineAuto).toBe(true); expect(p.settings.fastWedding).toBeUndefined(); expect(p.settings.autoLoot).not.toBe('yes');
+  });
+});
+
+describe('partial closures 3 (S32 L241 L242 S39)', () => {
+  it('S32 timed crafting queue: pays up front, 3 slots, 20 s per item, collected with the normal success rolls; bag-full keeps it queued', () => {
+    const { svc, p, clock } = mk(); const [rid, r] = Object.entries(RECIPES).find(([, x]) => x.level <= 1)!; for (const i of r.inputs) svc.addItem(i.itemId, i.qty * 10); svc.earn('gold', 1e6, 't');
+    const g0 = svc.gold(); const q = svc.queueCraft(rid, 2); expect(q.ok).toBe(true); expect(svc.gold()).toBe(g0 - BigInt(r.gold * 2)); expect(svc.countItem(r.inputs[0]!.itemId)).toBe(r.inputs[0]!.qty * 8);
+    expect(q.data!.finishAt - clock.t).toBe(40_000); svc.queueCraft(rid, 1); svc.queueCraft(rid, 1); expect(svc.queueCraft(rid, 1).err).toBe('QUEUE_FULL');
+    expect(svc.collectCrafts().data!.collected).toBe(0); clock.t += 40_000; const n0 = svc.countItem(r.output.itemId); const c = svc.collectCrafts(); expect(c.data!.collected).toBe(1); expect(svc.countItem(r.output.itemId) - n0).toBe(c.data!.made * r.output.qty); expect(c.data!.waiting).toBe(2);
+    clock.t += 60_000; expect(svc.collectCrafts().data!.collected).toBe(2); expect((p as any).craftQueue.length).toBe(0);
+  });
+  it('L241 world boss follows the Bangkok schedule; L242 one boss per Bangkok day in rotation', () => {
+    const at = (iso: string) => Date.parse(iso); // 12:30 / 20:30 Asia/Bangkok = 05:30 / 13:30 UTC
+    expect(nextScheduledBkk(at('2026-11-27T05:00:00Z'), ['12:30', '20:30'])).toBe(at('2026-11-27T05:30:00Z')); expect(nextScheduledBkk(at('2026-11-27T05:30:00Z'), ['12:30', '20:30'])).toBe(at('2026-11-27T13:30:00Z')); expect(nextScheduledBkk(at('2026-11-27T14:00:00Z'), ['12:30', '20:30'])).toBe(at('2026-11-28T05:30:00Z'));
+    expect(dailyWorldBoss(at('2026-11-27T05:00:00Z'))).toBe(dailyWorldBoss(at('2026-11-27T16:59:00Z'))); expect(dailyWorldBoss(at('2026-11-27T05:00:00Z'))).not.toBe(dailyWorldBoss(at('2026-11-27T17:01:00Z'))); // day changes at 00:00 Bangkok
+    const clock = { t: at('2026-11-27T05:00:00Z') }; const w = new World({ mapId: 'sunken_crater', rng: new Rng(3), bots: 0, now: () => clock.t, worldBossTimes: ['12:30', '20:30'] }); w.addPlayer(mk().svc); expect(w.nextBossAt).toBe(at('2026-11-27T05:30:00Z'));
+    clock.t += 29 * 60_000; w.tick(100); expect(w.boss).toBeFalsy(); clock.t += 61_000; w.tick(100); expect(w.boss?.bossId).toBe(dailyWorldBoss(clock.t)); // the next slot (20:30) is set when this boss is settled
+  });
+  it('S39 personal mute hides chat only (no block, friendship kept)', () => {
+    const { svc, p } = mk(); p.friends.push({ name: 'Juniper', note: '', since: 0 }); const w = new World({ mapId: 'emberglen', rng: new Rng(1), bots: 0 }); const e = w.addPlayer(svc); const ctx = ctxFor(w, svc, e.id);
+    expect(executeCommand(ctx, 'mute', { name: 'Juniper' }).ok).toBe(true); expect((p as any).muted).toEqual(['Juniper']); expect(p.blocked).toEqual([]); expect(p.friends.length).toBe(1); expect(executeCommand(ctx, 'mute', { name: p.name }).ok).toBe(false);
+    executeCommand(ctx, 'unmute', { name: 'Juniper' }); expect((p as any).muted).toEqual([]);
   });
 });

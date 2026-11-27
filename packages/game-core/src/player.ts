@@ -587,17 +587,29 @@ export class PlayerService {
   }
 
   // ---- crafting & gathering (§32) ----
-  craft(recipeId: string, times = 1, focusStat?: string): Result {
+  craft(recipeId: string, times = 1, focusStat?: string, prepaid = false): Result {
     const r = RECIPES[recipeId]; if (!r || times < 1 || times > 50) return fail('INVALID');
     const prof = this.p.professions[r.profession] ?? { lvl: 1, exp: 0 }; if (prof.lvl < r.level) return fail('PROFESSION_LEVEL', `Requires ${r.profession} ${r.level}`);
-    for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`);
-    if (this.gold() < BigInt(r.gold * times)) return fail('NOT_ENOUGH_GOLD'); if (this.slotsNeeded(r.output.itemId, r.output.qty * times) > this.freeSlots()) return fail('INVENTORY_FULL');
+    if (!prepaid) for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`);
+    if (!prepaid && this.gold() < BigInt(r.gold * times)) return fail('NOT_ENOUGH_GOLD'); if (this.slotsNeeded(r.output.itemId, r.output.qty * times) > this.freeSlots()) return fail('INVENTORY_FULL');
     const outDef = ITEMS[r.output.itemId]!; const focus = focusStat ? OPTION_POOL.find((o) => o.stat === focusStat && o.slots.includes(outDef.type)) : undefined;
     if (focusStat && !focus) return fail('INVALID_OPTION', 'That option cannot appear on this item'); if (focus && this.countItem('enchant_stone') < times) return fail('NEED_ENCHANT_STONE', 'Focused crafting needs 1 Enchant Stone per item');
     let made = 0;
-    for (let t = 0; t < times; t++) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { const got = this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); if (focus) { this.removeItem('enchant_stone', 1); const g = got[got.length - 1]; if (g) { g.options = [{ stat: focus.stat, kind: 'flat' as const, value: this.rng.int(Math.ceil((focus.min + focus.max) / 2), focus.max) }, ...g.options.filter((o) => o.stat !== focus.stat)].slice(0, 3); } } made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }
+    for (let t = 0; t < times; t++) { if (!prepaid) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); } if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { const got = this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); if (focus) { this.removeItem('enchant_stone', 1); const g = got[got.length - 1]; if (g) { g.options = [{ stat: focus.stat, kind: 'flat' as const, value: this.rng.int(Math.ceil((focus.min + focus.max) / 2), focus.max) }, ...g.options.filter((o) => o.stat !== focus.stat)].slice(0, 3); } } made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }
     this.p.professions[r.profession] = prof; this.bump('crafts', made); this.progressObjective('craft', '', made);
     return ok({ made, failed: times - made });
+  }
+  /** Timed crafting queue (§32): materials + gold are paid when queued; results (same success rolls/EXP as instant crafting) are collected when the timer ends. 3 slots, 20 s per item. */
+  queueCraft(recipeId: string, times = 1): Result<{ finishAt: number }> {
+    const r = RECIPES[recipeId]; if (!r || times < 1 || times > 50) return fail('INVALID'); const q = ((this.p as any).craftQueue ??= []) as { id: string; recipe: string; times: number; finishAt: number }[]; if (q.length >= 3) return fail('QUEUE_FULL', 'All 3 crafting slots are busy');
+    const prof = this.p.professions[r.profession] ?? { lvl: 1, exp: 0 }; if (prof.lvl < r.level) return fail('PROFESSION_LEVEL', `Requires ${r.profession} ${r.level}`);
+    for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`); if (!this.spend('gold', r.gold * times, 'craft_queue')) return fail('NOT_ENOUGH_GOLD');
+    for (const i of r.inputs) this.removeItem(i.itemId, i.qty * times); const start = Math.max(this.now(), ...q.map((x) => x.finishAt)); const e = { id: uid('cq'), recipe: recipeId, times, finishAt: start + 20_000 * times }; q.push(e); return ok({ finishAt: e.finishAt });
+  }
+  collectCrafts(): Result<{ collected: number; made: number; waiting: number }> {
+    const q = ((this.p as any).craftQueue ?? []) as { id: string; recipe: string; times: number; finishAt: number }[]; let collected = 0, made = 0;
+    for (const e of [...q]) { if (e.finishAt > this.now()) continue; const r = this.craft(e.recipe, e.times, undefined, true); if (!r.ok) break; /* e.g. bag full: stays queued */ made += (r.data as any).made; collected++; q.splice(q.indexOf(e), 1); }
+    return ok({ collected, made, waiting: q.length });
   }
   gather(type: 'ore' | 'tree' | 'herb' | 'fish', tier: number): Result<{ itemId: string; qty: number }> {
     const tool = { ore: 'tool_pickaxe', tree: 'tool_axe', herb: 'tool_sickle', fish: 'tool_rod' }[type];
