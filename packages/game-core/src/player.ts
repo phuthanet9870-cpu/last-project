@@ -9,7 +9,7 @@ import { valuesAt } from './skills/v4.js';
 import { STONE_RULES, applyStone, rollBehavior, rollStoneMods } from './skills/stones.js';
 import { MEMBERSHIPS, TCG_COSMETICS, seasonalFeatured, activeEventAt, WEEK_MS, ACHIEVEMENTS, CARD_SET_BONUS, EGG_POOL, LOGIN_CALENDAR, MISSIONS_DAILY, ACTIVITY_CHESTS, MONSTER_CARDS, MOUNTS, PASS, PETS, QUESTS, RECIPES, SHOPS, TITLES, NPCS, EVENTS, GACHA_BANNERS, DUNGEONS, type Objective, type Profession } from './content.js';
 import { EconomyError, Ledger, feeOf, type Currency } from './economy.js';
-import { EQUIP_SLOTS, ITEMS, OPTION_POOL, RARITIES, SET_BONUS, type ItemInstance, type Rarity, type Slot } from './items.js';
+import { EQUIP_SLOTS, ITEMS, OPTION_POOL, RARITIES, SET_BONUS, optionSlotOf, type ItemInstance, type Rarity, type Slot } from './items.js';
 import { Rng, uid } from './rng.js';
 import { combatPower, computeStats, zeroPrimary, type Modifier, type Primary, type StatResult } from './stats.js';
 import { STARTER_DECKS, TCG_CARDS, openPack, validateDeck } from './tcg.js';
@@ -74,13 +74,13 @@ export function newItem(defId: string, qty = 1, rng?: Rng): ItemInstance {
   const it: ItemInstance = { uid: uid('it'), defId, qty, refine: 0, options: [], sockets: [], cards: [], locked: false, bound: !def.tradeable, durability: 100 };
   if (def.type === 'weapon' || def.type === 'armor' || def.type === 'accessory') {
     it.cards = [null];
-    if (rng) { const n = RARITIES.indexOf(def.rarity) >= 2 ? 2 : rng.chance(0.4) ? 1 : 0; for (let i = 0; i < n; i++) it.options.push(rollOption(rng, def.type)); }
+    if (rng) { const n = RARITIES.indexOf(def.rarity) >= 2 ? 2 : rng.chance(0.4) ? 1 : 0; for (let i = 0; i < n; i++) it.options.push(rollOption(rng, def)); }
   }
   if (def.type === 'skill_stone') it.stone = { skillId: null, mods: [], refine: 0 };
   return it;
 }
-function rollOption(rng: Rng, type: string): Omit<Modifier, 'source'> {
-  const pool = OPTION_POOL.filter((o) => o.slots.includes(type as any));
+function rollOption(rng: Rng, def: { slot?: Slot }): Omit<Modifier, 'source'> {
+  const sl = optionSlotOf(def); const pool = OPTION_POOL.filter((o) => sl && o.slots.includes(sl));
   const o = rng.pick(pool); return { stat: o.stat, kind: 'flat', value: rng.int(o.min, o.max) };
 }
 
@@ -122,20 +122,25 @@ export const walletId = (p: PlayerState) => `p:${p.id}`;
 
 /** Collect every modifier source in a fixed order (§10 pipeline). */
 export function playerModifiers(p: PlayerState, extra: Modifier[] = []): Modifier[] {
-  const mods: Modifier[] = [];
+  const mods: Modifier[] = []; const cardMods: Modifier[] = [];
   const setCounts: Record<string, number> = {};
   for (const slot of EQUIP_SLOTS) {
     const it = p.equipment[slot]; if (!it || it.durability <= 0) continue; const def = ITEMS[it.defId]!; // broken gear contributes nothing
     const src = `equip:${slot}`;
     for (const m of def.stats ?? []) {
       const bonus = m.kind === 'flat' && ['atk', 'matk', 'def', 'mdef', 'maxHp'].includes(m.stat) ? Math.floor(m.value * it.refine * 0.06) + it.refine * 2 : 0;
-      mods.push({ ...m, value: m.value + bonus, source: src });
+      const cos = def.type === 'costume' || def.enhanceable ? 1 + (it.cosmetic ?? 0) * CONFIG.cosmeticStatPerLevel : 1; // HB-022: +10% per enhancement level (max +5)
+      mods.push({ ...m, value: Math.round((m.value + bonus) * cos * 10) / 10, source: src });
     }
     for (const o of it.options) mods.push({ ...o, source: `option:${slot}` });
     it.sockets.forEach((g, i) => { if (g && it.refine >= CONFIG.gemSocketUnlock[i]!) for (const m of ITEMS[g]?.stats ?? []) mods.push({ ...m, value: Math.round(m.value * (1 + (it.gemRefine?.[i] ?? 0) * 0.1) * 10) / 10, source: `gem:${slot}` }); });
-    for (const c of it.cards) if (c) for (const m of MONSTER_CARDS[c]?.mods ?? []) mods.push({ ...m, source: `card:${slot}` });
+    { // HB-021: within one gear piece's card row the same stat counts once (highest card), not summed
+      const best = new Map<string, Omit<Modifier, 'source'>>(); for (const c of it.cards) if (c) for (const m of MONSTER_CARDS[c]?.mods ?? []) { const k = `${m.stat}:${m.kind}`; if (!best.has(k) || best.get(k)!.value < m.value) best.set(k, m); }
+      for (const m of best.values()) cardMods.push({ ...m, source: `card:${slot}` }); }
     if (def.setId) setCounts[def.setId] = (setCounts[def.setId] ?? 0) + 1;
   }
+  { // HB-021: character-wide cap per stat from monster cards
+    const tot = new Map<string, number>(); for (const m of cardMods) { const k = `${m.stat}:${m.kind}`; const cap = CONFIG.cardStatCap[m.kind === 'pct' ? 'pct' : 'flat']; const used = tot.get(k) ?? 0; const v = Math.max(0, Math.min(m.value, cap - used)); tot.set(k, used + v); if (v > 0) mods.push({ ...m, value: v }); } }
   for (const [set, n] of Object.entries(setCounts)) for (const b of SET_BONUS[set] ?? []) if (n >= b.pieces) for (const m of b.mods) mods.push({ ...m, source: `set:${set}${b.pieces}` });
   const collected = Object.keys(p.monsterCards).length;
   for (const b of CARD_SET_BONUS) if (collected >= b.count) for (const m of b.mods) mods.push({ ...m, source: `collection:${b.count}` });
@@ -252,7 +257,8 @@ export class PlayerService {
     if (!d.slot) return fail('NOT_EQUIPPABLE'); if (d.reqLevel > this.p.level) return fail('LEVEL_TOO_LOW', `Requires level ${d.reqLevel}`);
     if (d.type === 'weapon' && d.weapon && !CLASSES[this.p.classId]!.weapons.includes(d.weapon)) return fail('CLASS_RESTRICTED', `${CLASSES[this.p.classId]!.name.en} cannot use ${d.weapon}`);
     let slot = d.slot; if (slot === 'ring1' && this.p.equipment.ring1 && !this.p.equipment.ring2) slot = 'ring2';
-    if (slot === 'off' && ['greatsword', 'bow', 'staff', 'gun'].includes(ITEMS[this.p.equipment.main?.defId ?? '']?.weapon ?? '')) return fail('TWO_HANDED');
+    if (slot === 'off' && d.offRoles && !d.offRoles.includes(CLASSES[this.p.classId]!.role)) return fail('CLASS_RESTRICTED', `${CLASSES[this.p.classId]!.name.en} cannot use a ${d.offKind ?? 'this off-hand'}`);
+    if (slot === 'off' && d.offKind === 'shield' && ['greatsword', 'bow', 'staff', 'gun'].includes(ITEMS[this.p.equipment.main?.defId ?? '']?.weapon ?? '')) return fail('TWO_HANDED'); // only shields conflict with two-handed weapons
     const prev = this.p.equipment[slot];
     this.p.inventory.splice(this.p.inventory.indexOf(it), 1); // atomic swap: free slot guaranteed since we removed one
     if (prev) this.p.inventory.push(prev);
@@ -280,22 +286,21 @@ export class PlayerService {
     const base = CONFIG.refineSuccess[lvl]!; const pity = Math.min(CONFIG.refinePityCap, (this.p.refinePity[uidv] ?? 0) * CONFIG.refinePityPerFail);
     const ore = lvl >= 10 ? 'refine_ore_hi' : 'refine_ore';
     return { max: false, from: lvl, to: lvl + 1, chance: Math.min(100, base + (base < 100 ? pity : 0)), gold: CONFIG.refineGoldCost(lvl + 1), ore, oreQty: CONFIG.refineOreCost(lvl + 1),
-      onFail: lvl + 1 <= 5 ? 'none' : lvl + 1 <= 10 ? 'materials lost' : lvl + 1 <= 15 ? `materials lost, ${Math.round(CONFIG.refineDowngradeChance11to15 * 100)}% chance −1` : 'materials lost, −1 unless protected', pity };
+      ward: lvl < CONFIG.refineDowngradeFromLevel ? null : lvl + 1 <= CONFIG.wardMaxLevel ? 'ward_scroll' : 'ward_scroll_hi',
+      onFail: lvl < CONFIG.refineDowngradeFromLevel ? 'materials lost (no level loss)' : `materials lost, −1 level unless protected by ${lvl + 1 <= CONFIG.wardMaxLevel ? 'a Ward Scroll' : 'a Greater Ward Scroll'} (gear is never destroyed)`, pity };
   }
   refine(uidv: string, useProtection = false, useBlessing = false): Result<{ success: boolean; level: number; downgraded: boolean }> {
     const it = this.findOwned(uidv); const pv = this.refinePreview(uidv); if (!it || !pv) return fail('NOT_FOUND'); if (pv.max) return fail('MAX_LEVEL');
     const d = ITEMS[it.defId]!; if (!['weapon', 'armor', 'accessory'].includes(d.type)) return fail('NOT_REFINABLE');
     if (this.gold() < BigInt(pv.gold)) return fail('NOT_ENOUGH_GOLD'); if (this.countItem(pv.ore) < pv.oreQty) return fail('NOT_ENOUGH_ORE', `Need ${pv.oreQty}× ${ITEMS[pv.ore]!.name.en}`);
-    if (useProtection && this.countItem('ward_scroll') < 1) return fail('NO_PROTECTION'); if (useBlessing && this.countItem('blessing_scroll') < 1) return fail('NO_BLESSING');
+    const wardItem = pv.ward ?? 'ward_scroll'; if (useProtection && this.countItem(wardItem) < 1) return fail('NO_PROTECTION', `Needs ${ITEMS[wardItem]?.name.en ?? wardItem}`); if (useBlessing && this.countItem('blessing_scroll') < 1) return fail('NO_BLESSING');
     this.spend('gold', pv.gold, 'refine'); this.removeItem(pv.ore, pv.oreQty); if (useBlessing) this.removeItem('blessing_scroll', 1);
     const success = this.rng.next() * 100 < Math.min(100, pv.chance + (useBlessing ? 10 : 0)); let downgraded = false;
     if (success) { it.refine++; this.p.refinePity[uidv] = 0; this.bump('refine_success'); this.p.counters.max_refine = Math.max(this.p.counters.max_refine ?? 0, it.refine); if (it.refine >= 10) this.emit({ type: 'announce', msg: `${this.p.name} refined ${d.name.en} to +${it.refine}!` }); }
     else {
       this.p.refinePity[uidv] = (this.p.refinePity[uidv] ?? 0) + 1;
-      const target = pv.to;
-      if (target >= 16 || (target >= 11 && this.rng.chance(CONFIG.refineDowngradeChance11to15))) {
-        if (useProtection) this.removeItem('ward_scroll', 1); else { it.refine = Math.max(10, it.refine - 1); downgraded = true; }
-      }
+      // HB-018: gear is never destroyed; failing from +5 or higher drops one level unless warded (Ward ≤ +15, Greater Ward ≤ +20)
+      if (pv.from >= CONFIG.refineDowngradeFromLevel) { if (useProtection) this.removeItem(wardItem, 1); else { it.refine = Math.max(0, it.refine - 1); downgraded = true; } }
     }
     this.bump('refines'); this.progressObjective('refine', '', 1); this.clampVitals();
     this.note(`Refine ${d.name.en} +${pv.from}→+${pv.to}: ${success ? 'SUCCESS' : 'FAIL'}${downgraded ? ' (downgraded)' : ''}`);
@@ -311,8 +316,8 @@ export class PlayerService {
     it.sockets[idx] = gem.defId; gem.qty--; if (gem.qty <= 0) this.p.inventory.splice(this.p.inventory.indexOf(gem), 1);
     return ok();
   }
-  unsocketGem(itemUid: string, idx: number): Result { const it = this.findOwned(itemUid); if (!it || !it.sockets[idx]) return fail('EMPTY'); if (!this.spend('gold', 500, 'gem_remove')) return fail('NOT_ENOUGH_GOLD'); const g = it.sockets[idx]!; it.sockets[idx] = null; this.addItem(g, 1); return ok(); }
-  fuseGems(defId: string): Result { const m = /^gem_(\w+)_(\d)$/.exec(defId); if (!m || m[2] === '3') return fail('CANNOT_FUSE'); if (this.countItem(defId) < 3) return fail('NEED_3'); if (!this.spend('gold', 300 * Number(m[2]), 'gem_fuse')) return fail('NOT_ENOUGH_GOLD'); this.removeItem(defId, 3); this.addItem(`gem_${m[1]}_${Number(m[2]) + 1}`, 1); return ok(); }
+  unsocketGem(itemUid: string, idx: number): Result { const it = this.findOwned(itemUid); if (!it || !it.sockets[idx]) return fail('EMPTY'); const g = it.sockets[idx]!; /* HB-019: removal is free */ it.sockets[idx] = null; this.addItem(g, 1); return ok(); }
+  fuseGems(defId: string): Result { const m = /^gem_(\w+)_(\d)$/.exec(defId); if (!m || Number(m[2]) >= 5) return fail('CANNOT_FUSE', 'Grade V is the highest'); if (this.countItem(defId) < 3) return fail('NEED_3'); if (!this.spend('gold', 300 * Number(m[2]), 'gem_fuse')) return fail('NOT_ENOUGH_GOLD'); this.removeItem(defId, 3); this.addItem(`gem_${m[1]}_${Number(m[2]) + 1}`, 1); return ok(); }
   /** Gem refining (§23): socketed gem +0–10, +10% of its stat per level; costs Gem Dust + Gold; failure keeps the level (no destruction). */
   refineGem(itemUid: string, idx: number): Result<{ success: boolean; level: number }> {
     const it = this.findOwned(itemUid); if (!it || !it.sockets[idx]) return fail('NO_GEM', 'No gem in that socket'); it.gemRefine ??= it.sockets.map(() => 0); while (it.gemRefine.length < it.sockets.length) it.gemRefine.push(0);
@@ -322,7 +327,7 @@ export class PlayerService {
   }
   /** Cosmetic enhancement (§22): costumes/wings +0–5 using a duplicate costume or Star Dust; purely visual (aura), never adds stats. */
   enhanceCosmetic(itemUid: string, fodderUid?: string): Result<{ level: number }> {
-    const it = this.findOwned(itemUid); if (!it || ITEMS[it.defId]!.type !== 'costume') return fail('NOT_COSMETIC'); const lv = it.cosmetic ?? 0; if (lv >= COSMETIC_MAX) return fail('MAX_LEVEL');
+    const it = this.findOwned(itemUid); if (!it || !(ITEMS[it.defId]!.type === 'costume' || ITEMS[it.defId]!.enhanceable)) return fail('NOT_COSMETIC'); const lv = it.cosmetic ?? 0; if (lv >= COSMETIC_MAX) return fail('MAX_LEVEL');
     if (fodderUid) { const f = this.findInv(fodderUid); if (!f || f === it || f.defId !== it.defId || f.locked) return fail('NEED_DUPLICATE', 'Use an identical costume'); this.p.inventory.splice(this.p.inventory.indexOf(f), 1); }
     else if (!this.removeItem('star_dust', 3 + lv * 2)) return fail('NEED_STAR_DUST', `Need ${3 + lv * 2} Star Dust (or a duplicate costume)`);
     it.cosmetic = lv + 1; return ok({ level: it.cosmetic });
@@ -334,7 +339,7 @@ export class PlayerService {
     this.removeItem('enchant_stone', need);
     const n = Math.max(1, it.options.length, RARITIES.indexOf(d.rarity) >= 3 ? 3 : 2);
     const next: Omit<Modifier, 'source'>[] = [];
-    for (let i = 0; i < n; i++) next.push(lockIdx.includes(i) && it.options[i] ? it.options[i]! : rollOption(this.rng, d.type));
+    for (let i = 0; i < n; i++) next.push(lockIdx.includes(i) && it.options[i] ? it.options[i]! : rollOption(this.rng, d));
     it.options = next; this.clampVitals(); return ok();
   }
   // ---- monster cards (§24) ----
@@ -401,7 +406,7 @@ export class PlayerService {
     this.p.jobExp += Math.floor(gained * 0.6);
     while (this.p.jobLevel < 70 && this.p.jobExp >= requiredJobExp(this.p.jobLevel)) { this.p.jobExp -= requiredJobExp(this.p.jobLevel); this.p.jobLevel++; this.p.skillPoints++; }
     if (this.p.level >= capLvl) {
-      if (this.p.ascension >= CONFIG.ascensionTiers) { this.p.masteryExp += gained; while (this.p.mastery < CONFIG.extendedMasteryCap && this.p.masteryExp >= requiredMasteryExp(this.p.mastery)) { this.p.masteryExp -= requiredMasteryExp(this.p.mastery); this.p.mastery++; this.emit({ type: 'mastery', level: this.p.mastery }); this.masteryMilestone(this.p.mastery); } }
+      if (this.p.ascension >= CONFIG.masteryAscension) { this.p.masteryExp += gained; while (this.p.mastery < CONFIG.extendedMasteryCap && this.p.masteryExp >= requiredMasteryExp(this.p.mastery)) { this.p.masteryExp -= requiredMasteryExp(this.p.mastery); this.p.mastery++; if (this.p.mastery <= CONFIG.masteryStatPointLevels) this.p.statPoints += 1; this.emit({ type: 'mastery', level: this.p.mastery }); this.masteryMilestone(this.p.mastery); } }
       return gained;
     }
     this.p.exp += gained;
@@ -554,7 +559,7 @@ export class PlayerService {
   }
   isMarried() { const m = this.p.marriage; return !!m && m.stage !== 'engaged'; }
   /** Mastery (Lantern Level) milestones: titles + an aura cosmetic at 10/25/50. */
-  masteryMilestone(lv: number) { const t = ({ 10: 'title_lantern_10', 25: 'title_lantern_25', 50: 'title_lantern_50' } as Record<number, string>)[lv]; if (!t) return; if (!this.p.titles.includes(t)) this.p.titles.push(t); if (lv === 50) this.addItem('wings_fairy', 1); this.sendMail('Elder Rowan', `Lantern Level ${lv}`, 'Your lantern burns brighter. A new title awaits.', [], 0); }
+  masteryMilestone(lv: number) { const t = ({ 10: 'title_lantern_10', 25: 'title_lantern_25', 50: 'title_lantern_50' } as Record<number, string>)[lv]; if (!t) return; if (!this.p.titles.includes(t)) this.p.titles.push(t); if (lv === 50) this.addItem('wings_fairy', 1); this.emit({ type: 'announce', msg: `${this.p.name} reached Astral Mastery ${lv}!` }); this.sendMail('Elder Rowan', `Lantern Level ${lv}`, 'Your lantern burns brighter. A new title awaits.', [], 0); }
   /** Equipment presets: save the equipped set; loading re-equips whatever of it is still owned. */
   savePreset(i: number): Result { if (!(i >= 0 && i < 3)) return fail('INVALID'); const ps = ((this.p as any).presets ??= [null, null, null]) as (Record<string, string> | null)[]; ps[i] = Object.fromEntries(Object.entries(this.p.equipment).filter(([, v]) => v).map(([k, v]) => [k, (v as ItemInstance).uid])); return ok(); }
   loadPreset(i: number): Result<{ equipped: number; missing: number }> { const ps = (this.p as any).presets as (Record<string, string> | null)[] | undefined; const pr = ps?.[i]; if (!pr) return fail('EMPTY'); let equipped = 0, missing = 0; for (const uidv of Object.values(pr)) { if (Object.values(this.p.equipment).some((e) => e?.uid === uidv)) { equipped++; continue; } if (!this.findInv(uidv)) { missing++; continue; } if (this.equip(uidv).ok) equipped++; else missing++; } return ok({ equipped, missing }); }
@@ -663,7 +668,7 @@ export class PlayerService {
     const prof = this.p.professions[r.profession] ?? { lvl: 1, exp: 0 }; if (prof.lvl < r.level) return fail('PROFESSION_LEVEL', `Requires ${r.profession} ${r.level}`);
     if (!prepaid) for (const i of r.inputs) if (this.countItem(i.itemId) < i.qty * times) return fail('MISSING_MATERIALS', `Need ${i.qty * times}× ${ITEMS[i.itemId]!.name.en}`);
     if (!prepaid && this.gold() < BigInt(r.gold * times)) return fail('NOT_ENOUGH_GOLD'); if (this.slotsNeeded(r.output.itemId, r.output.qty * times) > this.freeSlots()) return fail('INVENTORY_FULL');
-    const outDef = ITEMS[r.output.itemId]!; const focus = focusStat ? OPTION_POOL.find((o) => o.stat === focusStat && o.slots.includes(outDef.type)) : undefined;
+    const outDef = ITEMS[r.output.itemId]!; const focus = focusStat ? OPTION_POOL.find((o) => o.stat === focusStat && o.slots.includes(optionSlotOf(outDef)!)) : undefined;
     if (focusStat && !focus) return fail('INVALID_OPTION', 'That option cannot appear on this item'); if (focus && this.countItem('enchant_stone') < times) return fail('NEED_ENCHANT_STONE', 'Focused crafting needs 1 Enchant Stone per item');
     let made = 0;
     for (let t = 0; t < times; t++) { if (!prepaid) { for (const i of r.inputs) this.removeItem(i.itemId, i.qty); this.spend('gold', r.gold, 'craft'); } if (this.rng.chance(Math.min(1, r.success + prof.lvl * 0.01))) { const got = this.addItem(r.output.itemId, r.output.qty, { rollOptions: true, source: 'craft' }); if (focus) { this.removeItem('enchant_stone', 1); const g = got[got.length - 1]; if (g) { g.options = [{ stat: focus.stat, kind: 'flat' as const, value: this.rng.int(Math.ceil((focus.min + focus.max) / 2), focus.max) }, ...g.options.filter((o) => o.stat !== focus.stat)].slice(0, 3); } } made++; } prof.exp += r.exp; while (prof.exp >= prof.lvl * 100) { prof.exp -= prof.lvl * 100; prof.lvl++; } }

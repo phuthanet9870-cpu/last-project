@@ -56,7 +56,12 @@ describe('items, equipment, refine', () => {
     for (let i = 0; i < 5; i++) expect(svc.refine(w.uid).data!.success).toBe(true);
     expect(w.refine).toBe(5); const spent = [1, 2, 3, 4, 5].reduce((s, l) => s + (200 + l * l * 150), 0); expect(g0 - svc.gold()).toBe(BigInt(spent));
   });
-  it('refine never goes below +10 on downgrade and never destroys the item', () => { const { svc, p } = mk(); svc.earn('gold', 1e9, 't'); svc.addItem('refine_ore_hi', 999); svc.addItem('refine_ore', 99); const w = p.equipment.main!; w.refine = 15; for (let i = 0; i < 60; i++) svc.refine(w.uid); expect(w.refine).toBeGreaterThanOrEqual(10); expect(p.equipment.main).toBe(w); });
+  it('HB-018 refine never destroys gear; a failure from +5 or higher drops exactly one level unless warded; +4 never drops; Greater Ward above +15', () => {
+    const { svc, p } = mk(); svc.earn('gold', 1e9, 't'); svc.addItem('refine_ore_hi', 999); svc.addItem('refine_ore', 999); const w = p.equipment.main!;
+    for (let i = 0; i < 200; i++) { const before = w.refine; const r = svc.refine(w.uid); if (!r.ok) break; if (!r.data!.success) expect(w.refine).toBe(before >= 5 ? before - 1 : before); expect(p.equipment.main).toBe(w); }
+    w.refine = 12; svc.addItem('ward_scroll', 50); for (let i = 0; i < 40 && w.refine === 12; i++) { const r = svc.refine(w.uid, true); if (r.data && !r.data.success) { expect(w.refine).toBe(12); break; } if (r.data?.success) w.refine = 12; }
+    w.refine = 17; expect(svc.refine(w.uid, true).err).toBe('NO_PROTECTION'); svc.addItem('ward_scroll_hi', 1); expect(svc.refine(w.uid, true).ok).toBe(true);
+  });
   it('gem socket requires +5', () => { const { svc, p } = mk(); const [g] = svc.addItem('gem_ruby_1'); expect(svc.socketGem(p.equipment.main!.uid, g!.uid).err).toBe('NO_SOCKET'); p.equipment.main!.refine = 5; expect(svc.socketGem(p.equipment.main!.uid, g!.uid).ok).toBe(true); expect(svc.countItem('gem_ruby_1')).toBe(0); });
 });
 
@@ -201,9 +206,9 @@ describe('items & pets additions (v0.5)', () => {
     const str0 = playerStats(p).primary.str; for (let i = 0; i < 60 && (w.gemRefine?.[0] ?? 0) < 10; i++) svc.refineGem(w.uid, 0);
     expect(w.gemRefine![0]).toBe(10); expect(w.sockets[0]).toBe('gem_ruby_1'); expect(playerStats(p).primary.str).toBeGreaterThan(str0); expect(svc.refineGem(w.uid, 0).err).toBe('MAX_LEVEL');
   });
-  it('cosmetic enhancement changes no stats', () => {
+  it('HB-022 enhancement adds +10% of the fixed stats per level (max +5)', () => {
     const { svc, p } = mk(); svc.addItem('star_dust', 100); const [c] = svc.addItem('costume_witch'); svc.gainExp(1e5, 't'); svc.equip(c!.uid); const before = JSON.stringify(playerStats(p).derived);
-    for (let i = 0; i < 5; i++) expect(svc.enhanceCosmetic(c!.uid).ok).toBe(true); expect(c!.cosmetic).toBe(5); expect(svc.enhanceCosmetic(c!.uid).err).toBe('MAX_LEVEL'); expect(JSON.stringify(playerStats(p).derived)).toBe(before);
+    for (let i = 0; i < 5; i++) expect(svc.enhanceCosmetic(c!.uid).ok).toBe(true); expect(c!.cosmetic).toBe(5); expect(svc.enhanceCosmetic(c!.uid).err).toBe('MAX_LEVEL'); expect(playerStats(p).derived.maxHp).toBeGreaterThan(JSON.parse(before).maxHp);
   });
   it('focused crafting guarantees the chosen option and costs an enchant stone', () => {
     const { svc, p } = mk(); svc.earn('gold', 1e6, 't'); svc.addItem('iron_ore', 50); svc.addItem('oak_log', 20); svc.addItem('enchant_stone', 5); let made = 0;

@@ -39,9 +39,9 @@ describe('items & enhancement (L089 L143 L146 L148 L173 L174 L179 L181 L160 L350
     const { svc } = mk(); svc.earn('gold', 1e6, 't'); let it = svc.addItem('frost_sword', 1, { rollOptions: true })[0]!; for (let i = 0; i < 30 && it.options.length < 2; i++) it = svc.addItem('frost_sword', 1, { rollOptions: true })[0]!; expect(it.options.length).toBeGreaterThanOrEqual(1);
     svc.addItem('enchant_stone', 5); const keep = JSON.stringify(it.options[0]); const r = svc.enchant(it.uid, [0]); expect(r.ok).toBe(true); expect(JSON.stringify(it.options[0])).toBe(keep); expect(svc.countItem('enchant_stone')).toBeLessThan(5);
   });
-  it('L179 three gems of a grade fuse into the next grade; L181 unsocketing returns the gem for 500 Gold', () => {
-    const { svc } = mk(); svc.earn('gold', 1e5, 't'); svc.addItem('gem_ruby_1', 3); expect(svc.fuseGems('gem_ruby_1').ok).toBe(true); expect(svc.countItem('gem_ruby_2')).toBe(1); expect(svc.fuseGems('gem_ruby_3').err).toBe('CANNOT_FUSE');
-    const [w] = svc.addItem('frost_sword'); const gem = svc.p.inventory.find((x) => x.defId === 'gem_ruby_2')!; expect(svc.socketGem(w!.uid, gem.uid).err).toBe('NO_SOCKET'); w!.refine = 5; // sockets unlock at +5 expect(svc.socketGem(w!.uid, gem.uid).ok).toBe(true); const g0 = svc.gold(); expect(svc.unsocketGem(w!.uid, 0).ok).toBe(true); expect(svc.gold()).toBe(g0 - 500n); expect(svc.countItem('gem_ruby_2')).toBe(1);
+  it('L179 three gems of a grade fuse into the next grade; L181/HB-019 unsocketing is free and returns the gem; HB-020 grades go to V', () => {
+    const { svc } = mk(); svc.earn('gold', 1e5, 't'); svc.addItem('gem_ruby_1', 3); expect(svc.fuseGems('gem_ruby_1').ok).toBe(true); expect(svc.countItem('gem_ruby_2')).toBe(1); svc.addItem('gem_ruby_5', 3); expect(svc.fuseGems('gem_ruby_5').err).toBe('CANNOT_FUSE'); svc.removeItem('gem_ruby_5', 3);
+    const [w] = svc.addItem('frost_sword'); const gem = svc.p.inventory.find((x) => x.defId === 'gem_ruby_2')!; expect(svc.socketGem(w!.uid, gem.uid).err).toBe('NO_SOCKET'); w!.refine = 5; // sockets unlock at +5 expect(svc.socketGem(w!.uid, gem.uid).ok).toBe(true); const g0 = svc.gold(); expect(svc.unsocketGem(w!.uid, 0).ok).toBe(true); expect(svc.gold()).toBe(g0); expect(svc.countItem('gem_ruby_2')).toBe(1);
   });
   it('L089 an inscribed skill stone refines with stone dust (capped at +10)', () => {
     const { svc } = mk(); lvl(svc, 20); svc.earn('gold', 1e6, 't'); svc.addItem('skill_stone', 1); svc.addItem('stone_dust', 200); const st = svc.p.inventory.find((x) => x.defId === 'skill_stone')!;

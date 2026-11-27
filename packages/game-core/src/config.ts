@@ -33,6 +33,14 @@ export const CONFIG = {
   /** V4: Ascension I→II at Lv 40, II→III at Lv 80 (CUSTOM_DESIGN fallback, spec V4), III+ at 120 unlocks extended mastery. */
   ascensionLevelReq: [40, 80, 120],
   extendedMasteryCap: 200,
+  /** HB-007: Astral Mastery starts at Lv 120 with Ascension III (ascension index 2); the first 50 mastery levels give 1 stat point each. PROVIDED_SPEC */
+  masteryAscension: 2, masteryStatPointLevels: 50,
+  /** HB-018: failing a refine from +5 or higher drops one level (gear never destroyed). Ward Scroll protects up to +15, Greater Ward up to +20. PROVIDED_SPEC (rule) / CUSTOM_DESIGN (ward split) */
+  refineDowngradeFromLevel: 5, wardMaxLevel: 15,
+  /** HB-021: character-wide monster card cap per stat. CUSTOM_DESIGN */
+  cardStatCap: { flat: 60, pct: 20 },
+  /** HB-022: fixed-stat cosmetics gain +10% per enhancement level (0–5). CUSTOM_DESIGN */
+  cosmeticStatPerLevel: 0.1,
   statPointsPerLevel: 3,
   /** V4: base level gives stat points only; skill points come from job level (PROVIDED_SPEC). */
   skillPointsPerLevel: 0,

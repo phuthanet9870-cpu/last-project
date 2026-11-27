@@ -7,12 +7,12 @@ export type Rarity = (typeof RARITIES)[number];
 export const RARITY_COLOR: Record<Rarity, string> = { common: '#d8d8d8', uncommon: '#6fdc6f', rare: '#5aa8ff', epic: '#c07aff', legendary: '#ffb340', mythic: '#ff5a7a' };
 
 export type ItemType = 'weapon' | 'armor' | 'accessory' | 'consumable' | 'material' | 'gem' | 'skill_stone' | 'monster_card' | 'quest' | 'pet_egg' | 'pet_food' | 'mount_key' | 'costume' | 'decoration' | 'ticket' | 'card_pack' | 'tool' | 'enchant' | 'protection';
-export type Slot = 'main' | 'off' | 'head' | 'body' | 'gloves' | 'boots' | 'belt' | 'ring1' | 'ring2' | 'necklace' | 'earring' | 'costume' | 'wings';
-export const EQUIP_SLOTS: Slot[] = ['main', 'off', 'head', 'body', 'gloves', 'boots', 'belt', 'ring1', 'ring2', 'necklace', 'earring', 'costume', 'wings'];
+export type Slot = 'main' | 'off' | 'head' | 'body' | 'gloves' | 'boots' | 'belt' | 'ring1' | 'ring2' | 'necklace' | 'earring' | 'costume' | 'wings' | 'companion';
+export const EQUIP_SLOTS: Slot[] = ['main', 'off', 'head', 'body', 'gloves', 'boots', 'belt', 'ring1', 'ring2', 'necklace', 'earring', 'costume', 'wings', 'companion'];
 
 export interface ItemDef {
   id: string; name: L10n; type: ItemType; rarity: Rarity; icon: string; color: string; stack: number; price: number;
-  tradeable: boolean; reqLevel: number; slot?: Slot; weapon?: WeaponType; stats?: Omit<Modifier, 'source'>[]; element?: Element;
+  tradeable: boolean; reqLevel: number; slot?: Slot; /** HB-016: off-hand family and the class roles that can use it */ offKind?: string; offRoles?: string[]; /** HB-022: fixed-stat item enhanced with duplicates (+0–5) */ enhanceable?: boolean; weapon?: WeaponType; stats?: Omit<Modifier, 'source'>[]; element?: Element;
   use?: { hp?: number; mp?: number; status?: string; durationMs?: number; grant?: string; exp?: number }; setId?: string; desc?: L10n;
 }
 export interface ItemInstance {
@@ -54,7 +54,16 @@ const ARMOR: { s: Slot; en: string; th: string; icon: string; def: number; mdef:
   { s: 'gloves', en: 'Gloves', th: 'ถุงมือ', icon: 'gloves', def: 2, mdef: 1, hp: 8, extra: [['acc', 3]] },
   { s: 'boots', en: 'Boots', th: 'รองเท้า', icon: 'boots', def: 2, mdef: 1, hp: 8, extra: [['moveSpeed', 4]] },
   { s: 'belt', en: 'Belt', th: 'เข็มขัด', icon: 'belt', def: 2, mdef: 2, hp: 20 },
-  { s: 'off', en: 'Shield', th: 'โล่', icon: 'shield', def: 6, mdef: 3, hp: 25, extra: [['block', 3]] },
+];
+/** HB-016: every class has a fitting off-hand (family chosen by role). CUSTOM_DESIGN stats. Shield = the generic `${tier}_off`. */
+export const OFFHANDS: { k: string; en: string; th: string; icon: string; roles: string[]; stats: [StatKey, number][] }[] = [
+  { k: 'quiver', en: 'Quiver', th: 'ซองธนู', icon: 'belt', roles: ['archer'], stats: [['atk', 4], ['acc', 6], ['crit', 1]] },
+  { k: 'orb', en: 'Focus Orb', th: 'ลูกแก้วสมาธิ', icon: 'amulet', roles: ['mage'], stats: [['matk', 5], ['maxMp', 20], ['mdef', 2]] },
+  { k: 'charm', en: 'Prayer Charm', th: 'เครื่องรางสวด', icon: 'amulet', roles: ['healer', 'support'], stats: [['healPower', 5], ['mdef', 3], ['maxMp', 15]] },
+  { k: 'lantern', en: 'Spirit Lantern', th: 'ตะเกียงวิญญาณ', icon: 'amulet', roles: ['summoner'], stats: [['matk', 3], ['atk', 3], ['maxHp', 25]] },
+  { k: 'toolkit', en: 'Gear Toolkit', th: 'ชุดเครื่องมือ', icon: 'belt', roles: ['tech'], stats: [['atk', 3], ['pen', 2], ['def', 3]] },
+  { k: 'brace', en: 'Sword Brace', th: 'สนับแขนนักดาบ', icon: 'gloves', roles: ['warrior'], stats: [['atk', 4], ['def', 3], ['crit', 1]] }, // works with two-handed weapons
+  { k: 'parry', en: 'Parrying Dagger', th: 'มีดปัด', icon: 'dagger', roles: ['assassin'], stats: [['atk', 3], ['eva', 5], ['crit', 1]] },
 ];
 const ACCS: { s: Slot; en: string; th: string; icon: string; extra: [StatKey, number][] }[] = [
   { s: 'ring1', en: 'Ring', th: 'แหวน', icon: 'ring', extra: [['atk', 3], ['matk', 3]] },
@@ -64,6 +73,8 @@ const ACCS: { s: Slot; en: string; th: string; icon: string; extra: [StatKey, nu
 for (const t of TIERS) {
   for (const w of WEAPONS) add({ id: `${t.key}_${w.w}`, name: { en: `${t.en} ${w.en}`, th: `${w.th}${t.th}` }, type: 'weapon', slot: 'main', weapon: w.w, rarity: t.r, reqLevel: t.lvl, icon: w.w, color: t.color, price: Math.floor(80 * t.mul * t.mul), stats: [...st(['atk', Math.round(w.atk * t.mul)], ['matk', Math.round(w.matk * t.mul)]), ...st(...w.extra.map(([k, v]) => [k, k === 'aspd' ? v : Math.round(v * t.mul)] as [StatKey, number]))].filter((m) => m.value !== 0), setId: t.key });
   for (const a of ARMOR) add({ id: `${t.key}_${a.s}`, name: { en: `${t.en} ${a.en}`, th: `${a.th}${t.th}` }, type: 'armor', slot: a.s, rarity: t.r, reqLevel: t.lvl, icon: a.icon, color: t.color, price: Math.floor(60 * t.mul * t.mul), stats: st(['def', Math.round(a.def * t.mul)], ['mdef', Math.round(a.mdef * t.mul)], ['maxHp', Math.round(a.hp * t.mul)], ...(a.extra ?? []).map(([k, v]) => [k, Math.round(v * Math.sqrt(t.mul))] as [StatKey, number])), setId: t.key });
+  add({ id: `${t.key}_off`, name: { en: `${t.en} Shield`, th: `โล่${t.th}` }, type: 'armor', slot: 'off', offKind: 'shield', offRoles: ['tank', 'warrior'], rarity: t.r, reqLevel: t.lvl, icon: 'shield', color: t.color, price: Math.floor(60 * t.mul * t.mul), stats: st(['def', Math.round(6 * t.mul)], ['mdef', Math.round(3 * t.mul)], ['maxHp', Math.round(25 * t.mul)], ['block', 3]) });
+  for (const o of OFFHANDS) add({ id: `${t.key}_off_${o.k}`, name: { en: `${t.en} ${o.en}`, th: `${o.th}${t.th}` }, type: 'armor', slot: 'off', offKind: o.k, offRoles: o.roles, rarity: t.r, reqLevel: t.lvl, icon: o.icon, color: t.color, price: Math.floor(60 * t.mul * t.mul), stats: st(...o.stats.map(([k, v]) => [k, k === 'crit' || k === 'acc' || k === 'eva' ? v : Math.round(v * t.mul)] as [StatKey, number])) });
   for (const a of ACCS) add({ id: `${t.key}_${a.s}`, name: { en: `${t.en} ${a.en}`, th: `${a.th}${t.th}` }, type: 'accessory', slot: a.s, rarity: t.r, reqLevel: t.lvl, icon: a.icon, color: t.color, price: Math.floor(70 * t.mul * t.mul), stats: st(...a.extra.map(([k, v]) => [k, Math.round(v * t.mul)] as [StatKey, number])), setId: t.key });
 }
 export const SET_BONUS: Record<string, { pieces: number; mods: Omit<Modifier, 'source'>[] }[]> = Object.fromEntries(TIERS.map((t) => [t.key, [
@@ -112,18 +123,21 @@ const MATS: [string, string, string, string, string, Rarity?][] = [
 ];
 for (const [id, en, th, icon, color, r] of MATS) add({ id, name: { en, th }, type: 'material', icon, color, stack: 999, price: r === 'epic' ? 400 : r === 'rare' ? 120 : r === 'uncommon' ? 30 : 6, rarity: r ?? 'common' });
 
-// ---- Gems (grades 1–3) ----
+// ---- Gems: HB-020 14 types × 5 grades (CUSTOM_DESIGN values; grade g = value × g) ----
 const GEMS: [string, string, string, string, StatKey, number][] = [
   ['ruby', 'Ruby', 'ทับทิม', '#e02040', 'str', 3], ['topaz', 'Topaz', 'บุษราคัม', '#f0c020', 'agi', 3], ['emerald', 'Emerald', 'มรกต', '#20c060', 'vit', 3],
   ['sapphire', 'Sapphire', 'ไพลิน', '#2060e0', 'int', 3], ['amethyst', 'Amethyst', 'อเมทิสต์', '#a040e0', 'dex', 3], ['opal', 'Opal', 'โอปอล', '#f0f0f0', 'luk', 3],
   ['garnet', 'Garnet', 'โกเมน', '#a02020', 'maxHp', 60], ['aquamarine', 'Aquamarine', 'พลอยน้ำทะเล', '#60e0e0', 'maxMp', 30], ['onyx', 'Onyx', 'นิล', '#303030', 'crit', 2],
+  ['jade', 'Jade', 'หยก', '#40a060', 'def', 6], ['moonstone', 'Moonstone', 'มุกจันทร์', '#c0d0ff', 'mdef', 6], ['citrine', 'Citrine', 'ซิทริน', '#ffb020', 'atk', 5],
+  ['tanzanite', 'Tanzanite', 'แทนซาไนต์', '#4040c0', 'matk', 5], ['peridot', 'Peridot', 'เพอริดอต', '#a0e040', 'eva', 4],
 ];
-for (const [id, en, th, color, stat, v] of GEMS) for (let g = 1; g <= 3; g++) add({ id: `gem_${id}_${g}`, name: { en: `${en} ${'I'.repeat(g)}`, th: `${th} ขั้น ${g}` }, type: 'gem', icon: 'gem', color, stack: 99, price: 100 * g * g, rarity: (['uncommon', 'rare', 'epic'] as Rarity[])[g - 1], stats: [{ stat, kind: 'flat', value: v * g }] });
+for (const [id, en, th, color, stat, v] of GEMS) for (let g = 1; g <= 5; g++) add({ id: `gem_${id}_${g}`, name: { en: `${en} ${['I', 'II', 'III', 'IV', 'V'][g - 1]}`, th: `${th} ขั้น ${g}` }, type: 'gem', icon: 'gem', color, stack: 99, price: 100 * g * g, rarity: (['uncommon', 'rare', 'epic', 'legendary', 'mythic'] as Rarity[])[g - 1], stats: [{ stat, kind: 'flat', value: v * g }] });
 
 // ---- Skill stones, enchant, protection, tools, eggs, mount keys, costumes, tickets, card packs, decorations ----
+add({ id: 'ward_scroll_hi', name: { en: 'Greater Ward Scroll', th: 'คัมภีร์ป้องกันชั้นสูง' }, type: 'protection', icon: 'scroll', color: '#ffe080', stack: 99, price: 8000, rarity: 'epic', desc: { en: 'Prevents the −1 level loss on a failed refine from +15 to +20.', th: 'ป้องกันการลดระดับเมื่อตีบวก +15 ถึง +20 ล้มเหลว' } });
 add({ id: 'skill_stone', name: { en: 'Blank Skill Stone', th: 'ศิลาสกิลเปล่า' }, type: 'skill_stone', icon: 'stone', color: '#80a0c0', stack: 1, price: 300, rarity: 'rare' });
 add({ id: 'skill_stone_legendary', name: { en: 'Legendary Skill Stone', th: 'ศิลาสกิลตำนาน' }, type: 'skill_stone', icon: 'stone', color: '#ffb040', stack: 1, price: 6000, rarity: 'legendary', desc: { en: 'Inscribing also rolls a behaviour that changes how the skill works.', th: 'การจารึกจะสุ่มพฤติกรรมพิเศษที่เปลี่ยนวิธีทำงานของสกิล' } });
-add({ id: 'enchant_stone', name: { en: 'Enchant Stone', th: 'หินเอนชานต์' }, type: 'enchant', icon: 'crystal', color: '#ff80ff', stack: 99, price: 150, rarity: 'uncommon' });
+add({ id: 'enchant_stone', name: { en: 'Option Stone', th: 'หินออปชัน' }, type: 'enchant', desc: { en: 'Rerolls random options (lock lines to keep them); focuses the first line when crafting.', th: 'สุ่มออปชันใหม่ (ล็อกบรรทัดที่ต้องการเก็บได้) และกำหนดบรรทัดแรกตอนคราฟต์' }, icon: 'crystal', color: '#ff80ff', stack: 99, price: 150, rarity: 'uncommon' });
 add({ id: 'ward_scroll', name: { en: 'Hearthward Charm', th: 'เครื่องรางคุ้มกัน' }, type: 'protection', icon: 'scroll', color: '#80ffff', stack: 99, price: 2000, rarity: 'epic', desc: { en: 'Prevents downgrade on refine failure.', th: 'ป้องกันระดับลดเมื่อตีบวกล้มเหลว' } });
 add({ id: 'tool_pickaxe', name: { en: 'Pickaxe', th: 'จอบขุดแร่' }, type: 'tool', icon: 'pickaxe', color: '#a0a0a0', price: 50 });
 add({ id: 'tool_axe', name: { en: 'Woodaxe', th: 'ขวานตัดไม้' }, type: 'tool', icon: 'axe', color: '#a08060', price: 50 });
@@ -141,15 +155,23 @@ add({ id: 'card_pack', name: { en: 'Duel Card Pack', th: 'ซองการ์�
 for (const [id, en, th, color] of [['deco_lantern', 'Paper Lantern', 'โคมกระดาษ', '#ff8040'], ['deco_bench', 'Wooden Bench', 'ม้านั่งไม้', '#a07040'], ['deco_flowers', 'Flower Pot', 'กระถางดอกไม้', '#ff80c0'], ['deco_fountain', 'Small Fountain', 'น้ำพุเล็ก', '#80c0ff']] as const) add({ id, name: { en, th }, type: 'decoration', icon: 'deco', color, stack: 20, price: 400 });
 add({ id: 'quest_letter', name: { en: 'Sealed Letter', th: 'จดหมายผนึก' }, type: 'quest', icon: 'scroll', color: '#f0e0b0', tradeable: false, price: 0 });
 add({ id: 'wedding_cake', name: { en: 'Wedding Cake Slice', th: 'เค้กแต่งงานหนึ่งชิ้น' }, type: 'consumable', icon: 'potion', color: '#fff0f8', stack: 99, price: 1, rarity: 'uncommon', tradeable: false, use: { hp: 600, mp: 200 } });
-add({ id: 'wedding_ring', name: { en: 'Hearthbound Ring', th: 'แหวนผูกใจ' }, type: 'accessory', slot: 'ring2', icon: 'ring', color: '#ffc0e0', price: 10000, rarity: 'epic', tradeable: false, stats: [{ stat: 'maxHp', kind: 'pct', value: 3 }, { stat: 'expBonus', kind: 'flat', value: 5 }] });
+for (const [id, en, th, color, stat, v] of [['companion_lanternfox', 'Lantern Fox Companion', 'เพื่อนจิ้งจอกโคม', '#ff9040', 'expBonus', 3], ['companion_mossling', 'Mossling Companion', 'เพื่อนมอสลิง', '#60c060', 'dropBonus', 3], ['companion_starmote', 'Starmote Companion', 'เพื่อนละอองดาว', '#c0c0ff', 'goldBonus', 3]] as const)
+  add({ id, name: { en, th }, type: 'costume', slot: 'companion', icon: 'amulet', color, price: 4000, rarity: 'epic', enhanceable: true, desc: { en: 'Follows you around. Fixed stats; duplicates enhance it to +5.', th: 'เดินตามคุณ ค่าสถานะคงที่ ใช้ชิ้นซ้ำเสริมได้ถึง +5' }, stats: [{ stat, kind: 'flat', value: v }, { stat: 'maxHp', kind: 'flat', value: 15 }] });
+add({ id: 'wedding_ring', name: { en: 'Hearthbound Ring', th: 'แหวนผูกใจ' }, type: 'accessory', slot: 'ring2', enhanceable: true, icon: 'ring', color: '#ffc0e0', price: 10000, rarity: 'epic', tradeable: false, stats: [{ stat: 'maxHp', kind: 'pct', value: 3 }, { stat: 'expBonus', kind: 'flat', value: 5 }] });
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(D.map((d) => [d.id, d]));
 
 /** Random option pool (§23). */
-export const OPTION_POOL: { stat: StatKey; min: number; max: number; slots: ItemType[] }[] = [
-  { stat: 'atk', min: 2, max: 12, slots: ['weapon', 'accessory'] }, { stat: 'matk', min: 2, max: 12, slots: ['weapon', 'accessory'] },
-  { stat: 'crit', min: 1, max: 4, slots: ['weapon', 'accessory'] }, { stat: 'maxHp', min: 15, max: 90, slots: ['armor', 'accessory'] },
-  { stat: 'def', min: 2, max: 10, slots: ['armor'] }, { stat: 'mdef', min: 2, max: 10, slots: ['armor'] }, { stat: 'acc', min: 3, max: 12, slots: ['weapon', 'armor'] },
-  { stat: 'eva', min: 3, max: 12, slots: ['armor', 'accessory'] }, { stat: 'lifesteal', min: 1, max: 3, slots: ['weapon'] }, { stat: 'moveSpeed', min: 2, max: 6, slots: ['armor'] },
-  { stat: 'cdr', min: 1, max: 3, slots: ['accessory'] }, { stat: 'elemBonus', min: 2, max: 8, slots: ['weapon'] }, { stat: 'dropBonus', min: 1, max: 5, slots: ['accessory'] },
+/** HB-017: random option pools are per equipment slot (no affix on the wrong slot). `ring` covers ring1/ring2. CUSTOM_DESIGN ranges. */
+export type OptionSlot = 'main' | 'off' | 'head' | 'body' | 'gloves' | 'boots' | 'belt' | 'ring' | 'necklace' | 'earring';
+export const optionSlotOf = (d: { slot?: Slot }): OptionSlot | null => (!d.slot || d.slot === 'costume' || d.slot === 'wings' ? null : d.slot === 'ring1' || d.slot === 'ring2' ? 'ring' : d.slot as OptionSlot);
+export const OPTION_POOL: { stat: StatKey; min: number; max: number; slots: OptionSlot[] }[] = [
+  { stat: 'atk', min: 2, max: 12, slots: ['main', 'ring', 'gloves'] }, { stat: 'matk', min: 2, max: 12, slots: ['main', 'ring', 'off'] },
+  { stat: 'crit', min: 1, max: 4, slots: ['main', 'earring', 'gloves'] }, { stat: 'critDmg', min: 3, max: 12, slots: ['main', 'necklace'] },
+  { stat: 'maxHp', min: 15, max: 90, slots: ['body', 'head', 'belt', 'necklace', 'off'] }, { stat: 'maxMp', min: 10, max: 40, slots: ['head', 'necklace', 'off'] },
+  { stat: 'def', min: 2, max: 10, slots: ['body', 'head', 'boots', 'off'] }, { stat: 'mdef', min: 2, max: 10, slots: ['body', 'head', 'belt', 'off'] },
+  { stat: 'acc', min: 3, max: 12, slots: ['main', 'gloves'] }, { stat: 'eva', min: 3, max: 12, slots: ['boots', 'earring'] },
+  { stat: 'lifesteal', min: 1, max: 3, slots: ['main'] }, { stat: 'moveSpeed', min: 2, max: 6, slots: ['boots'] }, { stat: 'aspd', min: 1, max: 4, slots: ['gloves'] },
+  { stat: 'cdr', min: 1, max: 3, slots: ['ring', 'earring'] }, { stat: 'elemBonus', min: 2, max: 8, slots: ['main', 'off'] }, { stat: 'dropBonus', min: 1, max: 5, slots: ['necklace', 'belt'] },
+  { stat: 'hpRegen', min: 2, max: 10, slots: ['belt', 'body'] }, { stat: 'healPower', min: 2, max: 8, slots: ['off', 'ring'] }, { stat: 'block', min: 1, max: 3, slots: ['off'] },
 ];
