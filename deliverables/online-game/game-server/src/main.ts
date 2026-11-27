@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import IORedis from 'ioredis';
 import { CLASSES, MAPS, createCharacter, playerCP, Ledger } from '../../../packages/game-core/src/index.js';
-import { AuthError, login, logout, mfaEnable, mfaSetup, refresh, register, verifyAccess } from './auth.js';
+import { AuthError, login, logout, mfaEnable, mfaSetup, refresh, register, verifyAccess, verifyCredentials } from './auth.js';
 import { adminAllowed } from './totp.js';
 import { migrate, pool, seed, tx } from './db.js';
 import { CONFIG } from './env.js';
@@ -83,6 +83,38 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
     game.ledger.mint(`p:${p.id}`, 'gold', 500n, 'starter', `starter:${p.id}`); game.ledger.pending = game.ledger.pending.filter((x) => x.txId !== `starter:${p.id}`); game.ledger.dirty.delete(`p:${p.id}`);
     reply.code(201); return { character: { id: p.id, name: p.name, classId: p.classId, level: 1 } };
   });
+  // Character rename (§07): offline only, unique per world, once per 30 days; friend lists and spouse references follow the new name.
+  app.post('/api/characters/:id/rename', async (req) => {
+    const a = auth(req); const id = (req.params as any).id; const name = String((req.body as any)?.name ?? '').trim(); if (!/^[\p{L}\p{N}_ ]{2,16}$/u.test(name)) throw new AuthError(400, 'Name must be 2–16 letters/numbers');
+    if (game.conns.has(id)) throw new AuthError(409, 'Log out of this character first');
+    return tx(async (cl) => {
+      const row = (await cl.query('SELECT name, renamed_at FROM characters WHERE id=$1 AND account_id=$2 AND deleted_at IS NULL FOR UPDATE', [id, a.sub])).rows[0]; if (!row) throw new AuthError(404, 'Character not found');
+      if (row.renamed_at && Date.now() - new Date(row.renamed_at).getTime() < 30 * 86400_000) throw new AuthError(429, 'Characters can be renamed once every 30 days');
+      try { await cl.query(`UPDATE characters SET name=$3, renamed_at=now(), state=jsonb_set(state, '{name}', to_jsonb($3::text)) WHERE id=$1 AND account_id=$2`, [id, a.sub, name]); } catch (e: any) { if (e.code === '23505') throw new AuthError(409, 'Name already taken'); throw e; }
+      const old = row.name as string;
+      await cl.query(`UPDATE characters SET state = jsonb_set(state, '{friends}', (SELECT COALESCE(jsonb_agg(CASE WHEN f->>'name' = $2 THEN jsonb_set(f, '{name}', to_jsonb($3::text)) ELSE f END), '[]'::jsonb) FROM jsonb_array_elements(state->'friends') f)) WHERE world_id=$1 AND state->'friends' @> jsonb_build_array(jsonb_build_object('name', $2::text))`, [CONFIG.worldId, old, name]);
+      await cl.query(`UPDATE characters SET state = jsonb_set(state, '{marriage,partner}', to_jsonb($3::text)) WHERE world_id=$1 AND state->'marriage'->>'partner' = $2`, [CONFIG.worldId, old, name]);
+      for (const c of game.conns.values()) { let ch = false; for (const f of c.svc.p.friends) if (f.name === old) { f.name = name; ch = true; } if (c.svc.p.marriage?.partner === old) { c.svc.p.marriage.partner = name; ch = true; } if (ch) c.dirty = true; } // online friends/spouse in memory too
+      return { ok: true, name, previous: old };
+    });
+  });
+  // Sanction appeals (§63): a sanctioned player (banned/suspended accounts cannot sign in) proves identity with username + password.
+  app.post('/api/appeals', async (req) => {
+    const b: any = req.body ?? {}; if (!(await limit(`appeal:${req.ip}`, Number(process.env.APPEAL_LIMIT_PER_HOUR ?? 5), 3600))) throw new AuthError(429, 'Too many appeals'); const text = String(b.text ?? '').replace(/<[^>]*>/g, '').trim().slice(0, 2000); if (text.length < 10) throw new AuthError(400, 'Please explain in at least 10 characters');
+    const acc = await verifyCredentials(b.username, b.password); if (!acc) throw new AuthError(401, 'Invalid credentials');
+    const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [acc.id])).rowCount! > 0; if (acc.status === 'active' && !muted) throw new AuthError(400, 'There is no active sanction to appeal');
+    try { const r = await pool.query('INSERT INTO appeals(account_id,text) VALUES ($1,$2) RETURNING id', [acc.id, text]); return { ok: true, id: Number(r.rows[0].id) }; } catch (e: any) { if (e.code === '23505') throw new AuthError(409, 'You already have an open appeal'); throw e; }
+  });
+  app.get('/api/admin/appeals', async (req) => { admin(req); return { rows: (await pool.query(`SELECT ap.id::int AS id, a.username, a.status AS account_status, a.ban_reason, ap.text, ap.status, ap.created_at FROM appeals ap JOIN accounts a ON a.id=ap.account_id ORDER BY (ap.status='open') DESC, ap.created_at DESC LIMIT 100`)).rows }; });
+  app.post('/api/admin/appeals/:id', async (req) => {
+    const a = admin(req); const b: any = req.body ?? {}; if (!['accept', 'reject'].includes(b.decision) || !b.note) throw new AuthError(400, 'decision and note required');
+    return tx(async (cl) => {
+      const ap = (await cl.query(`SELECT * FROM appeals WHERE id=$1 FOR UPDATE`, [(req.params as any).id])).rows[0]; if (!ap) throw new AuthError(404, 'not found'); if (ap.status !== 'open') throw new AuthError(409, 'Already resolved');
+      await cl.query(`UPDATE appeals SET status=$2, resolver=$3, resolution=$4, resolved_at=now() WHERE id=$1`, [ap.id, b.decision === 'accept' ? 'accepted' : 'rejected', a.sub, String(b.note).slice(0, 500)]);
+      if (b.decision === 'accept') { await cl.query(`UPDATE accounts SET status='active', ban_reason=NULL WHERE id=$1`, [ap.account_id]); await cl.query(`UPDATE moderation_actions SET expires_at=now() WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now())`, [ap.account_id]); }
+      await cl.query('INSERT INTO admin_audit_logs(actor,action,target,reason) VALUES ($1,$2,$3,$4)', [a.sub, `appeal_${b.decision}`, ap.account_id, String(b.note).slice(0, 500)]); return { ok: true };
+    });
+  });
   app.delete('/api/characters/:id', async (req) => { const a = auth(req); const id = (req.params as any).id; if (game.conns.has(id)) throw new AuthError(409, 'Character is online'); const r = await pool.query('UPDATE characters SET deleted_at=now() WHERE id=$1 AND account_id=$2 AND deleted_at IS NULL', [id, a.sub]); return { ok: r.rowCount === 1 }; });
   // Rankings (§54): whitelisted kinds only -> fixed SQL expressions (no user text reaches SQL except bound parameters).
   const RANK_EXPR: Record<string, string> = {
@@ -91,6 +123,7 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
     pet: `COALESCE((SELECT max((x->>'level')::int) FROM jsonb_array_elements(state->'pets') x), 0)`,
     life: `COALESCE((SELECT sum((v->>'lvl')::int) FROM jsonb_each(state->'professions') AS t(k, v)), 0) + COALESCE((SELECT sum((v->>'lvl')::int) FROM jsonb_each(state->'gathering') AS t(k, v)), 0)`,
     mastery: `COALESCE((state->>'mastery')::int, 0)`,
+    achievements: `COALESCE(jsonb_array_length(state->'achievements'), 0)`, // achievement count (points need the content table)
   };
   app.get('/api/rankings/:kind', async (req) => {
     const kind = String((req.params as any).kind); const cls = /^class:([a-z_]{2,24})$/.exec(kind);

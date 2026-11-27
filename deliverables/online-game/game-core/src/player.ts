@@ -383,7 +383,7 @@ export class PlayerService {
       const st = playerStats(this.p).derived; this.p.hp = st.maxHp; this.p.mp = st.maxMp;
       this.emit({ type: 'level_up', level: this.p.level }); this.note(`Level up! Now level ${this.p.level}`);
       this.p.counters.level = this.p.level; this.checkAchievements(); this.progressObjective('level', '', 0);
-      if (this.p.level % 10 === 0) this.sendMail('Elder Rowan', `Milestone: Level ${this.p.level}`, 'A gift for your growth.', [{ itemId: 'refine_ore', qty: 5 }, { itemId: 'gacha_ticket', qty: 1 }], 1000);
+      for (let lv = this.p.level - levels + 1; lv <= this.p.level; lv++) if (lv % 10 === 0) this.sendMail('Elder Rowan', `Milestone: Level ${lv}`, 'A gift for your growth.', [{ itemId: 'refine_ore', qty: 5 }, { itemId: 'gacha_ticket', qty: 1 }], 1000); // every crossed milestone, even on multi-level gains
     }
     this.gainPassExp(Math.max(1, Math.floor(amount / 200)));
     return gained;
@@ -500,6 +500,11 @@ export class PlayerService {
     const pool = Object.values(TCG_CARDS).filter((x) => x.rarity === next && !x.id.startsWith('tok_')); if (!pool.length) return fail('MAX_RARITY');
     for (const [c, n] of Object.entries(need)) this.p.tcg.collection[c]! -= n; const got = this.rng.pick(pool).id; this.p.tcg.collection[got] = (this.p.tcg.collection[got] ?? 0) + 1; return ok(got);
   }
+  /** Card set completion (§42): own at least one of every collectible card of an element → one-time reward. */
+  cardSetStatus() { const els = [...new Set(Object.values(TCG_CARDS).filter((c) => !c.id.startsWith('tok_')).map((c) => c.element))]; return els.map((el) => { const cards = Object.values(TCG_CARDS).filter((c) => c.element === el && !c.id.startsWith('tok_')); const owned = cards.filter((c) => (this.p.tcg.collection[c.id] ?? 0) > 0).length; return { element: el, owned, total: cards.length, claimed: !!this.p.counters[`tcgset:${el}`] }; }); }
+  claimCardSet(element: string): Result { const s = this.cardSetStatus().find((x) => x.element === element); if (!s) return fail('INVALID'); if (s.claimed) return fail('ALREADY_CLAIMED'); if (s.owned < s.total) return fail('INCOMPLETE', `${s.owned}/${s.total} cards`); this.p.counters[`tcgset:${element}`] = 1; this.earn('card_dust', 400, 'tcg_set'); this.addItem('card_pack', 2); this.bump('card_sets'); return ok(); }
+  /** Appearance salon: change hair/colours after creation (gold sink). Body type is kept. */
+  changeAppearance(a: Partial<PlayerState['appearance']>): Result { const allowed = ['hair', 'hairColor', 'skin', 'eyes'] as const; const next = { ...this.p.appearance } as any; for (const k of allowed) if (a[k] !== undefined) { if ((k === 'hair' && !(Number.isInteger(a[k]) && (a[k] as number) >= 0 && (a[k] as number) < 8)) || (k !== 'hair' && !/^#[0-9a-fA-F]{3,6}$/.test(String(a[k])))) return fail('INVALID_APPEARANCE'); next[k] = a[k]; } if (!this.spend('gold', 5000, 'appearance_salon')) return fail('NOT_ENOUGH_GOLD', 'The salon costs 5,000 Gold'); this.p.appearance = next; return ok(); }
   tcgCosmetic(id: string, buy: boolean): Result { const c = TCG_COSMETICS[id]; if (!c) return fail('INVALID'); const cos = (this.p.tcg.cosmetics ??= { owned: ['back_classic', 'mat_wood', 'table_classic'], back: 'back_classic', mat: 'mat_wood', table: 'table_classic' }); if (buy && !cos.owned.includes(id)) { if (!this.spend('card_dust', c.cost, 'tcg_cosmetic')) return fail('NOT_ENOUGH_DUST', `Costs ${c.cost} Card Dust`); cos.owned.push(id); } if (!cos.owned.includes(id)) return fail('NOT_OWNED'); (cos as any)[c.kind] = id; return ok(); }
   claimMission(id: string): Result { this.resetDailyIfNeeded(); const m = MISSIONS_DAILY.find((x) => x.id === id); if (!m) return fail('INVALID'); if (this.p.missions.claimed.includes(id)) return fail('ALREADY_CLAIMED'); if ((this.p.missions.progress[m.counter] ?? 0) < m.target) return fail('INCOMPLETE'); this.p.missions.claimed.push(id); this.p.missions.points += m.points; this.gainPassExp(20); return ok(); }
   claimChest(i: number): Result { const c = ACTIVITY_CHESTS[i]; if (!c) return fail('INVALID'); if (this.p.missions.chests.includes(i)) return fail('ALREADY_CLAIMED'); if (this.p.missions.points < c.points) return fail('INCOMPLETE'); this.p.missions.chests.push(i); this.addItem(c.itemId, c.qty); return ok(); }
@@ -648,7 +653,7 @@ export class PlayerService {
   upgradeMount(id: string): Result { if (!this.p.mounts.includes(id)) return fail('LOCKED'); const lv = this.p.mountLevels[id] ?? 0; if (lv >= 10) return fail('MAX'); if (!this.removeItem('star_dust', 2 + lv)) return fail('NEED_STAR_DUST'); this.p.mountLevels[id] = lv + 1; return ok(); }
 
   // ---- TCG collection & packs (§42, §44) ----
-  openCardPack(uidv: string): Result<string[]> { const it = this.findInv(uidv); if (!it) return fail('NOT_FOUND'); it.qty--; if (it.qty <= 0) this.p.inventory.splice(this.p.inventory.indexOf(it), 1); const r = openPack(this.rng, this.p.tcg.pity); this.p.tcg.pity = r.pity; for (const c of r.cards) this.p.tcg.collection[c] = (this.p.tcg.collection[c] ?? 0) + 1; this.note(`Pack: ${r.cards.map((c) => TCG_CARDS[c]!.name.en).join(', ')}`); return ok(r.cards); }
+  openCardPack(uidv: string): Result<string[]> { const it = this.findInv(uidv); if (!it) return fail('NOT_FOUND'); it.qty--; if (it.qty <= 0) this.p.inventory.splice(this.p.inventory.indexOf(it), 1); const r = openPack(this.rewardRng ?? this.rng, this.p.tcg.pity); this.p.tcg.pity = r.pity; for (const c of r.cards) this.p.tcg.collection[c] = (this.p.tcg.collection[c] ?? 0) + 1; this.note(`Pack: ${r.cards.map((c) => TCG_CARDS[c]!.name.en).join(', ')}`); return ok(r.cards); }
   saveDeck(id: string, name: string, cards: string[]): Result { const err = validateDeck(cards, this.p.tcg.collection); if (err) return fail(err); const d = this.p.tcg.decks.find((x) => x.id === id); if (d) { d.name = name; d.cards = [...cards]; } else { if (this.p.tcg.decks.length >= 10) return fail('DECK_LIMIT'); this.p.tcg.decks.push({ id, name, cards: [...cards] }); } return ok(); }
   craftCard(cardId: string): Result { const c = TCG_CARDS[cardId]; if (!c || cardId.startsWith('tok_')) return fail('INVALID'); if (!this.spend('card_dust', c.craft, 'card_craft')) return fail('NOT_ENOUGH_DUST'); this.p.tcg.collection[cardId] = (this.p.tcg.collection[cardId] ?? 0) + 1; return ok(); }
   dustCard(cardId: string): Result { const c = TCG_CARDS[cardId]; const n = this.p.tcg.collection[cardId] ?? 0; if (!c || this.spareCards(cardId) <= 0) return fail('IN_USE_OR_NONE', 'Card is in a deck or account-bound'); this.p.tcg.collection[cardId] = n - 1; this.earn('card_dust', Math.floor(c.craft / 4), 'card_dust'); return ok(); }
@@ -664,17 +669,20 @@ export class PlayerService {
   // ---- gacha (§46) — simulated Crystal only; real-money random rewards disabled by feature flag ----
   /** Spend Crystal: Free (bound) Crystal first, then tradeable Crystal (§33). */
   spendCrystal(n: number, reason: string): boolean { const free = Number(this.bal('crystal_free')); if (free + Number(this.bal('crystal')) < n) return false; const f = Math.min(free, n); if (f) this.spend('crystal_free', f, reason); if (n - f) this.spend('crystal', n - f, reason); return true; }
+  /** Optional unpredictable RNG for random rewards (server sets a crypto-backed one; the artifact uses the seeded RNG). */
+  rewardRng: Rng | null = null;
   gachaDraw(times: 1 | 10, useTicket: boolean, bannerId: string = 'standard'): Result<{ itemId: string; rarity: string }[]> {
+    const rr = this.rewardRng ?? this.rng;
     const b = (GACHA_BANNERS as Record<string, typeof GACHA_BANNERS.standard>)[bannerId]; if (!b) return fail('INVALID_BANNER'); const pb = (this.p.gacha.pityBy ??= {});
     if (useTicket) { if (!this.removeItem('gacha_ticket', times)) return fail('NOT_ENOUGH_TICKETS'); }
     else if (!this.spendCrystal(b.cost.crystal * times, `gacha_sim:${bannerId}`)) return fail('NOT_ENOUGH_CRYSTAL');
     const out: { itemId: string; rarity: string }[] = [];
     for (let i = 0; i < times; i++) {
       pb[bannerId] = (pb[bannerId] ?? (bannerId === 'standard' ? this.p.gacha.pity : 0)) + 1; // pity tracked per banner
-      let rarity = this.rng.weighted(CONFIG.gachaRates).rarity;
+      let rarity = rr.weighted(CONFIG.gachaRates).rarity;
       if (pb[bannerId]! >= CONFIG.gachaPity) rarity = 'legendary';
       if (rarity === 'legendary' || rarity === 'mythic') pb[bannerId] = 0; if (bannerId === 'standard') this.p.gacha.pity = pb[bannerId]!;
-      const pool = ((b.pools as any)[rarity] ?? (b.pools as any).uncommon) as string[]; const itemId = bannerId === 'seasonal' && rarity === 'mythic' ? seasonalFeatured(this.now()) : this.rng.pick(pool);
+      const pool = ((b.pools as any)[rarity] ?? (b.pools as any).uncommon) as string[]; const itemId = bannerId === 'seasonal' && rarity === 'mythic' ? seasonalFeatured(this.now()) : rr.pick(pool);
       if (ITEMS[itemId]) this.addItem(itemId, 1, { rollOptions: true, source: 'gacha' }); else if (PETS[itemId.replace('_egg', '')]) this.addPet(itemId.replace('_egg', ''));
       out.push({ itemId, rarity }); this.p.gacha.history.unshift({ ts: this.now(), item: itemId, rarity });
     }
@@ -683,7 +691,7 @@ export class PlayerService {
   }
 
   // ---- dungeons (§28) bookkeeping ----
-  canEnterDungeon(id: string): Result { this.resetDailyIfNeeded(); const d = DUNGEONS[id]; if (!d) return fail('INVALID'); if (this.p.level < d.levelReq) return fail('LEVEL_TOO_LOW', `Requires level ${d.levelReq}`); if ((this.p.dungeon.runs[id] ?? 0) >= d.dailyLimit) return fail('DAILY_LIMIT'); if (d.type === 'raid' && this.p.counters[`raid:${id}:${weekKey(this.now())}`]) return fail('WEEKLY_LOCKOUT', 'Raid already cleared this week (resets Monday 00:00 Asia/Bangkok)'); return ok(); }
+  canEnterDungeon(id: string): Result { this.resetDailyIfNeeded(); const d = DUNGEONS[id]; if (!d) return fail('INVALID'); if (this.p.level < d.levelReq) return fail('LEVEL_TOO_LOW', `Requires level ${d.levelReq}`); const fl = /^daily_(\w+)_(\d+)$/.exec(id); if (fl && Number(fl[2]) > 1 && !this.p.dungeon.firstClears.includes(`daily_${fl[1]}_${Number(fl[2]) - 1}`)) return fail('FLOOR_LOCKED', `Clear floor ${Number(fl[2]) - 1} first`); if ((this.p.dungeon.runs[id] ?? 0) >= d.dailyLimit) return fail('DAILY_LIMIT'); if (d.type === 'raid' && this.p.counters[`raid:${id}:${weekKey(this.now())}`]) return fail('WEEKLY_LOCKOUT', 'Raid already cleared this week (resets Monday 00:00 Asia/Bangkok)'); return ok(); }
   startDungeon(id: string): Result { const c = this.canEnterDungeon(id); if (!c.ok) return c; this.p.dungeon.runs[id] = (this.p.dungeon.runs[id] ?? 0) + 1; return ok(); }
   completeDungeon(id: string, runId: string): Result {
     const d = DUNGEONS[id]!; const key = `dun:${runId}`; if (this.p.counters[key]) return fail('ALREADY_CLAIMED'); this.p.counters[key] = 1;

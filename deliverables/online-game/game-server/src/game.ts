@@ -3,10 +3,10 @@
  * One process = one world shard (modular monolith, ADR-004). Durable state: PostgreSQL. Presence: Redis.
  */
 import type { WebSocket } from 'ws';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import {
   CONFIG as GAME, DYNAMIC_KEYS, STARTER_DECKS, absoluteAction, applyAction, newMatch, perspective, validateDeck, type TcgAction, type TcgState, publicEntity, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
-  activeEventAt, playerCP, CURRENCIES, guildCan, type Currency, type PlayerState, type Result, type Session,
+  activeEventAt, playerCP, CURRENCIES, guildCan, SecureRng, type Currency, type PlayerState, type Result, type Session,
 } from '../../../packages/game-core/src/index.js';
 import { pool, tx } from './db.js';
 import { CONFIG } from './env.js';
@@ -46,7 +46,7 @@ export class GameServer {
     if (!row) throw new Error('CHARACTER_NOT_FOUND');
     const prev = this.conns.get(charId); if (prev) { prev.ws.close(4001, 'Logged in elsewhere'); await this.leave(charId); } // single active session per character
     const p = row.state as PlayerState; p.wallet = this.ledger; // shared world ledger (balances loaded from wallets table)
-    const svc = new PlayerService(p, new Rng(this.rng.int(1, 2 ** 30)));
+    const svc = new PlayerService(p, new Rng(this.rng.int(1, 2 ** 30))); svc.rewardRng = new SecureRng(() => randomInt(0, 2 ** 32) / 2 ** 32); // gacha/packs: unpredictable server-side draws
     const off = svc.settleFarm(); svc.resetDailyIfNeeded();
     const map = MAPS[p.map] && !MAPS[p.map]!.instanced ? p.map : p.savedMap ?? 'emberglen';
     const world = this.world(map); const e = world.addPlayer(svc, MAPS[p.map]?.instanced ? undefined : { x: p.x, y: p.y });

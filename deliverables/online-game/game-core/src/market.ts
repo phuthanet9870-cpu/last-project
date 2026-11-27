@@ -105,6 +105,14 @@ export class MarketService {
     }
     return r;
   }
+  /** Instant (immediate-or-cancel) order: crosses the book up to a slippage cap (default 5% past the best price) and cancels any unfilled remainder. */
+  exchangeInstant(svc: PlayerService, side: 'buy' | 'sell', qty: bigint, slippageBps = 500) {
+    const top = side === 'buy' ? this.book.asks[0] : this.book.bids[0]; if (!top) throw new EconomyError('NO_LIQUIDITY');
+    const limit = side === 'buy' ? top.price + (top.price * BigInt(slippageBps)) / 10000n : top.price - (top.price * BigInt(slippageBps)) / 10000n; if (limit <= 0n) throw new EconomyError('NO_LIQUIDITY');
+    const r = this.exchangePlace(svc, side, limit, qty); const filled = r.fills.reduce((s, f) => s + f.qty, 0n);
+    if (r.order.status === 'open' && r.order.filled < r.order.qty) this.exchangeCancel(svc, r.order.id); // IOC: nothing rests on the book
+    return { filled, avgPrice: filled > 0n ? r.fills.reduce((s, f) => s + f.price * f.qty, 0n) / filled : 0n, cancelled: qty - filled };
+  }
   exchangeCancel(svc: PlayerService, orderId: string) { const o = this.book.cancel(orderId, walletId(svc.p)); if (!o) throw new EconomyError('NOT_FOUND'); const rem = o.qty - o.filled; if (o.side === 'buy') this.ledger.release(o.owner, 'gold', o.price * rem); else this.ledger.release(o.owner, 'crystal', rem); }
   private settleFills(fills: ReturnType<OrderBook['place']>['fills']) {
     for (const f of fills) {
