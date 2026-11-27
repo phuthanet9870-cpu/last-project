@@ -23,7 +23,7 @@ export function elementMultiplier(att: Element, def: Element): number {
 }
 
 export const CONFIG = {
-  version: '0.2.0-seed',
+  version: '0.3.0-seed',
   levelCap: 120,
   ascensionTiers: 3,
   ascensionLevelReq: [60, 90, 120],

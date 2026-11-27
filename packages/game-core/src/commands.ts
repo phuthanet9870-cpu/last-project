@@ -74,6 +74,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   settings: (c, a) => { Object.assign(c.svc.p.settings, a.settings ?? {}); return ok(); },
   heal: (c) => { if (!near(c, 'healer')) return fail('NEED_HEALER'); const e = c.world.entities.get(c.entityId)!; e.hp = e.maxHp; e.mp = e.maxMp; e.effects = e.effects.filter((x) => !['poison', 'burn', 'bleed', 'curse'].includes(x.id)); return ok(); },
   // --- enhancement ---
+  repair: (c) => (near(c, 'blacksmith') ? (() => { const r = c.svc.repairAll(); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_BLACKSMITH', 'Visit Brunhild the blacksmith, or use a Tinker Kit')),
   refinePreview: (c, a) => ok(c.svc.refinePreview(String(a.uid))),
   refine: (c, a) => (near(c, 'blacksmith') ? (() => { const r = c.svc.refine(String(a.uid), !!a.protect); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_BLACKSMITH', 'Visit Brunhild the blacksmith')),
   socket: (c, a) => (near(c, 'enchanter') ? c.svc.socketGem(String(a.item), String(a.gem)) : fail('NEED_ENCHANTER')),
@@ -231,6 +232,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
       case 'pet': s.addPet(String(a.id ?? 'pet_phoenix')); return ok();
       case 'mount': for (const m of Object.values(MOUNTS)) if (!s.p.mounts.includes(m.id)) { s.p.mounts.push(m.id); s.p.mountLevels[m.id] = 0; } s.p.activeMount ??= 'pony'; return ok();
       case 'farmTime': s.p.farm.lastSettle -= (Number(a.h) || 2) * 3600_000; for (const e of s.p.eggs) e.hatchAt = 0; return ok(s.settleFarm());
+      case 'wear': for (const it of Object.values(s.p.equipment)) if (it) it.durability = Math.max(0, Number(a.n ?? 15)); c.world.refreshPlayer(c.entityId); return ok();
       case 'heal': me.hp = me.maxHp; me.mp = me.maxMp; me.dead = false; for (const k of Object.keys(me.cds)) me.cds[k] = 0; return ok();
       case 'cards': for (const mc of Object.keys(PETS)) void mc; for (const m of Object.values(MONSTERS).slice(0, 12)) s.p.monsterCards[`mc_${m.id}`] = (s.p.monsterCards[`mc_${m.id}`] ?? 0) + 2; s.checkAchievements(); return ok();
       case 'pass': s.gainPassExp(1000); return ok();

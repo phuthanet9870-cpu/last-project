@@ -15,7 +15,7 @@
 
 ## Severity: Low
 10. Thai translation covers UI keys and content names; many panel strings are English only.
-11. Knockback/knockdown, durability/repair, fullscreen toggle, key remapping not implemented.
+11. Fullscreen toggle and key remapping not implemented. Projectiles are not blocked by walls (they fly over terrain).
 12. World boss schedule rotates by hour; configured Bangkok times are not wired to the real clock (artifact spawns every 4 minutes for testing).
 13. Lint: 4 unused-variable warnings.
 

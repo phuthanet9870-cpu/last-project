@@ -17,6 +17,7 @@ export const STATUSES: Record<string, StatusDef> = Object.fromEntries([
   s({ id: 'bleed', name: { en: 'Bleed', th: 'เลือดไหล' }, kind: 'debuff', tickMs: 1000, dotPctOfPower: 0.15, maxStacks: 5, stack: 'stack', color: '#c8243a' }),
   s({ id: 'chill', name: { en: 'Chill', th: 'หนาวเย็น' }, kind: 'debuff', slowPct: 30, mods: [{ stat: 'aspd', kind: 'pct', value: -15 }], color: '#9fe3ff' }),
   s({ id: 'freeze', name: { en: 'Freeze', th: 'แช่แข็ง' }, kind: 'debuff', cc: 'freeze', color: '#c8f2ff' }),
+  s({ id: 'knockdown', name: { en: 'Knocked Down', th: 'ล้มลง' }, kind: 'debuff', cc: 'stun', stack: 'ignore', color: '#d08040' }),
   s({ id: 'stun', name: { en: 'Stun', th: 'มึนงง' }, kind: 'debuff', cc: 'stun', color: '#ffe066' }),
   s({ id: 'silence', name: { en: 'Silence', th: 'ใบ้' }, kind: 'debuff', cc: 'silence', color: '#b58cff' }),
   s({ id: 'root', name: { en: 'Root', th: 'ตรึง' }, kind: 'debuff', cc: 'root', color: '#8a6b3d' }),

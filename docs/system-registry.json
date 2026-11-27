@@ -1,12 +1,12 @@
 {
- "generated": "2026-11-27T09:25:16.929Z",
+ "generated": "2026-11-27T10:08:34.848Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 283,
-  "PARTIAL": 91,
-  "NOT_STARTED": 97,
+  "COMPLETE": 288,
+  "PARTIAL": 89,
+  "NOT_STARTED": 92,
   "BLOCKED": 8,
-  "TESTING": 94,
+  "TESTING": 96,
   "SIMULATED": 8
  },
  "systems": [
@@ -430,8 +430,8 @@
    "id": "L053",
    "name": "Projectile",
    "section": "Combat",
-   "status": "PARTIAL",
-   "evidence": "projectiles are visual; hits resolve instantly server-side",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts projectile tests; e2e: tests/e2e/artifact.e2e.mjs step 28",
    "mode": "artifact+online"
   },
   {
@@ -486,17 +486,17 @@
    "id": "L060",
    "name": "Knockback",
    "section": "Combat",
-   "status": "NOT_STARTED",
-   "evidence": "knockback not implemented (dash only)",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts knockback (walls stop it, bosses immune)",
+   "mode": "artifact+online"
   },
   {
    "id": "L061",
    "name": "Knockdown",
    "section": "Combat",
-   "status": "NOT_STARTED",
-   "evidence": "knockdown not implemented",
-   "mode": "-"
+   "status": "TESTING",
+   "evidence": "knockdown status after heavy skills",
+   "mode": "artifact+online"
   },
   {
    "id": "L062",
@@ -934,9 +934,9 @@
    "id": "L116",
    "name": "Monster Guard",
    "section": "Monsters",
-   "status": "NOT_STARTED",
-   "evidence": "guard monsters not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts guard AI",
+   "mode": "artifact+online"
   },
   {
    "id": "L117",
@@ -1310,17 +1310,17 @@
    "id": "L163",
    "name": "Equipment Durability",
    "section": "Equipment",
-   "status": "PARTIAL",
-   "evidence": "durability field exists, no loss/repair",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 28",
    "mode": "artifact+online"
   },
   {
    "id": "L164",
    "name": "Equipment Repair",
    "section": "Equipment",
-   "status": "NOT_STARTED",
-   "evidence": "repair",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 28",
+   "mode": "artifact+online"
   },
   {
    "id": "L165",
@@ -2174,9 +2174,9 @@
    "id": "L271",
    "name": "Automatic Repair",
    "section": "Auto play",
-   "status": "NOT_STARTED",
-   "evidence": "auto repair (no durability)",
-   "mode": "-"
+   "status": "TESTING",
+   "evidence": "auto-battle uses Tinker Kit below 20% durability",
+   "mode": "artifact+online"
   },
   {
    "id": "L272",
@@ -4199,7 +4199,7 @@
    "name": "Combat engine",
    "section": "Expanded requirement",
    "status": "COMPLETE",
-   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 6",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 6; e2e: tests/e2e/artifact.e2e.mjs step 28",
    "mode": "artifact+online"
   },
   {

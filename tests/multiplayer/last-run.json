@@ -1,7 +1,7 @@
 {
-  "when": "2026-11-27T09:23:56.717Z",
+  "when": "2026-11-27T10:08:22.468Z",
   "server": "http://localhost:2567",
-  "durationMs": 30814,
+  "durationMs": 28170,
   "passed": 13,
   "total": 13,
   "results": [
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwyrxgzk38p6a8b, ch_mwyrxgzw38z1pyv"
+      "detail": "ch_mwytinxy1icsts, ch_mwytio1l1sjug0"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -28,7 +28,7 @@
     {
       "name": "server-authoritative movement replicated (collision-checked)",
       "ok": true,
-      "detail": "912→1008"
+      "detail": "912→1009"
     },
     {
       "name": "chat local + world + whisper delivered; malformed packet rejected",
@@ -63,7 +63,7 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwyrxgzk38p6a8b\":16,\"ch_mwyrxgzw38z1pyv\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwytinxy1icsts\":16,\"ch_mwytio1l1sjug0\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",

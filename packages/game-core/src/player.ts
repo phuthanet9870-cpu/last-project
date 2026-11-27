@@ -110,7 +110,7 @@ export function playerModifiers(p: PlayerState, extra: Modifier[] = []): Modifie
   const mods: Modifier[] = [];
   const setCounts: Record<string, number> = {};
   for (const slot of EQUIP_SLOTS) {
-    const it = p.equipment[slot]; if (!it) continue; const def = ITEMS[it.defId]!;
+    const it = p.equipment[slot]; if (!it || it.durability <= 0) continue; const def = ITEMS[it.defId]!; // broken gear contributes nothing
     const src = `equip:${slot}`;
     for (const m of def.stats ?? []) {
       const bonus = m.kind === 'flat' && ['atk', 'matk', 'def', 'mdef', 'maxHp'].includes(m.stat) ? Math.floor(m.value * it.refine * 0.06) + it.refine * 2 : 0;
@@ -219,6 +219,7 @@ export class PlayerService {
     if (!d.use) return fail('NOT_USABLE');
     const st = playerStats(this.p).derived;
     if (d.use.grant === 'capture') return fail('USE_ON_TARGET', 'Select a weakened monster and press the net in hotbar / Capture button.');
+    if (d.use.grant === 'repair') { const eq = Object.values(this.p.equipment).filter((i) => i && i.durability < 100) as ItemInstance[]; if (!eq.length) return fail('NOTHING_TO_REPAIR', 'Equipped gear is in perfect condition'); for (const i of eq) i.durability = 100; it.qty--; if (it.qty <= 0) this.p.inventory.splice(this.p.inventory.indexOf(it), 1); this.clampVitals(); return ok({ repaired: eq.length }); }
     if (d.use.hp) this.p.hp = Math.min(st.maxHp, this.p.hp + d.use.hp);
     if (d.use.mp) this.p.mp = Math.min(st.maxMp, this.p.mp + d.use.mp);
     if (d.use.exp) this.gainExp(d.use.exp, 'item');
@@ -245,6 +246,15 @@ export class PlayerService {
   clampVitals() { const d = playerStats(this.p).derived; this.p.hp = Math.min(this.p.hp, d.maxHp); this.p.mp = Math.min(this.p.mp, d.maxMp); }
   findOwned(uidv: string): ItemInstance | undefined { return this.findInv(uidv) ?? Object.values(this.p.equipment).find((i) => i?.uid === uidv); }
 
+  // ---- durability & repair (§21) ----
+  gearList(): ItemInstance[] { return [...Object.values(this.p.equipment).filter(Boolean), ...this.p.inventory.filter((i) => ['weapon', 'armor', 'accessory'].includes(ITEMS[i.defId]!.type))] as ItemInstance[]; }
+  repairCost(it: ItemInstance): number { const d = ITEMS[it.defId]!; const missing = Math.max(0, 100 - it.durability); return Math.ceil(missing * (1 + d.price * 0.004) * (1 + it.refine * 0.1)); }
+  repairAll(equippedOnly = false): Result<{ cost: number; repaired: number }> {
+    const list = (equippedOnly ? Object.values(this.p.equipment).filter(Boolean) : this.gearList()) as ItemInstance[]; const need = list.filter((i) => i.durability < 100);
+    if (!need.length) return fail('NOTHING_TO_REPAIR', 'All gear is in perfect condition'); const cost = need.reduce((s, i) => s + this.repairCost(i), 0);
+    if (!this.spend('gold', cost, 'repair')) return fail('NOT_ENOUGH_GOLD', `Repair costs ${cost}G`);
+    for (const i of need) i.durability = 100; this.clampVitals(); return ok({ cost, repaired: need.length });
+  }
   // ---- refinement (§22) ----
   refinePreview(uidv: string) {
     const it = this.findOwned(uidv); if (!it) return null; const lvl = it.refine;
