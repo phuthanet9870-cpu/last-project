@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 — 2026-11-27 — Task 9: production readiness (not a release)
+- Security: admin **TOTP MFA** (RFC 6238, node:crypto only, AES-256-GCM-encrypted secrets, single use per 30 s step, required for admin APIs in production); dashboard code field.
+- Security: CSP, X-Frame-Options, COOP, Permissions-Policy and HSTS (when behind TLS); admin dashboard script moved out of inline HTML so CSP needs no `unsafe-inline` scripts; CORS origin list.
+- Security: a production config guard refuses to start with weak/missing `JWT_SECRET`/`MFA_ENC_KEY`, `CORS_ORIGIN=*`, `DEV_COMMANDS=1` or the development DB password.
+- Fix (security, found in review): Fastify trusted `X-Forwarded-For` unconditionally, so a directly exposed server let clients spoof IPs and dodge the login rate limit. Now only with `TRUST_PROXY=1`.
+- Operations: `/metrics` (Prometheus), `/readyz`, alert rules; `scripts/db-backup.sh`; **backup → restore drill** (`scripts/backup-drill.mjs`, verified); bundled server/worker build (`dist/*.mjs`, no tsx at runtime, verified); Dockerfile, `docker-compose.prod.yml`, Caddy TLS config (written, not built here); CI workflow for PRs/manual runs; runbook and §69 release acceptance review (verdict: not production-ready).
+- Tests: unit 74 (incl. RFC vectors), E2E 36/36, multiplayer 27/27, online browser E2E 3/3 with console/CSP capture, load 100/250, restore drill.
+
 ## 0.11.0 — 2026-11-27 — Endgame Lv90–120 + raid
 - Two final zones: **Skyreach Isles** (Lv92–102; cloud islands over a void that blocks movement) and **Shattered Rift** (Lv106–120; rift floor, void, crystals). 10 new monsters (2 elites, 2 guard elites), 2 NPCs (Aeronaut Pell, Warden Nyx), 3 materials, new **Primordial** equipment tier (Lv100, generated like the other tiers).
 - **Raid: Sanctum of the First Flame** (Lv110, up to 8): leader converts a party into a raid group (`partyRaid`, cap 6 → 8); boss Ignarch (3 phases with summons) HP +60% per extra combatant; hard enrage ×3 damage after 8 min; wipe = fail; reward once per week (lockout until Monday 00:00 Asia/Bangkok) + «Flamebreaker» title. Online: raid group members on the same map share the instance. Artifact: 7 simulated allies (·sim).

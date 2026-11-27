@@ -1,6 +1,7 @@
 # Known Issues & Limitations
 
 ## Severity: High
+- Not production-ready: see docs/RELEASE_ACCEPTANCE.md (no staging, no soak test, no external security/legal review, placeholder art, Docker/CI not run).
 1. **Capacity ceiling.** After delta snapshots + spatial AOI (v0.2.0), one map instance holds 250 players within budget (p95 46 ms). 500+ untested; combat-heavy load untested; JSON (not binary) encoding.
 2. **Single-process authority.** Economy/market state lives in one Node process (persisted to PostgreSQL after each economic command). Running two server processes against one DB would cause conflicts. Horizontal scaling requires ownership leases or moving market matching into DB transactions with row locks.
 3. **Not production-ready.** No TLS/WSS termination, no CI/CD, no backups/PITR, no monitoring stack, no admin MFA. Release gates (§69) are not met.

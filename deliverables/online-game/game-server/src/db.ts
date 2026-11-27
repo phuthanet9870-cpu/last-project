@@ -11,7 +11,7 @@ export async function tx<T>(fn: (c: pg.PoolClient) => Promise<T>): Promise<T> {
   catch (e) { await c.query('ROLLBACK').catch(() => undefined); throw e; } finally { c.release(); }
 }
 export async function migrate(): Promise<string[]> {
-  const dir = resolve(dirname(fileURLToPath(import.meta.url)), '../../../database/migrations');
+  const dir = process.env.APP_ROOT ? resolve(process.env.APP_ROOT, 'database/migrations') : resolve(dirname(fileURLToPath(import.meta.url)), '../../../database/migrations'); // APP_ROOT: bundled production build
   await pool.query('CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
   const done = new Set((await pool.query('SELECT version FROM schema_migrations')).rows.map((r) => r.version));
   const applied: string[] = [];

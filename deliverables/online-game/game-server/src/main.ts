@@ -7,34 +7,61 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import IORedis from 'ioredis';
 import { CLASSES, MAPS, createCharacter, playerCP, Ledger } from '../../../packages/game-core/src/index.js';
-import { AuthError, login, logout, refresh, register, verifyAccess } from './auth.js';
+import { AuthError, login, logout, mfaEnable, mfaSetup, refresh, register, verifyAccess } from './auth.js';
+import { adminAllowed } from './totp.js';
 import { migrate, pool, seed, tx } from './db.js';
 import { CONFIG } from './env.js';
 import { GameServer } from './game.js';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const root = process.env.APP_ROOT ? resolve(process.env.APP_ROOT) : resolve(dirname(fileURLToPath(import.meta.url)), '../../..'); // APP_ROOT: bundled production build
 export async function startServer(opts: { port?: number; quiet?: boolean } = {}) {
   await migrate(); await seed();
   if (process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD) { try { await register(process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD); } catch { /* exists */ } await pool.query(`UPDATE accounts SET role='admin' WHERE username=$1`, [process.env.ADMIN_USERNAME.toLowerCase()]); }
   let redis: IORedis | null = null;
   try { redis = new IORedis(CONFIG.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, enableOfflineQueue: false }); await redis.connect(); } catch { console.warn('[server] Redis unavailable — presence/rate-limit fall back to memory'); redis = null; }
   const game = new GameServer(redis); await game.load(); game.start();
-  const app = Fastify({ logger: opts.quiet ? false : { level: 'info' }, bodyLimit: 64 * 1024, trustProxy: true });
+  const app = Fastify({ logger: opts.quiet ? false : { level: 'info' }, bodyLimit: 64 * 1024, trustProxy: CONFIG.trustProxy }); // only trust X-Forwarded-For behind a reverse proxy (otherwise clients could spoof IPs and dodge rate limits)
   const hits = new Map<string, { n: number; t: number }>();
   const limit = async (key: string, max: number, windowSec: number) => {
     if (redis) { const k = `hb:rl:${key}`; const n = await redis.incr(k); if (n === 1) await redis.expire(k, windowSec); return n <= max; }
     const now = Date.now(); const h = hits.get(key); if (!h || now - h.t > windowSec * 1000) { hits.set(key, { n: 1, t: now }); return true; } h.n++; return h.n <= max;
   };
-  app.addHook('onRequest', async (req, reply) => { reply.header('access-control-allow-origin', CONFIG.corsOrigin); reply.header('access-control-allow-headers', 'content-type, authorization'); reply.header('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS'); reply.header('x-content-type-options', 'nosniff'); reply.header('referrer-policy', 'no-referrer'); if (req.method === 'OPTIONS') reply.code(204).send(); });
-  app.setErrorHandler((err, _req, reply) => { if (err instanceof AuthError) return reply.code(err.status).send({ error: err.message }); app.log.error(err); reply.code(err.statusCode ?? 500).send({ error: err.statusCode && err.statusCode < 500 ? err.message : 'Internal error' }); });
+  const origins = CONFIG.corsOrigin.split(',').map((x) => x.trim()).filter(Boolean);
+  const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
+  app.addHook('onRequest', async (req, reply) => {
+    const o = String(req.headers.origin ?? ''); reply.header('access-control-allow-origin', origins.includes('*') ? '*' : origins.includes(o) ? o : origins[0] ?? ''); reply.header('vary', 'origin');
+    reply.header('access-control-allow-headers', 'content-type, authorization'); reply.header('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS');
+    reply.header('x-content-type-options', 'nosniff'); reply.header('referrer-policy', 'no-referrer'); reply.header('x-frame-options', 'DENY'); reply.header('cross-origin-opener-policy', 'same-origin'); reply.header('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+    if (CONFIG.hsts) reply.header('strict-transport-security', 'max-age=31536000; includeSubDomains');
+    if (req.method === 'OPTIONS') reply.code(204).send();
+  });
+  app.addHook('onSend', async (_req, reply, payload) => { if (String(reply.getHeader('content-type') ?? '').startsWith('text/html')) reply.header('content-security-policy', CSP); return payload; });
+  // ---- metrics (Prometheus text format) ----
+  const httpStats = { requests: 0, errors5xx: 0, byRoute: new Map<string, number>() };
+  app.addHook('onResponse', async (req, reply) => { httpStats.requests++; if (reply.statusCode >= 500) httpStats.errors5xx++; const r = (req.routeOptions?.url ?? 'unknown').replace(/\*$/, '*'); httpStats.byRoute.set(r, (httpStats.byRoute.get(r) ?? 0) + 1); });
+  app.setErrorHandler((err, _req, reply) => { if (err instanceof AuthError) return reply.code(err.status).send({ error: err.message, ...((err as any).mfaRequired ? { mfaRequired: true } : {}) }); app.log.error(err); reply.code(err.statusCode ?? 500).send({ error: err.statusCode && err.statusCode < 500 ? err.message : 'Internal error' }); });
   const auth = (req: any) => { const a = verifyAccess(String(req.headers.authorization ?? '').replace(/^Bearer /, '')); if (!a) throw new AuthError(401, 'Unauthorized'); return a; };
-  const admin = (req: any) => { const a = auth(req); if (a.role !== 'admin' && a.role !== 'moderator') throw new AuthError(403, 'Forbidden'); return a; };
+  const admin = (req: any) => { const a = auth(req); const g = adminAllowed(a, CONFIG.adminRequireMfa); if (!g.ok) throw new AuthError(g.status, g.error); return a; };
 
+  app.get('/metrics', async (req, reply) => {
+    if (process.env.METRICS_TOKEN && req.headers.authorization !== `Bearer ${process.env.METRICS_TOKEN}`) throw new AuthError(401, 'Unauthorized');
+    const s = game.stats; const mem = process.memoryUsage(); const L: string[] = [];
+    const g = (name: string, help: string, v: number, type = 'gauge') => { L.push(`# HELP ${name} ${help}`, `# TYPE ${name} ${type}`, `${name} ${Number.isFinite(v) ? v : 0}`); };
+    g('hb_online_players', 'Connected characters', game.conns.size); g('hb_worlds', 'Live world instances', game.worlds.size); g('hb_tick_ms_avg', 'Average simulation tick (ms)', s.tickMsAvg); g('hb_tick_ms_p95', 'p95 simulation tick (ms), budget 50', s.tickMsP95);
+    g('hb_ticks_total', 'Simulation ticks', s.ticks, 'counter'); g('hb_ws_bytes_out_total', 'WebSocket bytes sent', s.bytesOut, 'counter'); g('hb_persist_errors_total', 'Failed state saves', (s as any).persistErrors ?? 0, 'counter');
+    g('hb_http_requests_total', 'HTTP requests', httpStats.requests, 'counter'); g('hb_http_5xx_total', 'HTTP 5xx responses', httpStats.errors5xx, 'counter'); g('hb_ledger_pending', 'Ledger entries waiting for flush', game.ledger.pending.length);
+    g('hb_redis_up', 'Redis connected', redis && redis.status === 'ready' ? 1 : 0); g('process_resident_memory_bytes', 'RSS', mem.rss); g('process_heap_used_bytes', 'Heap used', mem.heapUsed); g('process_uptime_seconds', 'Uptime', process.uptime());
+    let dbUp = 0; try { dbUp = (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1 ? 1 : 0; } catch { /* down */ } g('hb_db_up', 'PostgreSQL reachable', dbUp);
+    return reply.type('text/plain; version=0.0.4').send(L.join('\n') + '\n');
+  });
+  app.get('/readyz', async (_req, reply) => { try { await pool.query('SELECT 1'); return { ready: true }; } catch { return reply.code(503).send({ ready: false }); } });
   // ---- health ----
   app.get('/api/health', async () => ({ ok: true, db: (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1, redis: !!redis && redis.status === 'ready', online: game.conns.size, tickMsP95: game.stats.tickMsP95, tickMsAvg: game.stats.tickMsAvg, bytesOut: game.stats.bytesOut }));
   // ---- auth (§05) ----
   app.post('/api/auth/register', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`reg:${req.ip}`, Number(process.env.REGISTER_LIMIT_PER_HOUR ?? 10), 3600))) throw new AuthError(429, 'Too many registrations'); return register(b.username, b.password); });
-  app.post('/api/auth/login', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`login:${req.ip}`, 20, 60))) throw new AuthError(429, 'Too many login attempts'); return login(b.username, b.password, req.ip); });
+  app.post('/api/auth/login', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`login:${req.ip}`, 20, 60))) throw new AuthError(429, 'Too many login attempts'); return login(b.username, b.password, req.ip, b.otp ? String(b.otp) : undefined); });
+  app.post('/api/auth/mfa/setup', async (req) => mfaSetup(auth(req).sub));
+  app.post('/api/auth/mfa/enable', async (req) => { const a = auth(req); if (!(await limit(`mfa:${a.sub}`, 10, 300))) throw new AuthError(429, 'Too many attempts'); return mfaEnable(a.sub, String((req.body as any)?.code ?? '')); });
   app.post('/api/auth/refresh', async (req) => refresh((req.body as any)?.refreshToken));
   app.post('/api/auth/logout', async (req) => { await logout((req.body as any)?.refreshToken); return { ok: true }; });
   // ---- worlds & characters (§06–07) ----
