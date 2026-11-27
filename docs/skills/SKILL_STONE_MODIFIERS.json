@@ -1,0 +1,120 @@
+{
+ "generated": "scripts/gen-skill-docs.ts",
+ "rules": {
+  "firstInscriptionFree": true,
+  "reinscribe": {
+   "dust": 5,
+   "gold": 500
+  },
+  "refine": {
+   "max": 10,
+   "dustCost": "L → 5 + 3L",
+   "successChance": "max(30%, 100% − 7%·L)",
+   "bonusPerLevel": "+10% of each modifier"
+  },
+  "modsPerStone": 2
+ },
+ "modifiers": {
+  "power": {
+   "min": 5,
+   "max": 15,
+   "name": [
+    "Potency",
+    "พลัง"
+   ],
+   "desc": [
+    "+x% skill damage/healing",
+    "ดาเมจ/การรักษาของสกิล +x%"
+   ]
+  },
+  "cd": {
+   "min": 5,
+   "max": 12,
+   "name": [
+    "Haste",
+    "เร่ง"
+   ],
+   "desc": [
+    "−x% cooldown",
+    "คูลดาวน์ −x%"
+   ]
+  },
+  "mp": {
+   "min": 5,
+   "max": 20,
+   "name": [
+    "Thrift",
+    "ประหยัด"
+   ],
+   "desc": [
+    "−x% MP cost",
+    "ค่า MP −x%"
+   ]
+  },
+  "radius": {
+   "min": 5,
+   "max": 20,
+   "name": [
+    "Reach",
+    "ขยาย"
+   ],
+   "desc": [
+    "+x% area radius",
+    "รัศมีพื้นที่ +x%"
+   ]
+  }
+ },
+ "legendaryBehaviors": {
+  "echo": {
+   "name": [
+    "Echo",
+    "เสียงสะท้อน"
+   ],
+   "desc": [
+    "+1 hit; each hit deals 85% of normal",
+    "ตีเพิ่ม 1 ครั้ง แต่ละครั้งแรง 85%"
+   ]
+  },
+  "swift": {
+   "name": [
+    "Quicksilver",
+    "ปรอทเร็ว"
+   ],
+   "desc": [
+    "Cooldown −30%",
+    "คูลดาวน์ −30%"
+   ]
+  },
+  "frugal": {
+   "name": [
+    "Hollow Cost",
+    "ไร้ต้นทุน"
+   ],
+   "desc": [
+    "MP cost −50%",
+    "ค่า MP −50%"
+   ]
+  },
+  "expanse": {
+   "name": [
+    "Expanse",
+    "แผ่ขยาย"
+   ],
+   "desc": [
+    "Area radius +50%",
+    "รัศมีพื้นที่ +50%"
+   ]
+  },
+  "fork": {
+   "name": [
+    "Forked Path",
+    "ทางแยก"
+   ],
+   "desc": [
+    "Chains to 2 more targets",
+    "กระโดดเพิ่ม 2 เป้าหมาย"
+   ]
+  }
+ },
+ "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+}

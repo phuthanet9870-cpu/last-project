@@ -1,0 +1,3747 @@
+{
+ "generated": "scripts/gen-skill-docs.ts",
+ "count": 52,
+ "note": "Auto Allocate fills a draft in this order, then the ultimate path, passives, remaining skills; every step legal. Nothing is committed until Confirm.",
+ "builds": [
+  {
+   "classId": "vanguard",
+   "id": "vanguard_bulwark",
+   "n": [
+    "Bulwark Tank",
+    "สายป้องกัน"
+   ],
+   "desc": [
+    "Protect the party and hold aggro.",
+    "ปกป้องปาร์ตี้และดึงศัตรู"
+   ],
+   "pros": [
+    "Very tanky, party shields",
+    "อึดมาก โล่ปาร์ตี้"
+   ],
+   "cons": [
+    "Low damage",
+    "ดาเมจต่ำ"
+   ],
+   "stats": "VIT > STR",
+   "weapon": "sword + shield",
+   "seq": [
+    [
+     "shield_bash",
+     2
+    ],
+    [
+     "provoke",
+     2
+    ],
+    [
+     "iron_skin",
+     3
+    ],
+    [
+     "guard_stance",
+     3
+    ],
+    [
+     "bulwark",
+     2
+    ],
+    [
+     "cover",
+     3
+    ],
+    [
+     "stalwart_heart",
+     2
+    ],
+    [
+     "shield_wall",
+     3
+    ],
+    [
+     "unbroken",
+     2
+    ],
+    [
+     "aegis_of_earth",
+     2
+    ],
+    [
+     "guardian_oath",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "vanguard.shield_bash": 5,
+    "vanguard.provoke": 5,
+    "vanguard.iron_skin": 5,
+    "vanguard.guard_stance": 5,
+    "vanguard.bulwark": 5,
+    "vanguard.cover": 5,
+    "vanguard.stalwart_heart": 5,
+    "vanguard.shield_wall": 5,
+    "vanguard.aegis_of_earth": 5,
+    "vanguard.counter_edge": 10,
+    "vanguard.earth_slam": 6,
+    "vanguard.fault_line": 5,
+    "vanguard.mountain_breaker": 3,
+    "vanguard.last_bastion": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "vanguard",
+   "id": "vanguard_counter",
+   "n": [
+    "Counter Breaker",
+    "สายโจมตีสวนกลับ"
+   ],
+   "desc": [
+    "Convert Resolve into heavy counter-attacks.",
+    "เปลี่ยนความมุ่งมั่นเป็นการโจมตีสวนหนัก"
+   ],
+   "pros": [
+    "Strong sustained damage while tanking",
+    "ดาเมจต่อเนื่องดีระหว่างแทงก์"
+   ],
+   "cons": [
+    "Needs to get hit",
+    "ต้องรับดาเมจก่อน"
+   ],
+   "stats": "STR > VIT",
+   "weapon": "sword",
+   "seq": [
+    [
+     "shield_bash",
+     2
+    ],
+    [
+     "provoke",
+     2
+    ],
+    [
+     "counter_edge",
+     5
+    ],
+    [
+     "earth_slam",
+     4
+    ],
+    [
+     "retaliate",
+     3
+    ],
+    [
+     "fault_line",
+     5
+    ],
+    [
+     "mountain_breaker",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "vanguard.shield_bash": 5,
+    "vanguard.provoke": 5,
+    "vanguard.counter_edge": 10,
+    "vanguard.earth_slam": 10,
+    "vanguard.retaliate": 5,
+    "vanguard.fault_line": 10,
+    "vanguard.mountain_breaker": 10,
+    "vanguard.guard_stance": 3,
+    "vanguard.cover": 2,
+    "vanguard.shield_wall": 3,
+    "vanguard.aegis_of_earth": 2,
+    "vanguard.last_bastion": 1,
+    "vanguard.iron_skin": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "blade_sentinel",
+   "id": "blade_crit",
+   "n": [
+    "Edge Finisher",
+    "สายคริปิดฉาก"
+   ],
+   "desc": [
+    "Build Edge then cash it in with finishers.",
+    "สะสมคมดาบแล้วปิดฉาก"
+   ],
+   "pros": [
+    "Highest single-target burst",
+    "ดาเมจระเบิดเป้าเดียวสูงสุด"
+   ],
+   "cons": [
+    "Weak to kiting",
+    "อ่อนต่อการไล่ตี"
+   ],
+   "stats": "STR > DEX > LUK",
+   "weapon": "greatsword",
+   "seq": [
+    [
+     "double_cut",
+     2
+    ],
+    [
+     "blade_mastery",
+     5
+    ],
+    [
+     "rend",
+     3
+    ],
+    [
+     "parry",
+     1
+    ],
+    [
+     "keen_edge",
+     3
+    ],
+    [
+     "finishing_strike",
+     6
+    ],
+    [
+     "armor_split",
+     2
+    ],
+    [
+     "sentinel_eye",
+     3
+    ],
+    [
+     "iaido",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "blade_sentinel.double_cut": 5,
+    "blade_sentinel.blade_mastery": 10,
+    "blade_sentinel.rend": 5,
+    "blade_sentinel.keen_edge": 5,
+    "blade_sentinel.lunge": 1,
+    "blade_sentinel.parry": 5,
+    "blade_sentinel.finishing_strike": 10,
+    "blade_sentinel.iaido": 4,
+    "blade_sentinel.whirlwind": 3,
+    "blade_sentinel.crossing_blades": 4,
+    "blade_sentinel.thousand_cuts": 4,
+    "blade_sentinel.blade_storm": 3,
+    "blade_sentinel.final_verdict": 1,
+    "blade_sentinel.armor_split": 5,
+    "blade_sentinel.sentinel_eye": 5
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "blade_sentinel",
+   "id": "blade_flurry",
+   "n": [
+    "Flurry Dancer",
+    "สายรัวฟัน"
+   ],
+   "desc": [
+    "Many hits, bleed and area slashes.",
+    "ฟันหลายครั้ง เลือดไหล และฟันวงกว้าง"
+   ],
+   "pros": [
+    "Great at farming",
+    "ฟาร์มเก่ง"
+   ],
+   "cons": [
+    "MP hungry",
+    "ใช้ MP มาก"
+   ],
+   "stats": "STR > AGI",
+   "weapon": "sword",
+   "seq": [
+    [
+     "double_cut",
+     2
+    ],
+    [
+     "rend",
+     2
+    ],
+    [
+     "whirlwind",
+     3
+    ],
+    [
+     "crossing_blades",
+     4
+    ],
+    [
+     "flowing_steel",
+     3
+    ],
+    [
+     "thousand_cuts",
+     4
+    ],
+    [
+     "blade_storm",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "blade_sentinel.double_cut": 5,
+    "blade_sentinel.rend": 5,
+    "blade_sentinel.whirlwind": 10,
+    "blade_sentinel.crossing_blades": 10,
+    "blade_sentinel.flowing_steel": 5,
+    "blade_sentinel.thousand_cuts": 10,
+    "blade_sentinel.blade_storm": 10,
+    "blade_sentinel.lunge": 1,
+    "blade_sentinel.parry": 1,
+    "blade_sentinel.finishing_strike": 6,
+    "blade_sentinel.iaido": 3,
+    "blade_sentinel.final_verdict": 1,
+    "blade_sentinel.blade_mastery": 3
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "rune_knight",
+   "id": "rune_spellblade",
+   "n": [
+    "Spellblade",
+    "สายดาบเวท"
+   ],
+   "desc": [
+    "Melee range magic damage using runes.",
+    "ใช้รูนสร้างดาเมจเวทระยะประชิด"
+   ],
+   "pros": [
+    "Hybrid scaling",
+    "ได้ทั้ง STR และ INT"
+   ],
+   "cons": [
+    "Gear split",
+    "ต้องกระจายอุปกรณ์"
+   ],
+   "stats": "INT > STR",
+   "weapon": "sword",
+   "seq": [
+    [
+     "rune_slash",
+     3
+    ],
+    [
+     "sigil_bolt",
+     1
+    ],
+    [
+     "runic_study",
+     3
+    ],
+    [
+     "enchant_blade",
+     2
+    ],
+    [
+     "rune_burst",
+     3
+    ],
+    [
+     "spellblade",
+     6
+    ],
+    [
+     "runic_lance",
+     4
+    ],
+    [
+     "runic_cataclysm",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "rune_knight.rune_slash": 5,
+    "rune_knight.sigil_bolt": 5,
+    "rune_knight.runic_study": 5,
+    "rune_knight.enchant_blade": 5,
+    "rune_knight.rune_burst": 10,
+    "rune_knight.spellblade": 10,
+    "rune_knight.runic_lance": 10,
+    "rune_knight.runic_cataclysm": 10,
+    "rune_knight.world_rune": 1,
+    "rune_knight.rune_resonance": 5,
+    "rune_knight.ward_rune": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "rune_knight",
+   "id": "rune_warden",
+   "n": [
+    "Rune Warden",
+    "สายรูนพิทักษ์"
+   ],
+   "desc": [
+    "Barriers and roots for party support.",
+    "บาเรียและตรึงศัตรูเพื่อซัพพอร์ต"
+   ],
+   "pros": [
+    "Party protection",
+    "ป้องกันปาร์ตี้"
+   ],
+   "cons": [
+    "Slow kills",
+    "ฆ่าช้า"
+   ],
+   "stats": "VIT > INT",
+   "weapon": "spear",
+   "seq": [
+    [
+     "rune_slash",
+     2
+    ],
+    [
+     "sigil_bolt",
+     1
+    ],
+    [
+     "ward_rune",
+     4
+    ],
+    [
+     "binding_glyph",
+     3
+    ],
+    [
+     "runic_study",
+     2
+    ],
+    [
+     "rune_resonance",
+     3
+    ],
+    [
+     "arcane_armor",
+     3
+    ],
+    [
+     "rune_drain",
+     3
+    ],
+    [
+     "rune_aegis",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "rune_knight.rune_slash": 5,
+    "rune_knight.sigil_bolt": 5,
+    "rune_knight.ward_rune": 5,
+    "rune_knight.binding_glyph": 5,
+    "rune_knight.runic_study": 5,
+    "rune_knight.rune_resonance": 5,
+    "rune_knight.arcane_armor": 5,
+    "rune_knight.rune_drain": 5,
+    "rune_knight.rune_aegis": 5,
+    "rune_knight.enchant_blade": 2,
+    "rune_knight.rune_burst": 3,
+    "rune_knight.spellblade": 3,
+    "rune_knight.runic_lance": 4,
+    "rune_knight.runic_cataclysm": 3,
+    "rune_knight.world_rune": 1,
+    "rune_knight.glyph_mastery": 5,
+    "rune_knight.runelord": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "wild_archer",
+   "id": "archer_sniper",
+   "n": [
+    "Sniper",
+    "สายสไนเปอร์"
+   ],
+   "desc": [
+    "Focus-fuelled precision shots.",
+    "ใช้สมาธิยิงแม่น"
+   ],
+   "pros": [
+    "Long range burst",
+    "ดาเมจระเบิดระยะไกล"
+   ],
+   "cons": [
+    "Needs to stand still",
+    "ต้องยืนนิ่ง"
+   ],
+   "stats": "DEX > LUK",
+   "weapon": "bow",
+   "seq": [
+    [
+     "quick_shot",
+     2
+    ],
+    [
+     "aimed_shot",
+     5
+    ],
+    [
+     "archery",
+     6
+    ],
+    [
+     "hunters_patience",
+     2
+    ],
+    [
+     "eagle_eye",
+     2
+    ],
+    [
+     "pinning_shot",
+     2
+    ],
+    [
+     "piercing_arrow",
+     3
+    ],
+    [
+     "heart_seeker",
+     4
+    ],
+    [
+     "steady_hand",
+     4
+    ],
+    [
+     "deadeye",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "wild_archer.quick_shot": 5,
+    "wild_archer.aimed_shot": 10,
+    "wild_archer.archery": 10,
+    "wild_archer.hunters_patience": 5,
+    "wild_archer.eagle_eye": 5,
+    "wild_archer.pinning_shot": 5,
+    "wild_archer.piercing_arrow": 5,
+    "wild_archer.heart_seeker": 4,
+    "wild_archer.steady_hand": 4,
+    "wild_archer.deadeye": 3,
+    "wild_archer.gale_arrow": 3,
+    "wild_archer.snare_trap": 2,
+    "wild_archer.arrow_rain": 3,
+    "wild_archer.barrage": 5,
+    "wild_archer.thousand_arrows": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "wild_archer",
+   "id": "archer_trapper",
+   "n": [
+    "Trapper",
+    "สายกับดัก"
+   ],
+   "desc": [
+    "Control areas with traps and arrow rain.",
+    "คุมพื้นที่ด้วยกับดักและฝนธนู"
+   ],
+   "pros": [
+    "Great crowd control",
+    "ควบคุมฝูงศัตรูดี"
+   ],
+   "cons": [
+    "Lower single target",
+    "ดาเมจเป้าเดียวน้อย"
+   ],
+   "stats": "DEX > INT",
+   "weapon": "bow",
+   "seq": [
+    [
+     "quick_shot",
+     2
+    ],
+    [
+     "snare_trap",
+     4
+    ],
+    [
+     "arrow_rain",
+     4
+    ],
+    [
+     "explosive_trap",
+     4
+    ],
+    [
+     "trapper",
+     3
+    ],
+    [
+     "barrage",
+     3
+    ],
+    [
+     "hunters_mark",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "wild_archer.quick_shot": 5,
+    "wild_archer.snare_trap": 5,
+    "wild_archer.arrow_rain": 10,
+    "wild_archer.explosive_trap": 10,
+    "wild_archer.trapper": 5,
+    "wild_archer.barrage": 10,
+    "wild_archer.hunters_mark": 5,
+    "wild_archer.aimed_shot": 2,
+    "wild_archer.pinning_shot": 2,
+    "wild_archer.piercing_arrow": 3,
+    "wild_archer.archery": 3,
+    "wild_archer.hunters_patience": 2,
+    "wild_archer.eagle_eye": 1,
+    "wild_archer.heart_seeker": 3,
+    "wild_archer.gale_arrow": 3,
+    "wild_archer.thousand_arrows": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "falcon_scout",
+   "id": "falcon_master",
+   "n": [
+    "Falcon Master",
+    "สายเหยี่ยว"
+   ],
+   "desc": [
+    "Let the falcon do the damage.",
+    "ให้เหยี่ยวทำดาเมจหลัก"
+   ],
+   "pros": [
+    "Safe ranged damage",
+    "ดาเมจระยะไกลปลอดภัย"
+   ],
+   "cons": [
+    "Bond management",
+    "ต้องจัดการสายสัมพันธ์"
+   ],
+   "stats": "DEX > STR",
+   "weapon": "bow",
+   "seq": [
+    [
+     "falcon_strike",
+     5
+    ],
+    [
+     "falconry",
+     6
+    ],
+    [
+     "talon_rake",
+     4
+    ],
+    [
+     "hawk_dive",
+     4
+    ],
+    [
+     "twin_talons",
+     3
+    ],
+    [
+     "storm_falcon",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "falcon_scout.falcon_strike": 10,
+    "falcon_scout.falconry": 10,
+    "falcon_scout.talon_rake": 5,
+    "falcon_scout.hawk_dive": 10,
+    "falcon_scout.twin_talons": 10,
+    "falcon_scout.storm_falcon": 10,
+    "falcon_scout.raptor_king": 1,
+    "falcon_scout.keen_bond": 5,
+    "falcon_scout.sky_hunter": 5,
+    "falcon_scout.aerie": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "falcon_scout",
+   "id": "falcon_ranger",
+   "n": [
+    "Recon Ranger",
+    "สายลาดตระเวน"
+   ],
+   "desc": [
+    "Party buffs and marks.",
+    "บัฟและทำเครื่องหมายให้ปาร์ตี้"
+   ],
+   "pros": [
+    "Great party utility",
+    "ช่วยปาร์ตี้ได้มาก"
+   ],
+   "cons": [
+    "Lower solo damage",
+    "ดาเมจเดี่ยวน้อย"
+   ],
+   "stats": "DEX > AGI",
+   "weapon": "bow",
+   "seq": [
+    [
+     "falcon_strike",
+     2
+    ],
+    [
+     "scout_eye",
+     3
+    ],
+    [
+     "feather_volley",
+     2
+    ],
+    [
+     "tracking_shot",
+     3
+    ],
+    [
+     "falconry",
+     3
+    ],
+    [
+     "keen_bond",
+     3
+    ],
+    [
+     "wind_call",
+     3
+    ],
+    [
+     "reconnaissance",
+     3
+    ],
+    [
+     "falcon_guard",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "falcon_scout.falcon_strike": 10,
+    "falcon_scout.scout_eye": 5,
+    "falcon_scout.feather_volley": 10,
+    "falcon_scout.tracking_shot": 10,
+    "falcon_scout.falconry": 10,
+    "falcon_scout.keen_bond": 3,
+    "falcon_scout.wind_call": 3,
+    "falcon_scout.reconnaissance": 3,
+    "falcon_scout.falcon_guard": 3,
+    "falcon_scout.hawk_dive": 2,
+    "falcon_scout.talon_rake": 4,
+    "falcon_scout.twin_talons": 3,
+    "falcon_scout.storm_falcon": 3,
+    "falcon_scout.raptor_king": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "shadow_rogue",
+   "id": "rogue_assassin",
+   "n": [
+    "Assassin",
+    "สายลอบสังหาร"
+   ],
+   "desc": [
+    "Stealth, combo, big finishers.",
+    "ล่องหน คอมโบ ท่าปิดแรง"
+   ],
+   "pros": [
+    "Huge burst",
+    "ระเบิดดาเมจมาก"
+   ],
+   "cons": [
+    "Fragile",
+    "บอบบาง"
+   ],
+   "stats": "STR > LUK > AGI",
+   "weapon": "dagger",
+   "seq": [
+    [
+     "backstab",
+     3
+    ],
+    [
+     "envenom",
+     1
+    ],
+    [
+     "eviscerate",
+     5
+    ],
+    [
+     "vanish",
+     3
+    ],
+    [
+     "dagger_mastery",
+     3
+    ],
+    [
+     "lethality",
+     3
+    ],
+    [
+     "shadowstep",
+     3
+    ],
+    [
+     "assassins_creed",
+     3
+    ],
+    [
+     "shadow_dance",
+     2
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "shadow_rogue.backstab": 10,
+    "shadow_rogue.envenom": 5,
+    "shadow_rogue.eviscerate": 10,
+    "shadow_rogue.vanish": 5,
+    "shadow_rogue.dagger_mastery": 10,
+    "shadow_rogue.lethality": 5,
+    "shadow_rogue.shadowstep": 5,
+    "shadow_rogue.assassins_creed": 5,
+    "shadow_rogue.shadow_dance": 3,
+    "shadow_rogue.rupture": 4,
+    "shadow_rogue.kidney_shot": 2,
+    "shadow_rogue.garrote": 2,
+    "shadow_rogue.death_mark": 3,
+    "shadow_rogue.thousand_shadows": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "shadow_rogue",
+   "id": "rogue_venom",
+   "n": [
+    "Venomancer",
+    "สายพิษ"
+   ],
+   "desc": [
+    "Poison and bleed over time.",
+    "พิษและเลือดไหลต่อเนื่อง"
+   ],
+   "pros": [
+    "Strong sustained damage",
+    "ดาเมจต่อเนื่องดี"
+   ],
+   "cons": [
+    "Slow start",
+    "เริ่มช้า"
+   ],
+   "stats": "STR > DEX",
+   "weapon": "dagger",
+   "seq": [
+    [
+     "backstab",
+     3
+    ],
+    [
+     "envenom",
+     4
+    ],
+    [
+     "eviscerate",
+     5
+    ],
+    [
+     "fan_of_knives",
+     3
+    ],
+    [
+     "deadly_poison",
+     3
+    ],
+    [
+     "rupture",
+     4
+    ],
+    [
+     "kidney_shot",
+     2
+    ],
+    [
+     "garrote",
+     2
+    ],
+    [
+     "death_mark",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "shadow_rogue.backstab": 10,
+    "shadow_rogue.envenom": 5,
+    "shadow_rogue.eviscerate": 10,
+    "shadow_rogue.fan_of_knives": 10,
+    "shadow_rogue.deadly_poison": 5,
+    "shadow_rogue.rupture": 10,
+    "shadow_rogue.vanish": 3,
+    "shadow_rogue.kidney_shot": 5,
+    "shadow_rogue.garrote": 3,
+    "shadow_rogue.death_mark": 3,
+    "shadow_rogue.shadowstep": 3,
+    "shadow_rogue.shadow_dance": 2,
+    "shadow_rogue.thousand_shadows": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "phantom_dancer",
+   "id": "dancer_blade",
+   "n": [
+    "Blade Dancer",
+    "สายใบมีด"
+   ],
+   "desc": [
+    "Keep the beat and cash in finales.",
+    "รักษาจังหวะแล้วปิดด้วยท่าจบ"
+   ],
+   "pros": [
+    "High DPS while moving",
+    "ดาเมจสูงขณะเคลื่อนที่"
+   ],
+   "cons": [
+    "Rhythm decays",
+    "จังหวะลดลงเมื่อหยุด"
+   ],
+   "stats": "AGI > STR",
+   "weapon": "dagger",
+   "seq": [
+    [
+     "pirouette",
+     3
+    ],
+    [
+     "mirage_step",
+     2
+    ],
+    [
+     "phantom_double",
+     3
+    ],
+    [
+     "crescendo_cut",
+     4
+    ],
+    [
+     "afterimage_assault",
+     3
+    ],
+    [
+     "tango_of_blades",
+     4
+    ],
+    [
+     "grand_finale",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "phantom_dancer.pirouette": 10,
+    "phantom_dancer.mirage_step": 5,
+    "phantom_dancer.phantom_double": 5,
+    "phantom_dancer.crescendo_cut": 10,
+    "phantom_dancer.afterimage_assault": 10,
+    "phantom_dancer.tango_of_blades": 10,
+    "phantom_dancer.grand_finale": 8,
+    "phantom_dancer.ribbon_lash": 2,
+    "phantom_dancer.veil_dance": 2,
+    "phantom_dancer.phantom_veil": 2,
+    "phantom_dancer.swan_lake": 3,
+    "phantom_dancer.mirror_hall": 2,
+    "phantom_dancer.eternal_waltz": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "phantom_dancer",
+   "id": "dancer_illusion",
+   "n": [
+    "Illusionist",
+    "สายภาพลวง"
+   ],
+   "desc": [
+    "Confuse, evade and buff the party.",
+    "ทำให้สับสน หลบหลีก และบัฟปาร์ตี้"
+   ],
+   "pros": [
+    "Hard to hit, party buffs",
+    "ตีโดนยาก บัฟปาร์ตี้"
+   ],
+   "cons": [
+    "Lower damage",
+    "ดาเมจน้อยกว่า"
+   ],
+   "stats": "AGI > DEX",
+   "weapon": "whip",
+   "seq": [
+    [
+     "pirouette",
+     2
+    ],
+    [
+     "mirage_step",
+     3
+    ],
+    [
+     "ribbon_lash",
+     2
+    ],
+    [
+     "veil_dance",
+     3
+    ],
+    [
+     "grace_of_motion",
+     3
+    ],
+    [
+     "tempo_sense",
+     3
+    ],
+    [
+     "phantom_veil",
+     3
+    ],
+    [
+     "swan_lake",
+     3
+    ],
+    [
+     "mirror_hall",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "phantom_dancer.pirouette": 10,
+    "phantom_dancer.mirage_step": 5,
+    "phantom_dancer.ribbon_lash": 5,
+    "phantom_dancer.veil_dance": 5,
+    "phantom_dancer.grace_of_motion": 10,
+    "phantom_dancer.tempo_sense": 5,
+    "phantom_dancer.phantom_veil": 5,
+    "phantom_dancer.swan_lake": 5,
+    "phantom_dancer.mirror_hall": 4,
+    "phantom_dancer.phantom_double": 3,
+    "phantom_dancer.crescendo_cut": 3,
+    "phantom_dancer.afterimage_assault": 2,
+    "phantom_dancer.tango_of_blades": 4,
+    "phantom_dancer.grand_finale": 3,
+    "phantom_dancer.eternal_waltz": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "dawn_priest",
+   "id": "priest_healer",
+   "n": [
+    "Healer",
+    "สายรักษา"
+   ],
+   "desc": [
+    "Keep everyone alive.",
+    "ทำให้ทุกคนรอด"
+   ],
+   "pros": [
+    "Best party sustain",
+    "ฟื้นฟูปาร์ตี้ดีที่สุด"
+   ],
+   "cons": [
+    "Weak solo",
+    "เล่นเดี่ยวลำบาก"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "staff",
+   "seq": [
+    [
+     "heal",
+     5
+    ],
+    [
+     "faith",
+     5
+    ],
+    [
+     "purify",
+     2
+    ],
+    [
+     "blessing",
+     2
+    ],
+    [
+     "renew",
+     3
+    ],
+    [
+     "holy_ward",
+     3
+    ],
+    [
+     "devotion",
+     3
+    ],
+    [
+     "greater_heal",
+     5
+    ],
+    [
+     "resurrection",
+     2
+    ],
+    [
+     "sanctuary",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "dawn_priest.heal": 10,
+    "dawn_priest.faith": 10,
+    "dawn_priest.purify": 5,
+    "dawn_priest.blessing": 5,
+    "dawn_priest.renew": 10,
+    "dawn_priest.holy_ward": 5,
+    "dawn_priest.devotion": 5,
+    "dawn_priest.greater_heal": 10,
+    "dawn_priest.resurrection": 3,
+    "dawn_priest.sanctuary": 6,
+    "dawn_priest.miracle": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "dawn_priest",
+   "id": "priest_holy",
+   "n": [
+    "Holy Avenger",
+    "สายเวทศักดิ์สิทธิ์"
+   ],
+   "desc": [
+    "Holy magic damage with light support.",
+    "โจมตีด้วยเวทศักดิ์สิทธิ์พร้อมซัพพอร์ตเล็กน้อย"
+   ],
+   "pros": [
+    "Can solo",
+    "เล่นเดี่ยวได้"
+   ],
+   "cons": [
+    "Less healing",
+    "รักษาน้อยลง"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "tome",
+   "seq": [
+    [
+     "heal",
+     2
+    ],
+    [
+     "smite",
+     4
+    ],
+    [
+     "faith",
+     3
+    ],
+    [
+     "judgement",
+     4
+    ],
+    [
+     "devotion",
+     3
+    ],
+    [
+     "sanctity",
+     3
+    ],
+    [
+     "holy_lance",
+     4
+    ],
+    [
+     "divine_wrath",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "dawn_priest.heal": 10,
+    "dawn_priest.smite": 5,
+    "dawn_priest.faith": 10,
+    "dawn_priest.judgement": 10,
+    "dawn_priest.devotion": 5,
+    "dawn_priest.sanctity": 5,
+    "dawn_priest.holy_lance": 8,
+    "dawn_priest.divine_wrath": 3,
+    "dawn_priest.greater_heal": 5,
+    "dawn_priest.purify": 2,
+    "dawn_priest.holy_ward": 3,
+    "dawn_priest.sanctuary": 3,
+    "dawn_priest.miracle": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "spirit_monk",
+   "id": "monk_fist",
+   "n": [
+    "Fist of Ki",
+    "สายหมัดปราณ"
+   ],
+   "desc": [
+    "Gather Ki then unleash it.",
+    "สะสมปราณแล้วปลดปล่อย"
+   ],
+   "pros": [
+    "Huge burst",
+    "ระเบิดดาเมจสูง"
+   ],
+   "cons": [
+    "Melee only",
+    "ระยะประชิดเท่านั้น"
+   ],
+   "stats": "STR > AGI",
+   "weapon": "knuckle",
+   "seq": [
+    [
+     "triple_palm",
+     3
+    ],
+    [
+     "ki_blast",
+     3
+    ],
+    [
+     "hundred_fists",
+     3
+    ],
+    [
+     "dragon_palm",
+     5
+    ],
+    [
+     "pressure_point",
+     2
+    ],
+    [
+     "asura_strike",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "spirit_monk.triple_palm": 10,
+    "spirit_monk.ki_blast": 10,
+    "spirit_monk.hundred_fists": 10,
+    "spirit_monk.dragon_palm": 10,
+    "spirit_monk.pressure_point": 5,
+    "spirit_monk.asura_strike": 10,
+    "spirit_monk.spirit_wave": 4,
+    "spirit_monk.heavenly_fist": 1,
+    "spirit_monk.iron_body": 10
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "spirit_monk",
+   "id": "monk_guardian",
+   "n": [
+    "Iron Monk",
+    "สายกายเหล็ก"
+   ],
+   "desc": [
+    "Durable support monk with heals.",
+    "นักบวชอึดพร้อมรักษา"
+   ],
+   "pros": [
+    "Very durable",
+    "อึดมาก"
+   ],
+   "cons": [
+    "Lower burst",
+    "ระเบิดดาเมจน้อย"
+   ],
+   "stats": "VIT > STR",
+   "weapon": "knuckle",
+   "seq": [
+    [
+     "triple_palm",
+     2
+    ],
+    [
+     "breathing",
+     3
+    ],
+    [
+     "iron_body",
+     6
+    ],
+    [
+     "inner_peace",
+     2
+    ],
+    [
+     "chakra_heal",
+     3
+    ],
+    [
+     "monk_meditation",
+     3
+    ],
+    [
+     "flowing_water",
+     2
+    ],
+    [
+     "golden_bell",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "spirit_monk.triple_palm": 10,
+    "spirit_monk.breathing": 5,
+    "spirit_monk.iron_body": 10,
+    "spirit_monk.inner_peace": 5,
+    "spirit_monk.chakra_heal": 5,
+    "spirit_monk.monk_meditation": 5,
+    "spirit_monk.flowing_water": 5,
+    "spirit_monk.golden_bell": 4,
+    "spirit_monk.ki_blast": 5,
+    "spirit_monk.hundred_fists": 3,
+    "spirit_monk.dragon_palm": 5,
+    "spirit_monk.asura_strike": 3,
+    "spirit_monk.spirit_wave": 4,
+    "spirit_monk.heavenly_fist": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "moon_oracle",
+   "id": "oracle_moonfire",
+   "n": [
+    "Moonfire",
+    "สายเวทจันทร์"
+   ],
+   "desc": [
+    "Ride the phases for big magic damage.",
+    "ใช้ข้างจันทร์สร้างดาเมจเวทสูง"
+   ],
+   "pros": [
+    "Strong AoE",
+    "ดาเมจวงกว้างดี"
+   ],
+   "cons": [
+    "Phase timing",
+    "ต้องจับจังหวะข้างจันทร์"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "moonbeam",
+     3
+    ],
+    [
+     "crescent_blade",
+     3
+    ],
+    [
+     "stargazing",
+     5
+    ],
+    [
+     "eclipse_orb",
+     3
+    ],
+    [
+     "omen",
+     2
+    ],
+    [
+     "prophecy",
+     2
+    ],
+    [
+     "full_moon",
+     2
+    ],
+    [
+     "starfall",
+     4
+    ],
+    [
+     "lunar_lance",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "moon_oracle.moonbeam": 10,
+    "moon_oracle.crescent_blade": 10,
+    "moon_oracle.stargazing": 10,
+    "moon_oracle.eclipse_orb": 10,
+    "moon_oracle.omen": 5,
+    "moon_oracle.starfall": 10,
+    "moon_oracle.lunar_lance": 4,
+    "moon_oracle.blood_moon": 1,
+    "moon_oracle.prophecy": 5,
+    "moon_oracle.full_moon": 5
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "moon_oracle",
+   "id": "oracle_fate",
+   "n": [
+    "Fatebinder",
+    "สายควบคุมชะตา"
+   ],
+   "desc": [
+    "Control, curses and party foresight.",
+    "ควบคุม สาป และมองอนาคตให้ปาร์ตี้"
+   ],
+   "pros": [
+    "Best crowd control",
+    "ควบคุมฝูงศัตรูดีที่สุด"
+   ],
+   "cons": [
+    "Lower damage",
+    "ดาเมจน้อย"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "cards",
+   "seq": [
+    [
+     "moonbeam",
+     2
+    ],
+    [
+     "omen",
+     3
+    ],
+    [
+     "sleepsong",
+     3
+    ],
+    [
+     "prophecy",
+     3
+    ],
+    [
+     "stargazing",
+     3
+    ],
+    [
+     "tidal_sense",
+     3
+    ],
+    [
+     "moon_prison",
+     3
+    ],
+    [
+     "fate_weave",
+     3
+    ],
+    [
+     "destiny",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "moon_oracle.moonbeam": 10,
+    "moon_oracle.omen": 5,
+    "moon_oracle.sleepsong": 5,
+    "moon_oracle.prophecy": 5,
+    "moon_oracle.stargazing": 10,
+    "moon_oracle.tidal_sense": 5,
+    "moon_oracle.moon_prison": 5,
+    "moon_oracle.destiny": 5,
+    "moon_oracle.crescent_blade": 2,
+    "moon_oracle.eclipse_orb": 3,
+    "moon_oracle.starfall": 4,
+    "moon_oracle.lunar_lance": 3,
+    "moon_oracle.blood_moon": 1,
+    "moon_oracle.astral_insight": 5,
+    "moon_oracle.oracle_wisdom": 2
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "flame_weaver",
+   "id": "flame_burst",
+   "n": [
+    "Pyroclast",
+    "สายระเบิดเพลิง"
+   ],
+   "desc": [
+    "Big explosions, manage Heat.",
+    "ระเบิดใหญ่ จัดการความร้อน"
+   ],
+   "pros": [
+    "Top AoE burst",
+    "ระเบิดวงกว้างสูงสุด"
+   ],
+   "cons": [
+    "Overheat risk",
+    "เสี่ยงร้อนเกิน"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "fire_bolt",
+     3
+    ],
+    [
+     "fireball",
+     4
+    ],
+    [
+     "pyromancy",
+     6
+    ],
+    [
+     "flame_lash",
+     3
+    ],
+    [
+     "inferno",
+     2
+    ],
+    [
+     "combustion",
+     2
+    ],
+    [
+     "meteor",
+     4
+    ],
+    [
+     "flame_pillar",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "flame_weaver.fire_bolt": 10,
+    "flame_weaver.fireball": 10,
+    "flame_weaver.pyromancy": 10,
+    "flame_weaver.flame_lash": 10,
+    "flame_weaver.inferno": 10,
+    "flame_weaver.combustion": 10,
+    "flame_weaver.meteor": 6,
+    "flame_weaver.flame_pillar": 3,
+    "flame_weaver.phoenix_wrath": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "flame_weaver",
+   "id": "flame_phoenix",
+   "n": [
+    "Phoenix Heart",
+    "สายฟีนิกซ์"
+   ],
+   "desc": [
+    "Sustained burning with self-sustain.",
+    "เผาต่อเนื่องและอึด"
+   ],
+   "pros": [
+    "Survives well",
+    "เอาตัวรอดดี"
+   ],
+   "cons": [
+    "Less burst",
+    "ระเบิดน้อยลง"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "tome",
+   "seq": [
+    [
+     "fire_bolt",
+     2
+    ],
+    [
+     "fire_wall",
+     3
+    ],
+    [
+     "vent_heat",
+     2
+    ],
+    [
+     "ember_shield",
+     3
+    ],
+    [
+     "kindling",
+     3
+    ],
+    [
+     "heat_tolerance",
+     3
+    ],
+    [
+     "phoenix_feather",
+     3
+    ],
+    [
+     "phoenix_rebirth",
+     2
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "flame_weaver.fire_bolt": 10,
+    "flame_weaver.fire_wall": 5,
+    "flame_weaver.vent_heat": 5,
+    "flame_weaver.ember_shield": 5,
+    "flame_weaver.phoenix_feather": 5,
+    "flame_weaver.phoenix_rebirth": 3,
+    "flame_weaver.fireball": 4,
+    "flame_weaver.flame_lash": 3,
+    "flame_weaver.inferno": 2,
+    "flame_weaver.combustion": 2,
+    "flame_weaver.meteor": 3,
+    "flame_weaver.flame_pillar": 3,
+    "flame_weaver.phoenix_wrath": 1,
+    "flame_weaver.pyromancy": 10,
+    "flame_weaver.kindling": 5,
+    "flame_weaver.heat_tolerance": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "frost_sage",
+   "id": "frost_shatter",
+   "n": [
+    "Shatterer",
+    "สายแตกสลาย"
+   ],
+   "desc": [
+    "Stack Chill then shatter.",
+    "สะสมความเย็นแล้วทำให้แตก"
+   ],
+   "pros": [
+    "Strong burst on frozen targets",
+    "ระเบิดดาเมจใส่เป้าแช่แข็งได้แรง"
+   ],
+   "cons": [
+    "Combo-dependent",
+    "ต้องต่อคอมโบ"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "frost_bolt",
+     3
+    ],
+    [
+     "ice_lance",
+     5
+    ],
+    [
+     "cryomancy",
+     5
+    ],
+    [
+     "glacial_spike",
+     2
+    ],
+    [
+     "deep_freeze",
+     2
+    ],
+    [
+     "shatter",
+     4
+    ],
+    [
+     "comet_of_ice",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "frost_sage.frost_bolt": 10,
+    "frost_sage.ice_lance": 10,
+    "frost_sage.cryomancy": 10,
+    "frost_sage.glacial_spike": 10,
+    "frost_sage.deep_freeze": 5,
+    "frost_sage.shatter": 10,
+    "frost_sage.frost_nova": 2,
+    "frost_sage.blizzard": 3,
+    "frost_sage.frozen_orb": 4,
+    "frost_sage.comet_of_ice": 5,
+    "frost_sage.absolute_zero": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "frost_sage",
+   "id": "frost_control",
+   "n": [
+    "Winter Warden",
+    "สายควบคุมน้ำแข็ง"
+   ],
+   "desc": [
+    "Lock down crowds with freezes and slows.",
+    "คุมฝูงศัตรูด้วยแช่แข็งและทำให้ช้า"
+   ],
+   "pros": [
+    "Excellent control and safety",
+    "ควบคุมดีและปลอดภัย"
+   ],
+   "cons": [
+    "Moderate damage",
+    "ดาเมจปานกลาง"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "staff",
+   "seq": [
+    [
+     "frost_bolt",
+     2
+    ],
+    [
+     "frost_nova",
+     3
+    ],
+    [
+     "blizzard",
+     3
+    ],
+    [
+     "ice_barrier",
+     3
+    ],
+    [
+     "cold_blood",
+     3
+    ],
+    [
+     "frozen_orb",
+     3
+    ],
+    [
+     "permafrost",
+     3
+    ],
+    [
+     "ice_tomb",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "frost_sage.frost_bolt": 10,
+    "frost_sage.frost_nova": 5,
+    "frost_sage.blizzard": 10,
+    "frost_sage.ice_barrier": 5,
+    "frost_sage.frozen_orb": 10,
+    "frost_sage.permafrost": 5,
+    "frost_sage.ice_tomb": 5,
+    "frost_sage.comet_of_ice": 3,
+    "frost_sage.absolute_zero": 1,
+    "frost_sage.cryomancy": 10,
+    "frost_sage.cold_blood": 5,
+    "frost_sage.winter_heart": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "storm_caller",
+   "id": "storm_chain",
+   "n": [
+    "Chainmaster",
+    "สายลูกโซ่"
+   ],
+   "desc": [
+    "Bounce lightning through packs.",
+    "สายฟ้ากระเด้งไปทั้งฝูง"
+   ],
+   "pros": [
+    "Great farming",
+    "ฟาร์มดีมาก"
+   ],
+   "cons": [
+    "Spread damage",
+    "ดาเมจกระจาย"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "lightning_bolt",
+     2
+    ],
+    [
+     "chain_lightning",
+     5
+    ],
+    [
+     "conductivity",
+     5
+    ],
+    [
+     "static_field",
+     3
+    ],
+    [
+     "ball_lightning",
+     3
+    ],
+    [
+     "discharge",
+     2
+    ],
+    [
+     "forked_lightning",
+     4
+    ],
+    [
+     "thunder_god",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "storm_caller.lightning_bolt": 10,
+    "storm_caller.chain_lightning": 10,
+    "storm_caller.conductivity": 10,
+    "storm_caller.static_field": 10,
+    "storm_caller.thunderclap": 2,
+    "storm_caller.ball_lightning": 10,
+    "storm_caller.discharge": 10,
+    "storm_caller.forked_lightning": 4,
+    "storm_caller.thunder_god": 3,
+    "storm_caller.judgment_bolt": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "storm_caller",
+   "id": "storm_eye",
+   "n": [
+    "Eye of the Storm",
+    "สายตาพายุ"
+   ],
+   "desc": [
+    "Discharge bursts and party storm buffs.",
+    "ปลดประจุระเบิดและบัฟพายุให้ปาร์ตี้"
+   ],
+   "pros": [
+    "Burst + support",
+    "ระเบิดดาเมจพร้อมซัพพอร์ต"
+   ],
+   "cons": [
+    "Charge upkeep",
+    "ต้องรักษาประจุ"
+   ],
+   "stats": "INT > AGI",
+   "weapon": "tome",
+   "seq": [
+    [
+     "lightning_bolt",
+     4
+    ],
+    [
+     "thunderclap",
+     2
+    ],
+    [
+     "ball_lightning",
+     3
+    ],
+    [
+     "grounding",
+     2
+    ],
+    [
+     "discharge",
+     5
+    ],
+    [
+     "tempest_call",
+     2
+    ],
+    [
+     "eye_of_storm",
+     3
+    ],
+    [
+     "storm_shield",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "storm_caller.lightning_bolt": 10,
+    "storm_caller.thunderclap": 5,
+    "storm_caller.ball_lightning": 10,
+    "storm_caller.discharge": 10,
+    "storm_caller.chain_lightning": 5,
+    "storm_caller.forked_lightning": 3,
+    "storm_caller.thunder_god": 3,
+    "storm_caller.judgment_bolt": 1,
+    "storm_caller.conductivity": 10,
+    "storm_caller.overcharge": 5,
+    "storm_caller.storm_heart": 5,
+    "storm_caller.live_wire": 3
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "earth_keeper",
+   "id": "earth_quake",
+   "n": [
+    "Quakemaker",
+    "สายแผ่นดินไหว"
+   ],
+   "desc": [
+    "Area damage and knockdowns.",
+    "ดาเมจวงกว้างและทำให้ล้ม"
+   ],
+   "pros": [
+    "Strong AoE control",
+    "ควบคุมวงกว้างดี"
+   ],
+   "cons": [
+    "Slower casts",
+    "ร่ายช้ากว่า"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "staff",
+   "seq": [
+    [
+     "stone_spike",
+     2
+    ],
+    [
+     "rockfall",
+     3
+    ],
+    [
+     "geomancy",
+     5
+    ],
+    [
+     "tremor",
+     3
+    ],
+    [
+     "earthquake",
+     4
+    ],
+    [
+     "golem_fist",
+     3
+    ],
+    [
+     "fissure",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "earth_keeper.stone_spike": 10,
+    "earth_keeper.rockfall": 10,
+    "earth_keeper.geomancy": 10,
+    "earth_keeper.tremor": 10,
+    "earth_keeper.earthquake": 10,
+    "earth_keeper.fissure": 3,
+    "earth_keeper.stone_skin": 2,
+    "earth_keeper.earth_wall": 2,
+    "earth_keeper.gaia_blessing": 2,
+    "earth_keeper.living_mountain": 3,
+    "earth_keeper.titan_guard": 2,
+    "earth_keeper.continental_drift": 1,
+    "earth_keeper.golem_fist": 5
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "earth_keeper",
+   "id": "earth_warden",
+   "n": [
+    "Stone Warden",
+    "สายผู้พิทักษ์หิน"
+   ],
+   "desc": [
+    "Walls, prisons and party shields.",
+    "กำแพง คุกหิน และโล่ปาร์ตี้"
+   ],
+   "pros": [
+    "Party protection",
+    "ปกป้องปาร์ตี้"
+   ],
+   "cons": [
+    "Lower damage",
+    "ดาเมจน้อย"
+   ],
+   "stats": "VIT > INT",
+   "weapon": "staff",
+   "seq": [
+    [
+     "stone_spike",
+     2
+    ],
+    [
+     "stone_skin",
+     3
+    ],
+    [
+     "earth_wall",
+     4
+    ],
+    [
+     "gaia_blessing",
+     2
+    ],
+    [
+     "mountain_will",
+     3
+    ],
+    [
+     "stone_prison",
+     3
+    ],
+    [
+     "living_mountain",
+     3
+    ],
+    [
+     "titan_guard",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "earth_keeper.stone_spike": 10,
+    "earth_keeper.stone_skin": 5,
+    "earth_keeper.earth_wall": 5,
+    "earth_keeper.gaia_blessing": 5,
+    "earth_keeper.stone_prison": 5,
+    "earth_keeper.living_mountain": 5,
+    "earth_keeper.titan_guard": 5,
+    "earth_keeper.rockfall": 2,
+    "earth_keeper.tremor": 3,
+    "earth_keeper.earthquake": 4,
+    "earth_keeper.fissure": 3,
+    "earth_keeper.continental_drift": 1,
+    "earth_keeper.geomancy": 10,
+    "earth_keeper.mountain_will": 5,
+    "earth_keeper.bedrock_core": 2
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "tide_witch",
+   "id": "tide_storm",
+   "n": [
+    "Maelstrom Witch",
+    "สายวังวน"
+   ],
+   "desc": [
+    "Waves and whirlpools at High Tide.",
+    "คลื่นและวังวนช่วงน้ำขึ้น"
+   ],
+   "pros": [
+    "Strong control damage",
+    "ดาเมจพร้อมควบคุม"
+   ],
+   "cons": [
+    "Tide timing",
+    "ต้องจับจังหวะน้ำ"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "water_jet",
+     3
+    ],
+    [
+     "whirlpool",
+     3
+    ],
+    [
+     "hydromancy",
+     5
+    ],
+    [
+     "tidal_wave",
+     3
+    ],
+    [
+     "maelstrom",
+     4
+    ],
+    [
+     "riptide",
+     2
+    ],
+    [
+     "leviathan",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "tide_witch.water_jet": 10,
+    "tide_witch.whirlpool": 10,
+    "tide_witch.hydromancy": 10,
+    "tide_witch.tidal_wave": 10,
+    "tide_witch.maelstrom": 10,
+    "tide_witch.leviathan": 10,
+    "tide_witch.great_flood": 1,
+    "tide_witch.ebb_flow": 5,
+    "tide_witch.sea_witch": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "tide_witch",
+   "id": "tide_healer",
+   "n": [
+    "Spring Healer",
+    "สายฟื้นฟู"
+   ],
+   "desc": [
+    "Healing rain and pearl wards at Low Tide.",
+    "ฝนรักษาและปราการไข่มุกช่วงน้ำลง"
+   ],
+   "pros": [
+    "Healing and cleansing",
+    "รักษาและล้างสถานะ"
+   ],
+   "cons": [
+    "Less damage",
+    "ดาเมจน้อย"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "whip",
+   "seq": [
+    [
+     "tidal_mend",
+     5
+    ],
+    [
+     "bubble_shield",
+     4
+    ],
+    [
+     "hydromancy",
+     3
+    ],
+    [
+     "ebb_flow",
+     3
+    ],
+    [
+     "spring_rain",
+     4
+    ],
+    [
+     "pearl_ward",
+     2
+    ],
+    [
+     "sea_witch",
+     3
+    ],
+    [
+     "ocean_grace",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "tide_witch.water_jet": 2,
+    "tide_witch.tidal_mend": 10,
+    "tide_witch.bubble_shield": 5,
+    "tide_witch.hydromancy": 10,
+    "tide_witch.ebb_flow": 5,
+    "tide_witch.spring_rain": 10,
+    "tide_witch.pearl_ward": 5,
+    "tide_witch.sea_witch": 5,
+    "tide_witch.ocean_grace": 5,
+    "tide_witch.whirlpool": 2,
+    "tide_witch.tidal_wave": 3,
+    "tide_witch.maelstrom": 4,
+    "tide_witch.leviathan": 3,
+    "tide_witch.great_flood": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "void_scholar",
+   "id": "void_destroyer",
+   "n": [
+    "Annihilator",
+    "สายทำลายล้าง"
+   ],
+   "desc": [
+    "Ride high Entropy for huge damage.",
+    "ใช้เอนโทรปีสูงสร้างดาเมจมหาศาล"
+   ],
+   "pros": [
+    "Highest magic burst",
+    "ระเบิดดาเมจเวทสูงสุด"
+   ],
+   "cons": [
+    "Costs HP",
+    "เสีย HP"
+   ],
+   "stats": "INT > LUK",
+   "weapon": "tome",
+   "seq": [
+    [
+     "void_bolt",
+     3
+    ],
+    [
+     "rift",
+     4
+    ],
+    [
+     "forbidden_lore",
+     6
+    ],
+    [
+     "abyssal_study",
+     4
+    ],
+    [
+     "null_beam",
+     3
+    ],
+    [
+     "dark_pact",
+     2
+    ],
+    [
+     "entropic_mind",
+     4
+    ],
+    [
+     "black_hole",
+     4
+    ],
+    [
+     "annihilation",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "void_scholar.void_bolt": 10,
+    "void_scholar.rift": 10,
+    "void_scholar.forbidden_lore": 10,
+    "void_scholar.abyssal_study": 5,
+    "void_scholar.null_beam": 10,
+    "void_scholar.dark_pact": 5,
+    "void_scholar.entropic_mind": 4,
+    "void_scholar.gravity_well": 3,
+    "void_scholar.black_hole": 4,
+    "void_scholar.annihilation": 3,
+    "void_scholar.void_ward": 3,
+    "void_scholar.dimensional_shift": 2,
+    "void_scholar.end_of_all": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "void_scholar",
+   "id": "void_hexer",
+   "n": [
+    "Hexer",
+    "สายคำสาป"
+   ],
+   "desc": [
+    "Curses, silences and drains.",
+    "สาป ใบ้ และดูดพลัง"
+   ],
+   "pros": [
+    "Sustain and control",
+    "อึดและควบคุมได้"
+   ],
+   "cons": [
+    "Slower kills",
+    "ฆ่าช้ากว่า"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "tome",
+   "seq": [
+    [
+     "void_bolt",
+     2
+    ],
+    [
+     "curse_of_frailty",
+     3
+    ],
+    [
+     "siphon",
+     5
+    ],
+    [
+     "gravity_well",
+     3
+    ],
+    [
+     "hex_of_silence",
+     3
+    ],
+    [
+     "soul_rot",
+     3
+    ],
+    [
+     "void_ward",
+     3
+    ],
+    [
+     "dimensional_shift",
+     2
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "void_scholar.void_bolt": 10,
+    "void_scholar.curse_of_frailty": 5,
+    "void_scholar.siphon": 10,
+    "void_scholar.hex_of_silence": 5,
+    "void_scholar.soul_rot": 5,
+    "void_scholar.rift": 4,
+    "void_scholar.gravity_well": 5,
+    "void_scholar.null_beam": 2,
+    "void_scholar.black_hole": 4,
+    "void_scholar.annihilation": 3,
+    "void_scholar.forbidden_lore": 3,
+    "void_scholar.abyssal_study": 4,
+    "void_scholar.entropic_mind": 2,
+    "void_scholar.void_ward": 5,
+    "void_scholar.dimensional_shift": 2,
+    "void_scholar.end_of_all": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "sun_herald",
+   "id": "sun_burst",
+   "n": [
+    "Solar Judge",
+    "สายพิพากษา"
+   ],
+   "desc": [
+    "Light damage and blinds.",
+    "ดาเมจแสงและทำให้ตาพร่า"
+   ],
+   "pros": [
+    "Strong vs dark",
+    "แรงกับธาตุมืด"
+   ],
+   "cons": [
+    "Light-resistant foes",
+    "ศัตรูต้านแสง"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "solar_ray",
+     3
+    ],
+    [
+     "sunspear",
+     3
+    ],
+    [
+     "solar_faith",
+     5
+    ],
+    [
+     "flare",
+     3
+    ],
+    [
+     "solar_flare",
+     2
+    ],
+    [
+     "judgement",
+     4
+    ],
+    [
+     "zenith",
+     2
+    ],
+    [
+     "helios_beam",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "sun_herald.solar_ray": 10,
+    "sun_herald.sunspear": 10,
+    "sun_herald.solar_faith": 10,
+    "sun_herald.flare": 5,
+    "sun_herald.solar_flare": 10,
+    "sun_herald.judgement": 10,
+    "sun_herald.helios_beam": 10,
+    "sun_herald.supernova": 1,
+    "sun_herald.daybreak_vow": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "sun_herald",
+   "id": "sun_healer",
+   "n": [
+    "Dawnkeeper",
+    "สายผู้รักษาอรุณ"
+   ],
+   "desc": [
+    "Heals, cleanses and party shields.",
+    "รักษา ชำระ และโล่ปาร์ตี้"
+   ],
+   "pros": [
+    "Great party support",
+    "ซัพพอร์ตปาร์ตี้ดี"
+   ],
+   "cons": [
+    "Low damage",
+    "ดาเมจต่ำ"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "tome",
+   "seq": [
+    [
+     "solar_ray",
+     1
+    ],
+    [
+     "warm_light",
+     5
+    ],
+    [
+     "purge",
+     2
+    ],
+    [
+     "halo",
+     3
+    ],
+    [
+     "solar_faith",
+     3
+    ],
+    [
+     "daybreak_vow",
+     3
+    ],
+    [
+     "sanctuary_sun",
+     4
+    ],
+    [
+     "dawn_shield",
+     3
+    ],
+    [
+     "resurrection_dawn",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "sun_herald.solar_ray": 10,
+    "sun_herald.warm_light": 10,
+    "sun_herald.purge": 5,
+    "sun_herald.halo": 5,
+    "sun_herald.solar_faith": 10,
+    "sun_herald.daybreak_vow": 4,
+    "sun_herald.sanctuary_sun": 4,
+    "sun_herald.dawn_shield": 3,
+    "sun_herald.resurrection_dawn": 3,
+    "sun_herald.sunspear": 3,
+    "sun_herald.solar_flare": 2,
+    "sun_herald.flare": 3,
+    "sun_herald.judgement": 4,
+    "sun_herald.helios_beam": 3,
+    "sun_herald.supernova": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "beast_tamer",
+   "id": "tamer_pack",
+   "n": [
+    "Packmaster",
+    "สายจ่าฝูง"
+   ],
+   "desc": [
+    "Many beasts, many hits.",
+    "สัตว์หลายตัว ตีหลายครั้ง"
+   ],
+   "pros": [
+    "Safe damage from summons",
+    "ดาเมจปลอดภัยจากสัตว์"
+   ],
+   "cons": [
+    "Trust upkeep",
+    "ต้องรักษาความไว้ใจ"
+   ],
+   "stats": "STR > VIT",
+   "weapon": "whip",
+   "seq": [
+    [
+     "call_wolf",
+     4
+    ],
+    [
+     "lash",
+     2
+    ],
+    [
+     "sic_em",
+     3
+    ],
+    [
+     "pack_bond",
+     5
+    ],
+    [
+     "pack_hunt",
+     3
+    ],
+    [
+     "call_hawk",
+     3
+    ],
+    [
+     "call_behemoth",
+     2
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "beast_tamer.call_wolf": 10,
+    "beast_tamer.lash": 10,
+    "beast_tamer.sic_em": 10,
+    "beast_tamer.pack_bond": 10,
+    "beast_tamer.pack_hunt": 10,
+    "beast_tamer.call_hawk": 5,
+    "beast_tamer.call_behemoth": 4,
+    "beast_tamer.call_bear": 2,
+    "beast_tamer.feral_command": 2,
+    "beast_tamer.stampede": 3,
+    "beast_tamer.savage_bond": 3,
+    "beast_tamer.wild_hunt": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "beast_tamer",
+   "id": "tamer_stampede",
+   "n": [
+    "Stampede Lord",
+    "สายโขลงตะลุย"
+   ],
+   "desc": [
+    "Tanky frontline with roars and stampedes.",
+    "แนวหน้าอึดพร้อมคำรามและโขลง"
+   ],
+   "pros": [
+    "Durable + control",
+    "อึดและควบคุมได้"
+   ],
+   "cons": [
+    "Fewer summons",
+    "สัตว์น้อยลง"
+   ],
+   "stats": "VIT > STR",
+   "weapon": "spear",
+   "seq": [
+    [
+     "lash",
+     3
+    ],
+    [
+     "call_wolf",
+     3
+    ],
+    [
+     "beast_roar",
+     2
+    ],
+    [
+     "pack_bond",
+     3
+    ],
+    [
+     "wild_heart",
+     3
+    ],
+    [
+     "call_bear",
+     2
+    ],
+    [
+     "feral_command",
+     2
+    ],
+    [
+     "stampede",
+     3
+    ],
+    [
+     "savage_bond",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "beast_tamer.call_wolf": 10,
+    "beast_tamer.lash": 10,
+    "beast_tamer.beast_roar": 5,
+    "beast_tamer.pack_bond": 10,
+    "beast_tamer.wild_heart": 5,
+    "beast_tamer.call_bear": 5,
+    "beast_tamer.feral_command": 5,
+    "beast_tamer.stampede": 10,
+    "beast_tamer.savage_bond": 9,
+    "beast_tamer.wild_hunt": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "grove_warden",
+   "id": "grove_healer",
+   "n": [
+    "Lifebinder",
+    "สายผู้ผูกชีวิต"
+   ],
+   "desc": [
+    "Bloom-powered heals.",
+    "รักษาด้วยพลังบุปผา"
+   ],
+   "pros": [
+    "Top sustained healing",
+    "รักษาต่อเนื่องสูงสุด"
+   ],
+   "cons": [
+    "Low damage",
+    "ดาเมจต่ำ"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "staff",
+   "seq": [
+    [
+     "rejuvenate",
+     4
+    ],
+    [
+     "blossom",
+     4
+    ],
+    [
+     "green_thumb",
+     5
+    ],
+    [
+     "deep_roots",
+     3
+    ],
+    [
+     "barkskin",
+     2
+    ],
+    [
+     "verdant_soul",
+     3
+    ],
+    [
+     "wild_growth",
+     3
+    ],
+    [
+     "tree_of_life",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "grove_warden.thorn_whip": 1,
+    "grove_warden.rejuvenate": 10,
+    "grove_warden.blossom": 10,
+    "grove_warden.green_thumb": 10,
+    "grove_warden.deep_roots": 5,
+    "grove_warden.barkskin": 5,
+    "grove_warden.verdant_soul": 5,
+    "grove_warden.wild_growth": 10,
+    "grove_warden.tree_of_life": 5,
+    "grove_warden.forest_awakens": 1,
+    "grove_warden.heart_of_grove": 5,
+    "grove_warden.archdruid": 3
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "grove_warden",
+   "id": "grove_thorns",
+   "n": [
+    "Thornwarden",
+    "สายหนาม"
+   ],
+   "desc": [
+    "Roots, spores and treants.",
+    "ราก สปอร์ และต้นไม้มีชีวิต"
+   ],
+   "pros": [
+    "Control + summons",
+    "ควบคุมและอัญเชิญ"
+   ],
+   "cons": [
+    "Slow kills",
+    "ฆ่าช้า"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "thorn_whip",
+     3
+    ],
+    [
+     "entangle",
+     3
+    ],
+    [
+     "treant",
+     5
+    ],
+    [
+     "spore_cloud",
+     3
+    ],
+    [
+     "briar_wall",
+     3
+    ],
+    [
+     "ancient_treant",
+     2
+    ],
+    [
+     "strangle_vines",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "grove_warden.thorn_whip": 10,
+    "grove_warden.entangle": 5,
+    "grove_warden.spore_cloud": 10,
+    "grove_warden.briar_wall": 5,
+    "grove_warden.strangle_vines": 10,
+    "grove_warden.rejuvenate": 3,
+    "grove_warden.blossom": 4,
+    "grove_warden.wild_growth": 3,
+    "grove_warden.tree_of_life": 2,
+    "grove_warden.forest_awakens": 1,
+    "grove_warden.treant": 10,
+    "grove_warden.ancient_treant": 5,
+    "grove_warden.green_thumb": 2
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "soul_binder",
+   "id": "soul_legion",
+   "n": [
+    "Legion Master",
+    "สายกองทัพวิญญาณ"
+   ],
+   "desc": [
+    "Raise and empower spirits.",
+    "ปลุกและเสริมพลังวิญญาณ"
+   ],
+   "pros": [
+    "Safe summon damage",
+    "ดาเมจจากวิญญาณปลอดภัย"
+   ],
+   "cons": [
+    "Echo upkeep",
+    "ต้องสะสมเสียงสะท้อน"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "tome",
+   "seq": [
+    [
+     "soul_lash",
+     2
+    ],
+    [
+     "bind_spirit",
+     5
+    ],
+    [
+     "spirit_lore",
+     5
+    ],
+    [
+     "spirit_link",
+     2
+    ],
+    [
+     "legion",
+     3
+    ],
+    [
+     "necro_lore",
+     2
+    ],
+    [
+     "reaper",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "soul_binder.soul_lash": 10,
+    "soul_binder.bind_spirit": 10,
+    "soul_binder.spirit_lore": 10,
+    "soul_binder.spirit_link": 5,
+    "soul_binder.legion": 5,
+    "soul_binder.reaper": 5,
+    "soul_binder.haunt": 2,
+    "soul_binder.grave_chill": 3,
+    "soul_binder.soul_burst": 4,
+    "soul_binder.soul_storm": 3,
+    "soul_binder.requiem_of_souls": 1,
+    "soul_binder.ectoplasm": 5,
+    "soul_binder.necro_lore": 5,
+    "soul_binder.beyond_veil": 2
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "soul_binder",
+   "id": "soul_reaper",
+   "n": [
+    "Soulreaver",
+    "สายเก็บเกี่ยววิญญาณ"
+   ],
+   "desc": [
+    "Drain and detonate souls.",
+    "ดูดและระเบิดวิญญาณ"
+   ],
+   "pros": [
+    "Sustain + burst",
+    "อึดและระเบิดดาเมจ"
+   ],
+   "cons": [
+    "Needs kills to fuel",
+    "ต้องฆ่าเพื่อเติมเกจ"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "staff",
+   "seq": [
+    [
+     "soul_lash",
+     3
+    ],
+    [
+     "soul_siphon",
+     4
+    ],
+    [
+     "haunt",
+     2
+    ],
+    [
+     "grave_chill",
+     3
+    ],
+    [
+     "spirit_lore",
+     3
+    ],
+    [
+     "soul_burst",
+     4
+    ],
+    [
+     "ectoplasm",
+     3
+    ],
+    [
+     "soul_storm",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "soul_binder.soul_lash": 10,
+    "soul_binder.soul_siphon": 10,
+    "soul_binder.haunt": 5,
+    "soul_binder.grave_chill": 10,
+    "soul_binder.spirit_lore": 10,
+    "soul_binder.soul_burst": 10,
+    "soul_binder.ectoplasm": 5,
+    "soul_binder.soul_storm": 9,
+    "soul_binder.requiem_of_souls": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "iron_engineer",
+   "id": "engineer_turret",
+   "n": [
+    "Turret Master",
+    "สายป้อมปืน"
+   ],
+   "desc": [
+    "Deploy and power turrets.",
+    "ติดตั้งและจ่ายไฟป้อมปืน"
+   ],
+   "pros": [
+    "Safe sustained damage",
+    "ดาเมจต่อเนื่องปลอดภัย"
+   ],
+   "cons": [
+    "Needs setup time",
+    "ต้องใช้เวลาตั้ง"
+   ],
+   "stats": "DEX > INT",
+   "weapon": "gun",
+   "seq": [
+    [
+     "rivet_burst",
+     2
+    ],
+    [
+     "deploy_turret",
+     5
+    ],
+    [
+     "repair_drone",
+     2
+    ],
+    [
+     "tinkering",
+     5
+    ],
+    [
+     "overclock",
+     2
+    ],
+    [
+     "flame_turret",
+     3
+    ],
+    [
+     "barrier_field",
+     3
+    ],
+    [
+     "mech_suit",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "iron_engineer.rivet_burst": 10,
+    "iron_engineer.deploy_turret": 10,
+    "iron_engineer.repair_drone": 10,
+    "iron_engineer.tinkering": 10,
+    "iron_engineer.overclock": 5,
+    "iron_engineer.flame_turret": 5,
+    "iron_engineer.barrier_field": 5,
+    "iron_engineer.mech_suit": 5,
+    "iron_engineer.gatling": 4,
+    "iron_engineer.railgun": 3,
+    "iron_engineer.orbital_strike": 1,
+    "iron_engineer.reinforced_plate": 2
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "iron_engineer",
+   "id": "engineer_gunner",
+   "n": [
+    "Railgunner",
+    "สายเรลกัน"
+   ],
+   "desc": [
+    "Direct firepower and EMP control.",
+    "กำลังยิงตรงและควบคุมด้วย EMP"
+   ],
+   "pros": [
+    "Long-range burst",
+    "ระเบิดดาเมจระยะไกล"
+   ],
+   "cons": [
+    "Battery hungry",
+    "ใช้แบตมาก"
+   ],
+   "stats": "DEX > STR",
+   "weapon": "gun",
+   "seq": [
+    [
+     "rivet_burst",
+     5
+    ],
+    [
+     "shock_mine",
+     2
+    ],
+    [
+     "tesla_coil",
+     3
+    ],
+    [
+     "tinkering",
+     3
+    ],
+    [
+     "gatling",
+     4
+    ],
+    [
+     "emp",
+     2
+    ],
+    [
+     "precision_tools",
+     3
+    ],
+    [
+     "railgun",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "iron_engineer.rivet_burst": 10,
+    "iron_engineer.shock_mine": 5,
+    "iron_engineer.tesla_coil": 10,
+    "iron_engineer.tinkering": 10,
+    "iron_engineer.gatling": 10,
+    "iron_engineer.emp": 5,
+    "iron_engineer.railgun": 10,
+    "iron_engineer.orbital_strike": 1,
+    "iron_engineer.reinforced_plate": 5,
+    "iron_engineer.precision_tools": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "cannon_smith",
+   "id": "cannon_artillery",
+   "n": [
+    "Artillery",
+    "สายปืนใหญ่"
+   ],
+   "desc": [
+    "Long-range shell barrages.",
+    "ระดมยิงกระสุนระยะไกล"
+   ],
+   "pros": [
+    "Huge splash damage",
+    "ระเบิดวงกว้างมาก"
+   ],
+   "cons": [
+    "Slow, immobile",
+    "ช้าและเคลื่อนไหวน้อย"
+   ],
+   "stats": "STR > DEX",
+   "weapon": "gun",
+   "seq": [
+    [
+     "heavy_shell",
+     3
+    ],
+    [
+     "load_powder",
+     2
+    ],
+    [
+     "buckshot",
+     2
+    ],
+    [
+     "incendiary",
+     3
+    ],
+    [
+     "gunsmith",
+     5
+    ],
+    [
+     "mortar",
+     4
+    ],
+    [
+     "powder_keg",
+     2
+    ],
+    [
+     "big_bertha",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "cannon_smith.heavy_shell": 10,
+    "cannon_smith.load_powder": 5,
+    "cannon_smith.buckshot": 10,
+    "cannon_smith.incendiary": 10,
+    "cannon_smith.gunsmith": 10,
+    "cannon_smith.mortar": 10,
+    "cannon_smith.big_bertha": 10,
+    "cannon_smith.armageddon_shell": 1,
+    "cannon_smith.thick_barrel": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "cannon_smith",
+   "id": "cannon_fortress",
+   "n": [
+    "Fortress",
+    "สายป้อมปราการ"
+   ],
+   "desc": [
+    "Durable gunner with emplacements.",
+    "มือปืนอึดพร้อมฐานปืน"
+   ],
+   "pros": [
+    "Very durable",
+    "อึดมาก"
+   ],
+   "cons": [
+    "Lower burst",
+    "ระเบิดดาเมจน้อย"
+   ],
+   "stats": "VIT > STR",
+   "weapon": "gun",
+   "seq": [
+    [
+     "heavy_shell",
+     5
+    ],
+    [
+     "load_powder",
+     2
+    ],
+    [
+     "anchor_stance",
+     2
+    ],
+    [
+     "gunsmith",
+     3
+    ],
+    [
+     "thick_barrel",
+     3
+    ],
+    [
+     "incendiary",
+     3
+    ],
+    [
+     "mortar",
+     2
+    ],
+    [
+     "cannon_emplacement",
+     3
+    ],
+    [
+     "fortress_mode",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "cannon_smith.heavy_shell": 10,
+    "cannon_smith.load_powder": 5,
+    "cannon_smith.anchor_stance": 5,
+    "cannon_smith.gunsmith": 10,
+    "cannon_smith.thick_barrel": 5,
+    "cannon_smith.buckshot": 2,
+    "cannon_smith.incendiary": 10,
+    "cannon_smith.mortar": 10,
+    "cannon_smith.big_bertha": 3,
+    "cannon_smith.armageddon_shell": 1,
+    "cannon_smith.cannon_emplacement": 5,
+    "cannon_smith.fortress_mode": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "sky_dragoon",
+   "id": "dragoon_dive",
+   "n": [
+    "Dive Bomber",
+    "สายดิ่ง"
+   ],
+   "desc": [
+    "Jump, build Altitude, then dive.",
+    "กระโดดสะสมความสูงแล้วดิ่ง"
+   ],
+   "pros": [
+    "Big area bursts",
+    "ระเบิดดาเมจวงกว้าง"
+   ],
+   "cons": [
+    "Setup needed",
+    "ต้องเตรียมจังหวะ"
+   ],
+   "stats": "STR > DEX",
+   "weapon": "spear",
+   "seq": [
+    [
+     "high_jump",
+     4
+    ],
+    [
+     "dive",
+     5
+    ],
+    [
+     "lance_training",
+     3
+    ],
+    [
+     "double_jump",
+     2
+    ],
+    [
+     "meteor_dive",
+     4
+    ],
+    [
+     "storm_dive",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "sky_dragoon.spear_thrust": 2,
+    "sky_dragoon.high_jump": 5,
+    "sky_dragoon.dive": 10,
+    "sky_dragoon.lance_training": 10,
+    "sky_dragoon.double_jump": 5,
+    "sky_dragoon.meteor_dive": 10,
+    "sky_dragoon.storm_dive": 10,
+    "sky_dragoon.sweep_spear": 2,
+    "sky_dragoon.dragon_scale": 2,
+    "sky_dragoon.wyvern_roar": 3,
+    "sky_dragoon.dragon_heart": 2,
+    "sky_dragoon.heavens_fall": 1,
+    "sky_dragoon.wind_rider": 5,
+    "sky_dragoon.dragon_blood": 3
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "sky_dragoon",
+   "id": "dragoon_lancer",
+   "n": [
+    "Dragon Lancer",
+    "สายหอกมังกร"
+   ],
+   "desc": [
+    "Line attacks and sustain.",
+    "โจมตีแนวตรงและอึด"
+   ],
+   "pros": [
+    "Safe and consistent",
+    "มั่นคงปลอดภัย"
+   ],
+   "cons": [
+    "Less burst",
+    "ระเบิดดาเมจน้อยกว่า"
+   ],
+   "stats": "STR > VIT",
+   "weapon": "spear",
+   "seq": [
+    [
+     "spear_thrust",
+     3
+    ],
+    [
+     "high_jump",
+     2
+    ],
+    [
+     "dive",
+     2
+    ],
+    [
+     "skewer",
+     4
+    ],
+    [
+     "sky_lance",
+     4
+    ],
+    [
+     "dragon_scale",
+     2
+    ],
+    [
+     "wyvern_roar",
+     3
+    ],
+    [
+     "dragon_heart",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "sky_dragoon.spear_thrust": 5,
+    "sky_dragoon.high_jump": 5,
+    "sky_dragoon.dive": 10,
+    "sky_dragoon.skewer": 10,
+    "sky_dragoon.sky_lance": 10,
+    "sky_dragoon.double_jump": 2,
+    "sky_dragoon.meteor_dive": 4,
+    "sky_dragoon.storm_dive": 3,
+    "sky_dragoon.sweep_spear": 2,
+    "sky_dragoon.dragon_scale": 5,
+    "sky_dragoon.wyvern_roar": 5,
+    "sky_dragoon.dragon_heart": 5,
+    "sky_dragoon.heavens_fall": 1,
+    "sky_dragoon.lance_training": 3
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "chrono_adept",
+   "id": "chrono_dps",
+   "n": [
+    "Paradox Mage",
+    "สายปฏิทรรศน์"
+   ],
+   "desc": [
+    "Double-hit spells and tempo resets.",
+    "เวทโดนสองครั้งและรีเซ็ตจังหวะ"
+   ],
+   "pros": [
+    "Very high spell uptime",
+    "ใช้สกิลถี่มาก"
+   ],
+   "cons": [
+    "Fragile",
+    "บอบบาง"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "tome",
+   "seq": [
+    [
+     "time_bolt",
+     3
+    ],
+    [
+     "age",
+     3
+    ],
+    [
+     "clockwork_mind",
+     5
+    ],
+    [
+     "time_warp",
+     3
+    ],
+    [
+     "stasis",
+     2
+    ],
+    [
+     "blink",
+     2
+    ],
+    [
+     "rewind",
+     2
+    ],
+    [
+     "paradox",
+     5
+    ],
+    [
+     "epoch_collapse",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "chrono_adept.time_bolt": 10,
+    "chrono_adept.age": 10,
+    "chrono_adept.clockwork_mind": 10,
+    "chrono_adept.time_warp": 10,
+    "chrono_adept.stasis": 5,
+    "chrono_adept.blink": 5,
+    "chrono_adept.rewind": 5,
+    "chrono_adept.paradox": 8,
+    "chrono_adept.epoch_collapse": 3,
+    "chrono_adept.time_stop": 3,
+    "chrono_adept.end_of_time": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "chrono_adept",
+   "id": "chrono_support",
+   "n": [
+    "Timekeeper",
+    "สายผู้รักษาเวลา"
+   ],
+   "desc": [
+    "Haste the party and stop enemies.",
+    "เร่งปาร์ตี้และหยุดศัตรู"
+   ],
+   "pros": [
+    "Great control + haste",
+    "ควบคุมและเร่งความเร็วดี"
+   ],
+   "cons": [
+    "Lower damage",
+    "ดาเมจน้อย"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "staff",
+   "seq": [
+    [
+     "time_bolt",
+     2
+    ],
+    [
+     "quicken",
+     3
+    ],
+    [
+     "stasis",
+     4
+    ],
+    [
+     "clockwork_mind",
+     3
+    ],
+    [
+     "second_hand",
+     3
+    ],
+    [
+     "blink",
+     2
+    ],
+    [
+     "rewind",
+     2
+    ],
+    [
+     "chrono_shield",
+     3
+    ],
+    [
+     "haste_field",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "chrono_adept.time_bolt": 10,
+    "chrono_adept.quicken": 5,
+    "chrono_adept.stasis": 5,
+    "chrono_adept.clockwork_mind": 10,
+    "chrono_adept.second_hand": 5,
+    "chrono_adept.blink": 5,
+    "chrono_adept.rewind": 5,
+    "chrono_adept.chrono_shield": 5,
+    "chrono_adept.haste_field": 3,
+    "chrono_adept.age": 2,
+    "chrono_adept.time_warp": 3,
+    "chrono_adept.paradox": 5,
+    "chrono_adept.epoch_collapse": 3,
+    "chrono_adept.time_stop": 3,
+    "chrono_adept.end_of_time": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "fortune_dealer",
+   "id": "dealer_cards",
+   "n": [
+    "Card Sharp",
+    "สายไพ่"
+   ],
+   "desc": [
+    "Multi-hit cards and royal flushes.",
+    "ไพ่ตีหลายครั้งและรอยัลฟลัช"
+   ],
+   "pros": [
+    "Consistent damage",
+    "ดาเมจสม่ำเสมอ"
+   ],
+   "cons": [
+    "Squishy",
+    "บอบบาง"
+   ],
+   "stats": "DEX > LUK",
+   "weapon": "cards",
+   "seq": [
+    [
+     "card_toss",
+     4
+    ],
+    [
+     "stacked_deck",
+     3
+    ],
+    [
+     "lucky_streak",
+     5
+    ],
+    [
+     "wild_card",
+     3
+    ],
+    [
+     "card_shark",
+     3
+    ],
+    [
+     "royal_flush",
+     4
+    ],
+    [
+     "high_roller",
+     2
+    ],
+    [
+     "jackpot",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "fortune_dealer.card_toss": 10,
+    "fortune_dealer.stacked_deck": 10,
+    "fortune_dealer.lucky_streak": 10,
+    "fortune_dealer.wild_card": 10,
+    "fortune_dealer.card_shark": 5,
+    "fortune_dealer.royal_flush": 10,
+    "fortune_dealer.high_roller": 5,
+    "fortune_dealer.jackpot": 9,
+    "fortune_dealer.fates_hand": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "fortune_dealer",
+   "id": "dealer_dice",
+   "n": [
+    "High Stakes",
+    "สายเดิมพันสูง"
+   ],
+   "desc": [
+    "Dice, rerolls and all-in gambles.",
+    "ลูกเต๋า ทอยใหม่ และเดิมพันหมดตัว"
+   ],
+   "pros": [
+    "Huge spikes",
+    "ดาเมจพุ่งสูงได้"
+   ],
+   "cons": [
+    "High variance",
+    "ผลแกว่งมาก"
+   ],
+   "stats": "LUK > DEX",
+   "weapon": "cards",
+   "seq": [
+    [
+     "roll_dice",
+     5
+    ],
+    [
+     "reroll",
+     3
+    ],
+    [
+     "snake_eyes",
+     2
+    ],
+    [
+     "lucky_streak",
+     3
+    ],
+    [
+     "house_edge",
+     2
+    ],
+    [
+     "loaded_dice",
+     3
+    ],
+    [
+     "fold",
+     2
+    ],
+    [
+     "all_in",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "fortune_dealer.card_toss": 2,
+    "fortune_dealer.roll_dice": 10,
+    "fortune_dealer.reroll": 5,
+    "fortune_dealer.snake_eyes": 5,
+    "fortune_dealer.lucky_streak": 10,
+    "fortune_dealer.house_edge": 5,
+    "fortune_dealer.loaded_dice": 10,
+    "fortune_dealer.fold": 5,
+    "fortune_dealer.all_in": 5,
+    "fortune_dealer.stacked_deck": 2,
+    "fortune_dealer.wild_card": 3,
+    "fortune_dealer.royal_flush": 4,
+    "fortune_dealer.jackpot": 3,
+    "fortune_dealer.fates_hand": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "melody_bard",
+   "id": "bard_support",
+   "n": [
+    "Troubadour",
+    "สายบัฟปาร์ตี้"
+   ],
+   "desc": [
+    "Songs that make the party stronger.",
+    "เพลงเสริมพลังปาร์ตี้"
+   ],
+   "pros": [
+    "Top-tier party buffs",
+    "บัฟปาร์ตี้ระดับสูง"
+   ],
+   "cons": [
+    "Weak alone",
+    "เล่นเดี่ยวอ่อน"
+   ],
+   "stats": "INT > VIT",
+   "weapon": "lute",
+   "seq": [
+    [
+     "sharp_note",
+     2
+    ],
+    [
+     "war_ballad",
+     3
+    ],
+    [
+     "healing_hymn",
+     4
+    ],
+    [
+     "allegro",
+     3
+    ],
+    [
+     "perfect_pitch",
+     3
+    ],
+    [
+     "rhythm_heart",
+     3
+    ],
+    [
+     "serenade",
+     3
+    ],
+    [
+     "anthem",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "melody_bard.sharp_note": 10,
+    "melody_bard.war_ballad": 5,
+    "melody_bard.healing_hymn": 10,
+    "melody_bard.allegro": 5,
+    "melody_bard.perfect_pitch": 10,
+    "melody_bard.rhythm_heart": 5,
+    "melody_bard.serenade": 5,
+    "melody_bard.anthem": 5,
+    "melody_bard.lullaby": 2,
+    "melody_bard.dissonance": 3,
+    "melody_bard.finale": 5,
+    "melody_bard.symphony": 3,
+    "melody_bard.world_song": 1,
+    "melody_bard.virtuoso": 1
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  },
+  {
+   "classId": "melody_bard",
+   "id": "bard_sonic",
+   "n": [
+    "Sonic Virtuoso",
+    "สายคลื่นเสียง"
+   ],
+   "desc": [
+    "Store notes and blast them as finales.",
+    "สะสมโน้ตแล้วระเบิดเป็นท่าปิด"
+   ],
+   "pros": [
+    "Good AoE damage",
+    "ดาเมจวงกว้างดี"
+   ],
+   "cons": [
+    "Note management",
+    "ต้องจัดการโน้ต"
+   ],
+   "stats": "INT > DEX",
+   "weapon": "lute",
+   "seq": [
+    [
+     "sharp_note",
+     4
+    ],
+    [
+     "lullaby",
+     2
+    ],
+    [
+     "dissonance",
+     3
+    ],
+    [
+     "finale",
+     5
+    ],
+    [
+     "virtuoso",
+     3
+    ],
+    [
+     "sonic_boom",
+     4
+    ],
+    [
+     "symphony",
+     3
+    ]
+   ],
+   "finalDraftAtJob70": {
+    "melody_bard.sharp_note": 10,
+    "melody_bard.lullaby": 5,
+    "melody_bard.dissonance": 10,
+    "melody_bard.finale": 10,
+    "melody_bard.sonic_boom": 10,
+    "melody_bard.symphony": 10,
+    "melody_bard.war_ballad": 1,
+    "melody_bard.healing_hymn": 2,
+    "melody_bard.allegro": 2,
+    "melody_bard.serenade": 3,
+    "melody_bard.anthem": 2,
+    "melody_bard.world_song": 1,
+    "melody_bard.perfect_pitch": 4
+   },
+   "provenance": "CUSTOM_DESIGN/NEEDS_BALANCING"
+  }
+ ]
+}

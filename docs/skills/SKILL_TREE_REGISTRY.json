@@ -1,0 +1,7797 @@
+{
+ "generated": "scripts/gen-skill-docs.ts",
+ "rules": {
+  "stages": 3,
+  "ascensionLevels": [
+   40,
+   80
+  ],
+  "ascensionProvenance": "CUSTOM_DESIGN (V4 fallback 40/80)",
+  "skillPoints": "1 per job level (job 1 = 1 point, spent on the starter skill); base level gives stat points only",
+  "jobLevelCap": 70,
+  "prerequisiteModes": [
+   "AND",
+   "OR"
+  ]
+ },
+ "trees": [
+  {
+   "classId": "vanguard",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "vanguard.shield_bash",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.provoke",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.iron_skin",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.guard_stance",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "shield_bash",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.counter_edge",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 8,
+       "pre": [
+        [
+         "provoke",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.bulwark",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "iron_skin",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.cover",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "guard_stance",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.earth_slam",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "counter_edge",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "vanguard.stalwart_heart",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 25,
+       "pre": [
+        [
+         "bulwark",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.shield_wall",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "cover",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.retaliate",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 30,
+       "pre": [
+        [
+         "counter_edge",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.fault_line",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 34,
+       "pre": [
+        [
+         "earth_slam",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.challenge",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 38,
+       "pre": [
+        [
+         "provoke",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.unbroken",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 3,
+       "jobReq": 42,
+       "pre": [
+        [
+         "retaliate",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "vanguard.aegis_of_earth",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 48,
+       "pre": [
+        [
+         "shield_wall",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.mountain_breaker",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 52,
+       "pre": [
+        [
+         "fault_line",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.guardian_oath",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 56,
+       "pre": [
+        [
+         "unbroken",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "vanguard.last_bastion",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "aegis_of_earth",
+         2
+        ],
+        [
+         "mountain_breaker",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "blade_sentinel",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "blade_sentinel.double_cut",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.lunge",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.blade_mastery",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.rend",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "double_cut",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.parry",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "lunge",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.keen_edge",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 9,
+       "pre": [
+        [
+         "blade_mastery",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.whirlwind",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 12,
+       "pre": [
+        [
+         "rend",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.finishing_strike",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 16,
+       "pre": [
+        [
+         "rend",
+         3
+        ],
+        [
+         "parry",
+         1
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "blade_sentinel.crossing_blades",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "whirlwind",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.battle_trance",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "keen_edge",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.armor_split",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "finishing_strike",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.flowing_steel",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 34,
+       "pre": [
+        [
+         "crossing_blades",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.thousand_cuts",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 40,
+       "pre": [
+        [
+         "crossing_blades",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.sentinel_eye",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 44,
+       "pre": [
+        [
+         "armor_split",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "blade_sentinel.iaido",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 50,
+       "pre": [
+        [
+         "finishing_strike",
+         6
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.blade_storm",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 54,
+       "pre": [
+        [
+         "thousand_cuts",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.master_swordsman",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "sentinel_eye",
+         3
+        ],
+        [
+         "flowing_steel",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "blade_sentinel.final_verdict",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "iaido",
+         3
+        ],
+        [
+         "blade_storm",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "rune_knight",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "rune_knight.rune_slash",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.sigil_bolt",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.runic_study",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.enchant_blade",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "rune_slash",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.ward_rune",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "sigil_bolt",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.rune_resonance",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 9,
+       "pre": [
+        [
+         "runic_study",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.rune_burst",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 13,
+       "pre": [
+        [
+         "enchant_blade",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.binding_glyph",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 17,
+       "pre": [
+        [
+         "ward_rune",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "rune_knight.spellblade",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "rune_burst",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.triple_inscription",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 29,
+       "pre": [
+        [
+         "rune_resonance",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.arcane_armor",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 32,
+       "pre": [
+        [
+         "ward_rune",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.runic_lance",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 36,
+       "pre": [
+        [
+         "spellblade",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.rune_drain",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 40,
+       "pre": [
+        [
+         "binding_glyph",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.glyph_mastery",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 44,
+       "pre": [
+        [
+         "arcane_armor",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "rune_knight.runic_cataclysm",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "runic_lance",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.rune_aegis",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "arcane_armor",
+         3
+        ],
+        [
+         "ward_rune",
+         4
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "rune_knight.runelord",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "glyph_mastery",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "rune_knight.world_rune",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "runic_cataclysm",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "wild_archer",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "wild_archer.quick_shot",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.aimed_shot",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.archery",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.snare_trap",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "quick_shot",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.pinning_shot",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "aimed_shot",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.hunters_patience",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 9,
+       "pre": [
+        [
+         "archery",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.arrow_rain",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 13,
+       "pre": [
+        [
+         "snare_trap",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.piercing_arrow",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 17,
+       "pre": [
+        [
+         "pinning_shot",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "wild_archer.explosive_trap",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "snare_trap",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.eagle_eye",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "hunters_patience",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.steady_hand",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "archery",
+         6
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.heart_seeker",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "piercing_arrow",
+         3
+        ],
+        [
+         "eagle_eye",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.barrage",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 39,
+       "pre": [
+        [
+         "arrow_rain",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.trapper",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "explosive_trap",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "wild_archer.gale_arrow",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "heart_seeker",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.hunters_mark",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "trapper",
+         2
+        ],
+        [
+         "steady_hand",
+         3
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "wild_archer.deadeye",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "steady_hand",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "wild_archer.thousand_arrows",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "gale_arrow",
+         3
+        ],
+        [
+         "barrage",
+         5
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "falcon_scout",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "falcon_scout.falcon_strike",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.scout_eye",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.falconry",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.talon_rake",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "falcon_strike",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.feather_volley",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "scout_eye",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.keen_bond",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 9,
+       "pre": [
+        [
+         "falconry",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.decoy",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 13,
+       "pre": [
+        [
+         "talon_rake",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.tracking_shot",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 17,
+       "pre": [
+        [
+         "feather_volley",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "falcon_scout.hawk_dive",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "falcon_strike",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.wind_call",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "keen_bond",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.sky_hunter",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "falconry",
+         6
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.twin_talons",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "hawk_dive",
+         2
+        ],
+        [
+         "talon_rake",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.reconnaissance",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "tracking_shot",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.aerie",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "sky_hunter",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "falcon_scout.storm_falcon",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "twin_talons",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.falcon_guard",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "wind_call",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.one_with_sky",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "aerie",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "falcon_scout.raptor_king",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "storm_falcon",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "shadow_rogue",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "shadow_rogue.backstab",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.envenom",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.dagger_mastery",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.eviscerate",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "backstab",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.vanish",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 8,
+       "pre": [
+        [
+         "envenom",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.lethality",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "dagger_mastery",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.fan_of_knives",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "envenom",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.kidney_shot",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "eviscerate",
+         2
+        ],
+        [
+         "vanish",
+         1
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "shadow_rogue.shadowstep",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 25,
+       "pre": [
+        [
+         "vanish",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.deadly_poison",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "envenom",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.garrote",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "kidney_shot",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.rupture",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "eviscerate",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.smoke_bomb",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "fan_of_knives",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.assassins_creed",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "lethality",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "shadow_rogue.shadow_dance",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 50,
+       "pre": [
+        [
+         "shadowstep",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.death_mark",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 54,
+       "pre": [
+        [
+         "rupture",
+         4
+        ],
+        [
+         "garrote",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.nightblade",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "assassins_creed",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "shadow_rogue.thousand_shadows",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "death_mark",
+         3
+        ],
+        [
+         "shadow_dance",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "phantom_dancer",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "phantom_dancer.pirouette",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.mirage_step",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.grace_of_motion",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.ribbon_lash",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "pirouette",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.phantom_double",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 8,
+       "pre": [
+        [
+         "mirage_step",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.tempo_sense",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "grace_of_motion",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.veil_dance",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "ribbon_lash",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.crescendo_cut",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "phantom_double",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "phantom_dancer.afterimage_assault",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "crescendo_cut",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.phantom_veil",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "veil_dance",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.light_feet",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "tempo_sense",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.tango_of_blades",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "afterimage_assault",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.swan_lake",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "phantom_veil",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.encore",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "light_feet",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "phantom_dancer.grand_finale",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "tango_of_blades",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.mirror_hall",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "swan_lake",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.prima",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "encore",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "phantom_dancer.eternal_waltz",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "grand_finale",
+         3
+        ],
+        [
+         "mirror_hall",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "dawn_priest",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "dawn_priest.heal",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.smite",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.faith",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.blessing",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "heal",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.purify",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "heal",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.devotion",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "faith",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.renew",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "blessing",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.holy_ward",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "purify",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "dawn_priest.greater_heal",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "heal",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.judgement",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "smite",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.sanctity",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "devotion",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.resurrection",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 3,
+       "jobReq": 35,
+       "pre": [
+        [
+         "greater_heal",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.holy_lance",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 39,
+       "pre": [
+        [
+         "judgement",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.benediction",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "sanctity",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "dawn_priest.sanctuary",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "greater_heal",
+         5
+        ],
+        [
+         "holy_ward",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.divine_wrath",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 54,
+       "pre": [
+        [
+         "holy_lance",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.saint",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "benediction",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "dawn_priest.miracle",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "sanctuary",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "spirit_monk",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "spirit_monk.triple_palm",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.breathing",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.iron_body",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.ki_blast",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "triple_palm",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.sweeping_kick",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "triple_palm",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.inner_peace",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "iron_body",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.hundred_fists",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "ki_blast",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.chakra_heal",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "breathing",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "spirit_monk.dragon_palm",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "hundred_fists",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.monk_meditation",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "inner_peace",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.flowing_water",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "iron_body",
+         6
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.pressure_point",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "dragon_palm",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.spirit_wave",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 39,
+       "pre": [
+        [
+         "ki_blast",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.enlightened",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "flowing_water",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "spirit_monk.asura_strike",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "dragon_palm",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.golden_bell",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "monk_meditation",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.transcendence",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "enlightened",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "spirit_monk.heavenly_fist",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "asura_strike",
+         3
+        ],
+        [
+         "spirit_wave",
+         4
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "moon_oracle",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "moon_oracle.moonbeam",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.omen",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.stargazing",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.crescent_blade",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "moonbeam",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.sleepsong",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 8,
+       "pre": [
+        [
+         "omen",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.tidal_sense",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "stargazing",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.prophecy",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "omen",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.eclipse_orb",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "crescent_blade",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "moon_oracle.full_moon",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 25,
+       "pre": [
+        [
+         "prophecy",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.starfall",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "eclipse_orb",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.astral_insight",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "tidal_sense",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.moon_prison",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "sleepsong",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.fate_weave",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "full_moon",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.oracle_wisdom",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "astral_insight",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "moon_oracle.lunar_lance",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "starfall",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.destiny",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "fate_weave",
+         3
+        ],
+        [
+         "moon_prison",
+         3
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "moon_oracle.moon_goddess",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "oracle_wisdom",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "moon_oracle.blood_moon",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "lunar_lance",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "flame_weaver",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "flame_weaver.fire_bolt",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.fire_wall",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.pyromancy",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.fireball",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "fire_bolt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.vent_heat",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "fire_wall",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.kindling",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "pyromancy",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.flame_lash",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "fireball",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.ember_shield",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "vent_heat",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "flame_weaver.inferno",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "flame_lash",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.combustion",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "fireball",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.heat_tolerance",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "kindling",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.meteor",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "inferno",
+         2
+        ],
+        [
+         "combustion",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.phoenix_feather",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "ember_shield",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.firestorm_mind",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "heat_tolerance",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "flame_weaver.flame_pillar",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "meteor",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.phoenix_rebirth",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 54,
+       "pre": [
+        [
+         "phoenix_feather",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.archmage_fire",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "firestorm_mind",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "flame_weaver.phoenix_wrath",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "flame_pillar",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "frost_sage",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "frost_sage.frost_bolt",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.frost_nova",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.cryomancy",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.ice_lance",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "frost_bolt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.blizzard",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 8,
+       "pre": [
+        [
+         "frost_nova",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.cold_blood",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "cryomancy",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.ice_barrier",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "frost_nova",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.glacial_spike",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "ice_lance",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "frost_sage.frozen_orb",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "blizzard",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.deep_freeze",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "glacial_spike",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.winter_heart",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "cold_blood",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.shatter",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "deep_freeze",
+         2
+        ],
+        [
+         "ice_lance",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.permafrost",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "ice_barrier",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.crystal_mind",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "winter_heart",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "frost_sage.comet_of_ice",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "frozen_orb",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.ice_tomb",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "permafrost",
+         3
+        ],
+        [
+         "deep_freeze",
+         3
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "frost_sage.glacier_lord",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "crystal_mind",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "frost_sage.absolute_zero",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "comet_of_ice",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "storm_caller",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "storm_caller.lightning_bolt",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.chain_lightning",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.conductivity",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.thunderclap",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "lightning_bolt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.static_field",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "chain_lightning",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.overcharge",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "conductivity",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.ball_lightning",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "thunderclap",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.grounding",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "static_field",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "storm_caller.discharge",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "ball_lightning",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.tempest_call",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "grounding",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.storm_heart",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "overcharge",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.forked_lightning",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "chain_lightning",
+         5
+        ],
+        [
+         "discharge",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.eye_of_storm",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "tempest_call",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.live_wire",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "storm_heart",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "storm_caller.thunder_god",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "forked_lightning",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.storm_shield",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "eye_of_storm",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.stormlord",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "live_wire",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "storm_caller.judgment_bolt",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "thunder_god",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "earth_keeper",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "earth_keeper.stone_spike",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.stone_skin",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.geomancy",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.earth_wall",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "stone_skin",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.rockfall",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "stone_spike",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.mountain_will",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "geomancy",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.tremor",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "rockfall",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.gaia_blessing",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "earth_wall",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "earth_keeper.earthquake",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "tremor",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.golem_fist",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "stone_spike",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.bedrock_core",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "mountain_will",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.stone_prison",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "earth_wall",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.living_mountain",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "gaia_blessing",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.terra_mind",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "bedrock_core",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "earth_keeper.fissure",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "earthquake",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.titan_guard",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "living_mountain",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.world_pillar",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "terra_mind",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "earth_keeper.continental_drift",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "fissure",
+         3
+        ],
+        [
+         "titan_guard",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "tide_witch",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "tide_witch.water_jet",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.tidal_mend",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.hydromancy",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.whirlpool",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "water_jet",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.bubble_shield",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "tidal_mend",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.ebb_flow",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "hydromancy",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.tidal_wave",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "whirlpool",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.drown",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "bubble_shield",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "tide_witch.maelstrom",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "tidal_wave",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.spring_rain",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "tidal_mend",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.sea_witch",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "ebb_flow",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.riptide",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "drown",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.pearl_ward",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "bubble_shield",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.deep_current",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "sea_witch",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "tide_witch.leviathan",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "maelstrom",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.ocean_grace",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 54,
+       "pre": [
+        [
+         "spring_rain",
+         4
+        ],
+        [
+         "pearl_ward",
+         2
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "tide_witch.tide_queen",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "deep_current",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "tide_witch.great_flood",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "leviathan",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "void_scholar",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "void_scholar.void_bolt",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.curse_of_frailty",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.forbidden_lore",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.rift",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "void_bolt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.siphon",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "curse_of_frailty",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.abyssal_study",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "forbidden_lore",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.gravity_well",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "rift",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.hex_of_silence",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "siphon",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "void_scholar.null_beam",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "rift",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.dark_pact",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "abyssal_study",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.entropic_mind",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "abyssal_study",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.black_hole",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "gravity_well",
+         3
+        ],
+        [
+         "null_beam",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.soul_rot",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "hex_of_silence",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.void_ward",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "entropic_mind",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "void_scholar.annihilation",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "black_hole",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.dimensional_shift",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "void_ward",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.void_sage",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "entropic_mind",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "void_scholar.end_of_all",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "annihilation",
+         3
+        ],
+        [
+         "dimensional_shift",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "sun_herald",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "sun_herald.solar_ray",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.warm_light",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.solar_faith",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.flare",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "solar_ray",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.sunspear",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "solar_ray",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.daybreak_vow",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "solar_faith",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.halo",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "warm_light",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.purge",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "warm_light",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "sun_herald.solar_flare",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "sunspear",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.sanctuary_sun",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "purge",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.zenith",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "daybreak_vow",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.judgement",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "solar_flare",
+         2
+        ],
+        [
+         "flare",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.dawn_shield",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "halo",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.sunfire_soul",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "zenith",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "sun_herald.helios_beam",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "judgement",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.resurrection_dawn",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "sanctuary_sun",
+         4
+        ],
+        [
+         "dawn_shield",
+         3
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "sun_herald.sun_avatar",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "sunfire_soul",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sun_herald.supernova",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "helios_beam",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "beast_tamer",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "beast_tamer.call_wolf",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.lash",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.pack_bond",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.sic_em",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "call_wolf",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.beast_roar",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "lash",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.wild_heart",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "pack_bond",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.call_bear",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "call_wolf",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.mend_beast",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "beast_roar",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "beast_tamer.pack_hunt",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "sic_em",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.feral_command",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "call_bear",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.alpha",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "wild_heart",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.call_hawk",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "pack_hunt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.stampede",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 39,
+       "pre": [
+        [
+         "feral_command",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.beastlord_skin",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "alpha",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "beast_tamer.call_behemoth",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 50,
+       "pre": [
+        [
+         "call_hawk",
+         3
+        ],
+        [
+         "call_bear",
+         4
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "beast_tamer.savage_bond",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 54,
+       "pre": [
+        [
+         "stampede",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.beast_king",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "beastlord_skin",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "beast_tamer.wild_hunt",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "savage_bond",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "grove_warden",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "grove_warden.thorn_whip",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.rejuvenate",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.green_thumb",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.entangle",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "thorn_whip",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.treant",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "rejuvenate",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.deep_roots",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "green_thumb",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.spore_cloud",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "entangle",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.blossom",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "rejuvenate",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "grove_warden.briar_wall",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 25,
+       "pre": [
+        [
+         "spore_cloud",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.barkskin",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "blossom",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.verdant_soul",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "deep_roots",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.ancient_treant",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "treant",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.wild_growth",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 39,
+       "pre": [
+        [
+         "blossom",
+         4
+        ],
+        [
+         "barkskin",
+         2
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "grove_warden.heart_of_grove",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "verdant_soul",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "grove_warden.strangle_vines",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "briar_wall",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.tree_of_life",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "wild_growth",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.archdruid",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "heart_of_grove",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "grove_warden.forest_awakens",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "tree_of_life",
+         2
+        ],
+        [
+         "strangle_vines",
+         3
+        ]
+       ],
+       "mode": "OR"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "soul_binder",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "soul_binder.soul_lash",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.bind_spirit",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.spirit_lore",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.haunt",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "soul_lash",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.soul_siphon",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "soul_lash",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.ectoplasm",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "spirit_lore",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.spirit_link",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "bind_spirit",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.grave_chill",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "haunt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "soul_binder.soul_burst",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "grave_chill",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.legion",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "spirit_link",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.necro_lore",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "ectoplasm",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.banshee_wail",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "haunt",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.soul_cage",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "soul_burst",
+         2
+        ],
+        [
+         "legion",
+         2
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "soul_binder.beyond_veil",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "necro_lore",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "soul_binder.reaper",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 50,
+       "pre": [
+        [
+         "legion",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.soul_storm",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 54,
+       "pre": [
+        [
+         "soul_burst",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.soul_lord",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "beyond_veil",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "soul_binder.requiem_of_souls",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "soul_storm",
+         3
+        ],
+        [
+         "reaper",
+         2
+        ]
+       ],
+       "mode": "OR"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "iron_engineer",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "iron_engineer.rivet_burst",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.deploy_turret",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.tinkering",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.shock_mine",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "rivet_burst",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.repair_drone",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "deploy_turret",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.reinforced_plate",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "tinkering",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.tesla_coil",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "shock_mine",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.overclock",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "repair_drone",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "iron_engineer.gatling",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "rivet_burst",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.flame_turret",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "deploy_turret",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.precision_tools",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "reinforced_plate",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.emp",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "tesla_coil",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.barrier_field",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "overclock",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.master_mechanic",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "precision_tools",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "iron_engineer.railgun",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "gatling",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.mech_suit",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "barrier_field",
+         3
+        ],
+        [
+         "flame_turret",
+         3
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "iron_engineer.grand_inventor",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "master_mechanic",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "iron_engineer.orbital_strike",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "railgun",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "cannon_smith",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "cannon_smith.heavy_shell",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.load_powder",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.gunsmith",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.buckshot",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "heavy_shell",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.anchor_stance",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "load_powder",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.thick_barrel",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "gunsmith",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.incendiary",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "buckshot",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.recoil_jump",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "anchor_stance",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "cannon_smith.mortar",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "incendiary",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.armor_piercer",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "heavy_shell",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.powder_keg",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "thick_barrel",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.cannon_emplacement",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "mortar",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.shockwave_shell",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "recoil_jump",
+         2
+        ],
+        [
+         "armor_piercer",
+         2
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "cannon_smith.siege_veteran",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "powder_keg",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "cannon_smith.big_bertha",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "mortar",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.fortress_mode",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "cannon_emplacement",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.master_gunner",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "siege_veteran",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "cannon_smith.armageddon_shell",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "big_bertha",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "sky_dragoon",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "sky_dragoon.spear_thrust",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.high_jump",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.lance_training",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.dive",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 5,
+       "pre": [
+        [
+         "high_jump",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.sweep_spear",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 7,
+       "pre": [
+        [
+         "spear_thrust",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.wind_rider",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "lance_training",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.skewer",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "dive",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.dragon_scale",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "sweep_spear",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "sky_dragoon.sky_lance",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "skewer",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.double_jump",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "high_jump",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.dragon_blood",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 32,
+       "pre": [
+        [
+         "wind_rider",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.meteor_dive",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 36,
+       "pre": [
+        [
+         "dive",
+         5
+        ],
+        [
+         "double_jump",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.wyvern_roar",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 40,
+       "pre": [
+        [
+         "dragon_scale",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.aerial_mastery",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 44,
+       "pre": [
+        [
+         "dragon_blood",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "sky_dragoon.storm_dive",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "meteor_dive",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.dragon_heart",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "wyvern_roar",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.sky_sovereign",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "aerial_mastery",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "sky_dragoon.heavens_fall",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "storm_dive",
+         3
+        ],
+        [
+         "dragon_heart",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "chrono_adept",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "chrono_adept.time_bolt",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.quicken",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.clockwork_mind",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.stasis",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "time_bolt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.age",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "time_bolt",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.second_hand",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "clockwork_mind",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.blink",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "stasis",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.time_warp",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "age",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "chrono_adept.rewind",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 25,
+       "pre": [
+        [
+         "blink",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.paradox",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "time_warp",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.temporal_flow",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "second_hand",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.chrono_shield",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 35,
+       "pre": [
+        [
+         "rewind",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.time_stop",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "stasis",
+         4
+        ],
+        [
+         "paradox",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.timeless",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "temporal_flow",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "chrono_adept.epoch_collapse",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "paradox",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.haste_field",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "chrono_shield",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.timelord",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "timeless",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "chrono_adept.end_of_time",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "epoch_collapse",
+         3
+        ],
+        [
+         "time_stop",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "fortune_dealer",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "fortune_dealer.card_toss",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.roll_dice",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.lucky_streak",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.reroll",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "roll_dice",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.stacked_deck",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "card_toss",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.card_shark",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "lucky_streak",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.snake_eyes",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 14,
+       "pre": [
+        [
+         "reroll",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.wild_card",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 18,
+       "pre": [
+        [
+         "stacked_deck",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "fortune_dealer.house_edge",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 25,
+       "pre": [
+        [
+         "snake_eyes",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.royal_flush",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 28,
+       "pre": [
+        [
+         "wild_card",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.high_roller",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "card_shark",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.loaded_dice",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "roll_dice",
+         5
+        ],
+        [
+         "reroll",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.fold",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "house_edge",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.gamblers_nerve",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "high_roller",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "fortune_dealer.jackpot",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "royal_flush",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.all_in",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "loaded_dice",
+         3
+        ],
+        [
+         "fold",
+         2
+        ]
+       ],
+       "mode": "OR"
+      },
+      {
+       "id": "fortune_dealer.lady_luck",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "gamblers_nerve",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "fortune_dealer.fates_hand",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "jackpot",
+         3
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "classId": "melody_bard",
+   "stages": [
+    {
+     "ascension": 1,
+     "nodes": [
+      {
+       "id": "melody_bard.sharp_note",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 1,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.war_ballad",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 2,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.perfect_pitch",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 10,
+       "jobReq": 3,
+       "pre": [],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.lullaby",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 5,
+       "jobReq": 5,
+       "pre": [
+        [
+         "sharp_note",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.healing_hymn",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 10,
+       "jobReq": 7,
+       "pre": [
+        [
+         "war_ballad",
+         1
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.rhythm_heart",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 10,
+       "pre": [
+        [
+         "perfect_pitch",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.dissonance",
+       "cell": [
+        2,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 14,
+       "pre": [
+        [
+         "lullaby",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.allegro",
+       "cell": [
+        2,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 18,
+       "pre": [
+        [
+         "healing_hymn",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 2,
+     "nodes": [
+      {
+       "id": "melody_bard.finale",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 25,
+       "pre": [
+        [
+         "dissonance",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.serenade",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 28,
+       "pre": [
+        [
+         "allegro",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.virtuoso",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 31,
+       "pre": [
+        [
+         "rhythm_heart",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.sonic_boom",
+       "cell": [
+        1,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 35,
+       "pre": [
+        [
+         "finale",
+         2
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.requiem",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 39,
+       "pre": [
+        [
+         "lullaby",
+         4
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.encore_echo",
+       "cell": [
+        1,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 43,
+       "pre": [
+        [
+         "virtuoso",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    },
+    {
+     "ascension": 3,
+     "nodes": [
+      {
+       "id": "melody_bard.symphony",
+       "cell": [
+        0,
+        0
+       ],
+       "maxRank": 10,
+       "jobReq": 50,
+       "pre": [
+        [
+         "finale",
+         5
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.anthem",
+       "cell": [
+        0,
+        1
+       ],
+       "maxRank": 5,
+       "jobReq": 54,
+       "pre": [
+        [
+         "serenade",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.maestro",
+       "cell": [
+        0,
+        2
+       ],
+       "maxRank": 5,
+       "jobReq": 58,
+       "pre": [
+        [
+         "encore_echo",
+         3
+        ]
+       ],
+       "mode": "AND"
+      },
+      {
+       "id": "melody_bard.world_song",
+       "cell": [
+        1,
+        1
+       ],
+       "maxRank": 3,
+       "jobReq": 65,
+       "pre": [
+        [
+         "symphony",
+         3
+        ],
+        [
+         "anthem",
+         2
+        ]
+       ],
+       "mode": "AND"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

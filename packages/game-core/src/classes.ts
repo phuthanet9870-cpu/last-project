@@ -4,6 +4,7 @@ import { PX_PER_M, valuesAt, type BuildSrc, type ClassKitSrc, type GaugeDef, typ
 import { KITS_A } from './skills/classdata_a.js';
 import { KITS_B } from './skills/classdata_b.js';
 import { KITS_C } from './skills/classdata_c.js';
+import { CLASS_POWER_SCALE } from './skills/balance.js';
 
 export type Role = 'tank' | 'warrior' | 'assassin' | 'archer' | 'mage' | 'healer' | 'support' | 'summoner' | 'tech';
 export type WeaponType = 'sword' | 'greatsword' | 'spear' | 'dagger' | 'bow' | 'staff' | 'tome' | 'knuckle' | 'gun' | 'lute' | 'cards' | 'whip';
@@ -85,13 +86,14 @@ function toSkillDef(classId: string, el: Element, src: SkillSrc, idx: number): S
 }
 function buildSkills(classId: string, el: Element): SkillDef[] {
   const kit = KITS[classId]; if (!kit) throw new Error(`No V4 skill kit for ${classId}`);
-  return kit.skills.map((src, i) => toSkillDef(classId, el, src, i));
+  const k = CLASS_POWER_SCALE[classId] ?? 1; // calibrated class damage scale (skills/balance.ts); baked into src so UI and combat read the same value
+  return kit.skills.map((src, i) => toSkillDef(classId, el, k !== 1 && src.p && (src.d === 'phys' || src.d === 'mag') ? { ...src, p: Math.round(src.p * k * 1000) / 1000 } : src, i));
 }
 
 export const CLASSES: Record<string, ClassDef> = Object.fromEntries(RAW.map(([id, en, th, role, el, weapons, base, growth, , , pal]) => [id, {
   id, name: { en, th }, role, element: el, weapons, base, growth,
   gauge: { name: { en: KITS[id]!.gauge.name[0], th: KITS[id]!.gauge.name[1] }, max: KITS[id]!.gauge.max, perHit: KITS[id]!.gauge.gain.hit ?? 0, effect: { en: KITS[id]!.gauge.desc[0], th: KITS[id]!.gauge.desc[1] }, def: KITS[id]!.gauge },
-  mechanic: { en: KITS[id]!.gauge.desc[0], th: KITS[id]!.gauge.desc[1] }, normal: KITS[id]!.normal, builds: KITS[id]!.builds,
+  mechanic: { en: KITS[id]!.gauge.desc[0], th: KITS[id]!.gauge.desc[1] }, normal: { ...KITS[id]!.normal, p: Math.round(KITS[id]!.normal.p * (CLASS_POWER_SCALE[id] ?? 1) * 1000) / 1000 }, builds: KITS[id]!.builds,
   palette: { hair: pal[0], body: pal[1], trim: pal[2] }, skills: buildSkills(id, el),
 } satisfies ClassDef]));
 export const CLASS_IDS = Object.keys(CLASSES);
