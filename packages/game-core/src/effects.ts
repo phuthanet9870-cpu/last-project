@@ -34,6 +34,8 @@ export const STATUSES: Record<string, StatusDef> = Object.fromEntries([
   s({ id: 'heal_cut', name: { en: 'Grievous', th: 'ลดการฟื้นฟู' }, kind: 'debuff', mods: [{ stat: 'healPower', kind: 'pct', value: -50 }], color: '#702020' }),
   s({ id: 'regen', name: { en: 'Regeneration', th: 'ฟื้นฟู' }, kind: 'buff', tickMs: 1000, hotPctOfPower: 0.15, color: '#6fe07a' }),
   s({ id: 'shield', name: { en: 'Shield', th: 'โล่' }, kind: 'buff', shield: true, color: '#7fd0ff' }),
+  s({ id: 'matk_up', name: { en: 'Arcane Surge', th: 'พลังเวทพุ่ง' }, kind: 'buff', mods: [{ stat: 'matk', kind: 'pct', value: 20 }], color: '#b98cff' }),
+  s({ id: 'mdef_break', name: { en: 'Ward Break', th: 'เกราะเวทแตก' }, kind: 'debuff', mods: [{ stat: 'mdef', kind: 'pct', value: -25 }], color: '#8a5cff' }),
   s({ id: 'atk_up', name: { en: 'Might', th: 'พลังโจมตี' }, kind: 'buff', mods: [{ stat: 'atk', kind: 'pct', value: 20 }, { stat: 'matk', kind: 'pct', value: 20 }], color: '#ff9b3d' }),
   s({ id: 'def_up', name: { en: 'Bulwark', th: 'ป้อมปราการ' }, kind: 'buff', mods: [{ stat: 'def', kind: 'pct', value: 35 }, { stat: 'mdef', kind: 'pct', value: 25 }, { stat: 'dmgReduce', kind: 'flat', value: 10 }], color: '#c0a060' }),
   s({ id: 'haste', name: { en: 'Haste', th: 'เร่งความเร็ว' }, kind: 'buff', mods: [{ stat: 'aspd', kind: 'pct', value: 25 }, { stat: 'moveSpeed', kind: 'pct', value: 25 }], color: '#ffffff' }),

@@ -42,7 +42,7 @@ describe('stats & combat formulas', () => {
 describe('progression', () => {
   it('requiredExp(L)=floor(100*L^2.2)', () => { expect(requiredExp(1)).toBe(100); expect(requiredExp(10)).toBe(Math.floor(100 * Math.pow(10, 2.2))); });
   it('single EXP grant can raise multiple levels and grants points', () => { const { svc, p } = mk(); svc.gainExp(50_000, 'test'); expect(p.level).toBeGreaterThan(5); expect(p.statPoints).toBeGreaterThan(5 + 3 * 4); });
-  it('ascension gate caps level at 60 until ascended', () => { const { svc, p } = mk(); svc.gainExp(1e12, 'test'); expect(p.level).toBe(60); svc.addItem('boss_heart', 3); expect(svc.ascend().ok).toBe(true); svc.gainExp(1e12, 'test'); expect(p.level).toBe(90); });
+  it('ascension gate caps level at 40 until ascended (V4 stages: 40 / 80)', () => { const { svc, p } = mk(); svc.gainExp(1e12, 'test'); expect(p.level).toBe(40); svc.addItem('boss_heart', 3); expect(svc.ascend().ok).toBe(true); svc.gainExp(1e12, 'test'); expect(p.level).toBe(80); });
 });
 
 describe('items, equipment, refine', () => {

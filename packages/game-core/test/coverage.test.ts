@@ -158,10 +158,10 @@ describe('social & market rules (L330 L335 L337 L311 L315)', () => {
 });
 
 describe('combat, life skills & shops (L014 L061 L218 L264 L274 L275)', () => {
-  it('L014 the class gauge fills on hits (capped at 100)', () => {
-    const clock = { t: 1_800_000_000_000 }; const { svc } = mk(); const w = new World({ mapId: 'whisperwood', rng: new Rng(11), bots: 0, now: () => clock.t }); const me = w.addPlayer(svc, { x: 20 * TILE, y: 20 * TILE });
-    const m = w.spawnMonster('forest_slime', me.x + 30, me.y); m.maxHp = m.hp = 1e7; executeCommand(ctxFor(w, svc, me.id), 'attack', { target: m.id }); for (let i = 0; i < 80; i++) { clock.t += 100; w.tick(100); }
-    expect(me.gauge).toBeGreaterThan(0); expect(me.gauge).toBeLessThanOrEqual(100);
+  it('L014 the class gauge fills on hits (capped at the class gauge max)', () => {
+    const clock = { t: 1_800_000_000_000 }; const { svc } = mk('blade_sentinel'); const w = new World({ mapId: 'whisperwood', rng: new Rng(11), bots: 0, now: () => clock.t }); const me = w.addPlayer(svc, { x: 20 * TILE, y: 20 * TILE });
+    const m = w.spawnMonster('forest_slime', me.x + 30, me.y); m.maxHp = m.hp = 1e7; for (let n = 0; n < 6; n++) { executeCommand(ctxFor(w, svc, me.id), 'attack', { target: m.id }); for (let i = 0; i < 12; i++) { clock.t += 100; w.tick(100); } }
+    expect(me.gauge).toBeGreaterThan(0); expect(me.gauge).toBeLessThanOrEqual(CLASSES.blade_sentinel!.gauge.max);
   });
   it('L061 heavy skills with knockdown apply the knockdown status (stun-type CC) to the target', () => {
     const cls = Object.values(CLASSES).find((c) => c.skills.some((s) => s.knockdown && s.target === 'enemy'))!; const sk = cls.skills.find((s) => s.knockdown && s.target === 'enemy')!;

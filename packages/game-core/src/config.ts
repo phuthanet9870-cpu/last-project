@@ -30,10 +30,12 @@ export const CONFIG = {
   worldBossTimesBkk: ['12:30', '20:30'],
   levelCap: 120,
   ascensionTiers: 3,
-  ascensionLevelReq: [60, 90, 120],
+  /** V4: Ascension I→II at Lv 40, II→III at Lv 80 (CUSTOM_DESIGN fallback, spec V4), III+ at 120 unlocks extended mastery. */
+  ascensionLevelReq: [40, 80, 120],
   extendedMasteryCap: 200,
   statPointsPerLevel: 3,
-  skillPointsPerLevel: 1,
+  /** V4: base level gives stat points only; skill points come from job level (PROVIDED_SPEC). */
+  skillPointsPerLevel: 0,
   critMultiplier: 1.5,
   critCapPercent: 50,
   hitMin: 0.05, hitMax: 0.98,

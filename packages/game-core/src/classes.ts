@@ -1,5 +1,9 @@
 import type { Element } from './config.js';
 import type { Primary, Modifier } from './stats.js';
+import { PX_PER_M, valuesAt, type BuildSrc, type ClassKitSrc, type GaugeDef, type GaugeUse, type NormalAttackDef, type SkillSrc } from './skills/v4.js';
+import { KITS_A } from './skills/classdata_a.js';
+import { KITS_B } from './skills/classdata_b.js';
+import { KITS_C } from './skills/classdata_c.js';
 
 export type Role = 'tank' | 'warrior' | 'assassin' | 'archer' | 'mage' | 'healer' | 'support' | 'summoner' | 'tech';
 export type WeaponType = 'sword' | 'greatsword' | 'spear' | 'dagger' | 'bow' | 'staff' | 'tome' | 'knuckle' | 'gun' | 'lute' | 'cards' | 'whip';
@@ -13,10 +17,11 @@ export interface SkillDef {
   dmgType: 'phys' | 'mag' | 'pure' | 'heal' | 'none'; power: number; perRank: number; hits: number; element: Element | null;
   effects: SkillEffect[]; dash?: number; knockback?: number; knockdown?: boolean; shieldPct?: number; summon?: string; chain?: number; cleanse?: boolean; lifesteal?: number;
   passive?: Omit<Modifier, 'source'>[]; vfx: string; icon: number;
+  /** V4 tree data */ key: string; jobReq: number; asc: 1 | 2 | 3; tree: [number, number]; pre: [string, number][]; preAny: boolean; gauge?: GaugeUse; src: SkillSrc;
 }
 export interface ClassDef {
   id: string; name: L10n; role: Role; element: Element; weapons: WeaponType[]; base: Primary; growth: Primary;
-  gauge: { name: L10n; max: number; perHit: number; effect: L10n }; mechanic: L10n;
+  gauge: { name: L10n; max: number; perHit: number; effect: L10n; def: GaugeDef }; mechanic: L10n; normal: NormalAttackDef; builds: BuildSrc[];
   palette: { hair: string; body: string; trim: string; skin?: string }; skills: SkillDef[];
 }
 
@@ -52,155 +57,46 @@ const RAW: Raw[] = [
   ['melody_bard', 'Melody Bard', 'เมโลดี้บาร์ด', 'support', 'wind', ['lute'], P(3, 6, 5, 7, 6, 6), P(0.2, 0.5, 0.4, 0.6, 0.5, 0.5), ['Tempo', 'ทำนอง'], ['Songs grant party buffs; Tempo extends them.', 'บทเพลงบัฟปาร์ตี้ ทำนองยืดระยะเวลา'], ['#a04a2a', '#3a6a3a', '#f0e080']],
 ];
 
-const ELEMENT_WORDS: Record<Element, [string, string][]> = {
-  neutral: [['Steel', 'เหล็กกล้า'], ['Iron', 'เหล็ก'], ['Valor', 'กล้าหาญ']],
-  fire: [['Ember', 'ถ่านไฟ'], ['Blaze', 'เพลิง'], ['Inferno', 'นรกไฟ']],
-  water: [['Tide', 'กระแส'], ['Ripple', 'ระลอก'], ['Deluge', 'อุทกภัย']],
-  earth: [['Stone', 'ศิลา'], ['Root', 'ราก'], ['Quake', 'ธรณี']],
-  wind: [['Gale', 'วายุ'], ['Zephyr', 'ลมเย็น'], ['Tempest', 'พายุ']],
-  ice: [['Frost', 'น้ำค้างแข็ง'], ['Glacier', 'ธารน้ำแข็ง'], ['Rime', 'เกล็ดน้ำแข็ง']],
-  light: [['Dawn', 'รุ่งอรุณ'], ['Halo', 'รัศมี'], ['Solar', 'สุริยา']],
-  dark: [['Shade', 'เงา'], ['Umbral', 'มืดมิด'], ['Night', 'ราตรี']],
-  spirit: [['Soul', 'วิญญาณ'], ['Astral', 'ดารา'], ['Ether', 'อีเธอร์']],
-};
-
-type T = { n: [string, string]; type?: SkillDef['type']; tg: SkillDef['target']; dt: SkillDef['dmgType']; pw: number; cd: number; mp: number; rg: number; rad?: number; hits?: number; fx?: SkillEffect[]; x?: Partial<SkillDef>; v: string };
-const REQ = [1, 1, 3, 6, 10, 14, 18, 22, 28, 34, 40, 48, 56, 65, 75, 85, 100, 115];
-const mods = (...m: [Modifier['stat'], Modifier['kind'], number][]) => m.map(([stat, kind, value]) => ({ stat, kind, value }));
-
-const KIT_MELEE: T[] = [
-  { n: ['Strike', 'ฟัน'], tg: 'enemy', dt: 'phys', pw: 1.6, cd: 2500, mp: 6, rg: 60, v: 'slash' },
-  { n: ['Sweep', 'กวาด'], tg: 'aoe_self', dt: 'phys', pw: 1.1, cd: 5000, mp: 12, rg: 0, rad: 90, v: 'whirl' },
-  { n: ['Rush', 'พุ่งชน'], tg: 'enemy', dt: 'phys', pw: 1.3, cd: 8000, mp: 10, rg: 220, fx: [{ s: 'stun', d: 1200 }], x: { dash: 1 }, v: 'dash' },
-  { n: ['Resolve', 'ปณิธาน'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['atk', 'pct', 4], ['maxHp', 'pct', 3]) }, v: 'none' },
-  { n: ['Rend', 'ฉีก'], tg: 'enemy', dt: 'phys', pw: 1.2, cd: 6000, mp: 10, rg: 60, fx: [{ s: 'bleed', d: 5000 }], v: 'slash' },
-  { n: ['War Cry', 'เสียงคำราม'], tg: 'party', dt: 'none', pw: 0, cd: 25000, mp: 20, rg: 0, rad: 300, fx: [{ s: 'atk_up', d: 12000, party: true }], v: 'buff' },
-  { n: ['Cleave', 'ผ่า'], tg: 'cone', dt: 'phys', pw: 1.8, cd: 7000, mp: 16, rg: 100, rad: 100, v: 'arc' },
-  { n: ['Guard', 'ป้องกัน'], tg: 'self', dt: 'none', pw: 0, cd: 20000, mp: 15, rg: 0, fx: [{ s: 'def_up', d: 8000, self: true }], v: 'buff' },
-  { n: ['Sunder', 'ทลายเกราะ'], tg: 'enemy', dt: 'phys', pw: 1.5, cd: 9000, mp: 14, rg: 60, fx: [{ s: 'armor_break', d: 8000 }], v: 'slash' },
-  { n: ['Mastery', 'ชำนาญ'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['crit', 'flat', 4], ['acc', 'pct', 6]) }, v: 'none' },
-  { n: ['Quake', 'กระแทกพื้น'], tg: 'aoe_self', dt: 'phys', pw: 2.0, cd: 12000, mp: 24, rg: 0, rad: 130, fx: [{ s: 'slow', d: 3000 }], x: { knockback: 70, knockdown: true }, v: 'shock' },
-  { n: ['Bloodlust', 'กระหายเลือด'], tg: 'self', dt: 'none', pw: 0, cd: 30000, mp: 20, rg: 0, fx: [{ s: 'lifesteal_up', d: 10000, self: true }], v: 'buff' },
-  { n: ['Piercer', 'แทงทะลุ'], tg: 'line', dt: 'phys', pw: 2.4, cd: 10000, mp: 22, rg: 220, rad: 30, v: 'beam' },
-  { n: ['Fortitude', 'ทรหด'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['def', 'pct', 8], ['ccResist', 'flat', 10]) }, v: 'none' },
-  { n: ['Flurry', 'พายุฟัน'], tg: 'enemy', dt: 'phys', pw: 0.9, cd: 11000, mp: 26, rg: 70, hits: 4, v: 'slash' },
-  { n: ['Aegis', 'อีจิส'], tg: 'self', dt: 'none', pw: 0, cd: 40000, mp: 30, rg: 0, x: { shieldPct: 0.3 }, fx: [{ s: 'shield', d: 10000, self: true }], v: 'shield' },
-  { n: ['Executioner', 'เพชฌฆาต'], tg: 'enemy', dt: 'phys', pw: 4.0, cd: 20000, mp: 40, rg: 70, x: { knockback: 60, knockdown: true }, v: 'big' },
-  { n: ['Cataclysm', 'มหาวิบัติ'], type: 'ultimate', tg: 'aoe_self', dt: 'phys', pw: 5.0, cd: 60000, mp: 60, rg: 0, rad: 180, fx: [{ s: 'stun', d: 1500 }], x: { knockback: 100 }, v: 'nova' },
-];
-const KIT_RANGED: T[] = [
-  { n: ['Shot', 'ยิง'], tg: 'enemy', dt: 'phys', pw: 1.5, cd: 2000, mp: 5, rg: 320, v: 'arrow' },
-  { n: ['Volley', 'ห่าธนู'], tg: 'aoe_target', dt: 'phys', pw: 1.0, cd: 6000, mp: 14, rg: 300, rad: 90, v: 'rain' },
-  { n: ['Leap Back', 'กระโดดถอย'], tg: 'self', dt: 'none', pw: 0, cd: 9000, mp: 8, rg: 0, fx: [{ s: 'haste', d: 3000, self: true }], v: 'buff' },
-  { n: ['Keen Eye', 'ตาเหยี่ยว'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['acc', 'pct', 10], ['crit', 'flat', 3]) }, v: 'none' },
-  { n: ['Crippling Shot', 'ยิงขา'], tg: 'enemy', dt: 'phys', pw: 1.2, cd: 7000, mp: 10, rg: 320, fx: [{ s: 'slow', d: 4000 }], v: 'arrow' },
-  { n: ['Pierce', 'ทะลวง'], tg: 'line', dt: 'phys', pw: 2.0, cd: 8000, mp: 16, rg: 360, rad: 24, v: 'beam' },
-  { n: ['Focus', 'เพ่งเล็ง'], tg: 'self', dt: 'none', pw: 0, cd: 22000, mp: 15, rg: 0, fx: [{ s: 'focus', d: 10000, self: true }], v: 'buff' },
-  { n: ['Snare Trap', 'กับดัก'], tg: 'aoe_target', dt: 'phys', pw: 0.8, cd: 12000, mp: 14, rg: 250, rad: 60, fx: [{ s: 'root', d: 2500 }], v: 'trap' },
-  { n: ['Twin Shot', 'ยิงคู่'], tg: 'enemy', dt: 'phys', pw: 1.1, cd: 5000, mp: 12, rg: 320, hits: 2, v: 'arrow' },
-  { n: ['Steady Aim', 'เล็งมั่น'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['atk', 'pct', 6], ['pen', 'flat', 5]) }, v: 'none' },
-  { n: ['Blast', 'ระเบิด'], tg: 'aoe_target', dt: 'phys', pw: 2.0, cd: 11000, mp: 22, rg: 300, rad: 110, fx: [{ s: 'burn', d: 4000, c: 0.5 }], x: { knockback: 50 }, v: 'explosion' },
-  { n: ['Blinding Flash', 'แสงวาบ'], tg: 'aoe_target', dt: 'phys', pw: 0.6, cd: 15000, mp: 16, rg: 280, rad: 100, fx: [{ s: 'blind', d: 4000 }], v: 'flash' },
-  { n: ['Headshot', 'ยิงหัว'], tg: 'enemy', dt: 'phys', pw: 3.0, cd: 14000, mp: 26, rg: 380, v: 'arrow' },
-  { n: ['Windwalk', 'เดินลม'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['moveSpeed', 'pct', 8], ['eva', 'pct', 8]) }, v: 'none' },
-  { n: ['Barrage', 'สาดกระสุน'], tg: 'enemy', dt: 'phys', pw: 0.8, cd: 12000, mp: 28, rg: 320, hits: 5, v: 'arrow' },
-  { n: ['Hunter Mark', 'ตราล่า'], tg: 'enemy', dt: 'phys', pw: 0.5, cd: 18000, mp: 18, rg: 380, fx: [{ s: 'curse', d: 10000 }], v: 'mark' },
-  { n: ['Siege Round', 'กระสุนปิดล้อม'], tg: 'aoe_target', dt: 'phys', pw: 3.5, cd: 22000, mp: 42, rg: 340, rad: 130, v: 'explosion' },
-  { n: ['Skyfall', 'ฟ้าถล่ม'], type: 'ultimate', tg: 'aoe_target', dt: 'phys', pw: 5.5, cd: 60000, mp: 60, rg: 360, rad: 170, v: 'rain' },
-];
-const KIT_CASTER: T[] = [
-  { n: ['Bolt', 'ลูกศรเวท'], tg: 'enemy', dt: 'mag', pw: 1.7, cd: 2000, mp: 8, rg: 300, v: 'bolt' },
-  { n: ['Burst', 'ระเบิดเวท'], tg: 'aoe_target', dt: 'mag', pw: 1.3, cd: 6000, mp: 18, rg: 280, rad: 90, v: 'explosion' },
-  { n: ['Blink', 'วาร์ป'], tg: 'self', dt: 'none', pw: 0, cd: 10000, mp: 12, rg: 0, fx: [{ s: 'evasion_up', d: 3000, self: true }], v: 'buff' },
-  { n: ['Arcane Mind', 'จิตเวท'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['matk', 'pct', 5], ['maxMp', 'pct', 8]) }, v: 'none' },
-  { n: ['Hex', 'คำสาป'], tg: 'enemy', dt: 'mag', pw: 1.0, cd: 7000, mp: 14, rg: 300, fx: [{ s: 'weaken', d: 6000 }], v: 'mark' },
-  { n: ['Wave', 'คลื่น'], tg: 'cone', dt: 'mag', pw: 1.8, cd: 8000, mp: 20, rg: 160, rad: 160, fx: [{ s: 'chill', d: 3000, c: 0.5 }], v: 'arc' },
-  { n: ['Mana Shield', 'โล่มานา'], tg: 'self', dt: 'none', pw: 0, cd: 25000, mp: 25, rg: 0, x: { shieldPct: 0.25 }, fx: [{ s: 'shield', d: 10000, self: true }], v: 'shield' },
-  { n: ['Chain', 'ลูกโซ่'], tg: 'enemy', dt: 'mag', pw: 1.4, cd: 9000, mp: 22, rg: 300, x: { chain: 3 }, v: 'chain' },
-  { n: ['Lance', 'หอกเวท'], tg: 'line', dt: 'mag', pw: 2.3, cd: 9000, mp: 24, rg: 340, rad: 28, v: 'beam' },
-  { n: ['Attunement', 'ประสานธาตุ'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['elemBonus', 'flat', 10], ['mpen', 'flat', 6]) }, v: 'none' },
-  { n: ['Nova', 'โนวา'], tg: 'aoe_self', dt: 'mag', pw: 2.2, cd: 12000, mp: 30, rg: 0, rad: 140, fx: [{ s: 'stun', d: 800, c: 0.4 }], x: { knockback: 80, knockdown: true }, v: 'nova' },
-  { n: ['Drain', 'ดูดพลัง'], tg: 'enemy', dt: 'mag', pw: 1.6, cd: 10000, mp: 18, rg: 280, x: { lifesteal: 0.4 }, v: 'drain' },
-  { n: ['Meteor', 'อุกกาบาต'], tg: 'aoe_target', dt: 'mag', pw: 3.2, cd: 16000, mp: 40, rg: 320, rad: 120, castMsX: 0, v: 'explosion' } as T,
-  { n: ['Clarity', 'ปัญญาใส'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['mpRegen', 'pct', 30], ['cdr', 'flat', 4]) }, v: 'none' },
-  { n: ['Storm', 'พายุเวท'], tg: 'aoe_target', dt: 'mag', pw: 1.0, cd: 14000, mp: 36, rg: 300, rad: 130, hits: 4, v: 'rain' },
-  { n: ['Silence', 'ปิดผนึก'], tg: 'enemy', dt: 'mag', pw: 0.8, cd: 18000, mp: 20, rg: 300, fx: [{ s: 'silence', d: 4000 }], v: 'mark' },
-  { n: ['Annihilate', 'ทำลายล้าง'], tg: 'enemy', dt: 'mag', pw: 4.2, cd: 22000, mp: 50, rg: 320, v: 'big' },
-  { n: ['Apocalypse', 'อวสาน'], type: 'ultimate', tg: 'aoe_target', dt: 'mag', pw: 6.0, cd: 60000, mp: 80, rg: 340, rad: 190, v: 'nova' },
-];
-const KIT_SUPPORT: T[] = [
-  { n: ['Smite', 'ทัณฑ์'], tg: 'enemy', dt: 'mag', pw: 1.4, cd: 2200, mp: 6, rg: 280, v: 'bolt' },
-  { n: ['Mend', 'ประสาน'], tg: 'party', dt: 'heal', pw: 1.6, cd: 4000, mp: 14, rg: 0, rad: 260, v: 'heal' },
-  { n: ['Blessing', 'พร'], tg: 'party', dt: 'none', pw: 0, cd: 20000, mp: 18, rg: 0, rad: 300, fx: [{ s: 'def_up', d: 12000, party: true }], v: 'buff' },
-  { n: ['Devotion', 'ศรัทธา'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['healPower', 'pct', 12], ['maxMp', 'pct', 6]) }, v: 'none' },
-  { n: ['Renew', 'ฟื้นคืน'], tg: 'party', dt: 'none', pw: 0, cd: 12000, mp: 16, rg: 0, rad: 260, fx: [{ s: 'regen', d: 8000, party: true }], v: 'heal' },
-  { n: ['Purify', 'ชำระล้าง'], tg: 'party', dt: 'heal', pw: 0.6, cd: 15000, mp: 14, rg: 0, rad: 260, x: { cleanse: true }, v: 'heal' },
-  { n: ['Ward', 'ปราการ'], tg: 'party', dt: 'none', pw: 0, cd: 22000, mp: 26, rg: 0, rad: 260, x: { shieldPct: 0.15 }, fx: [{ s: 'shield', d: 8000, party: true }], v: 'shield' },
-  { n: ['Judgement', 'พิพากษา'], tg: 'aoe_target', dt: 'mag', pw: 1.6, cd: 9000, mp: 20, rg: 280, rad: 90, fx: [{ s: 'blind', d: 2500, c: 0.4 }], v: 'explosion' },
-  { n: ['Hymn', 'บทสวด'], tg: 'party', dt: 'none', pw: 0, cd: 24000, mp: 22, rg: 0, rad: 300, fx: [{ s: 'song', d: 15000, party: true }], v: 'buff' },
-  { n: ['Serenity', 'สงบ'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['mpRegen', 'pct', 25], ['mdef', 'pct', 10]) }, v: 'none' },
-  { n: ['Great Heal', 'มหาฮีล'], tg: 'party', dt: 'heal', pw: 3.0, cd: 14000, mp: 34, rg: 0, rad: 280, v: 'heal' },
-  { n: ['Quicken', 'เร่ง'], tg: 'party', dt: 'none', pw: 0, cd: 26000, mp: 20, rg: 0, rad: 300, fx: [{ s: 'haste', d: 8000, party: true }], v: 'buff' },
-  { n: ['Binding', 'พันธนาการ'], tg: 'aoe_target', dt: 'mag', pw: 1.0, cd: 14000, mp: 22, rg: 280, rad: 100, fx: [{ s: 'root', d: 2500 }], v: 'trap' },
-  { n: ['Grace', 'พระคุณ'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['vit', 'pct', 8], ['hpRegen', 'pct', 30]) }, v: 'none' },
-  { n: ['Clarion', 'แตรศึก'], tg: 'party', dt: 'none', pw: 0, cd: 30000, mp: 24, rg: 0, rad: 300, fx: [{ s: 'mp_regen_up', d: 15000, party: true }, { s: 'focus', d: 10000, party: true }], v: 'buff' },
-  { n: ['Radiant Ray', 'ลำแสง'], tg: 'line', dt: 'mag', pw: 2.6, cd: 12000, mp: 30, rg: 340, rad: 28, v: 'beam' },
-  { n: ['Sanctuary', 'สถานศักดิ์สิทธิ์'], tg: 'party', dt: 'heal', pw: 2.0, cd: 30000, mp: 50, rg: 0, rad: 300, fx: [{ s: 'invuln', d: 1500, party: true }], v: 'heal' },
-  { n: ['Miracle', 'ปาฏิหาริย์'], type: 'ultimate', tg: 'party', dt: 'heal', pw: 6.0, cd: 90000, mp: 80, rg: 0, rad: 320, x: { cleanse: true }, fx: [{ s: 'regen', d: 10000, party: true }], v: 'heal' },
-];
-
-function kitFor(role: Role): T[] {
-  if (role === 'archer' || role === 'tech') return KIT_RANGED;
-  if (role === 'mage') return KIT_CASTER;
-  if (role === 'healer' || role === 'support' || role === 'summoner') return KIT_SUPPORT;
-  return KIT_MELEE;
+// ---- Skill System V4: every class has its own authored kit (skills/classdata_*.ts). The old 4 shared role kits were removed (HB-003). ----
+const KITS: Record<string, ClassKitSrc> = Object.fromEntries([...KITS_A, ...KITS_B, ...KITS_C].map((k) => [k.classId, k]));
+const ROLE_ICON: Record<string, number> = { A: 0, P: 3, U: 17 };
+/** Converts an authored V4 skill into the runtime SkillDef the combat engine executes (metres → px, seconds → ms). */
+function toSkillDef(classId: string, el: Element, src: SkillSrc, idx: number): SkillDef {
+  const type = src.ty === 'P' ? 'passive' : src.ty === 'U' ? 'ultimate' : 'active';
+  const effects: SkillEffect[] = [
+    ...(src.fx ?? []).map(([id, d, c]) => ({ s: id, d: Math.round(d * 1000), ...(c !== undefined ? { c } : {}) })),
+    ...(src.fxSelf ?? []).map(([id, d]) => ({ s: id, d: Math.round(d * 1000), self: true })),
+    ...(src.fxParty ?? []).map(([id, d]) => ({ s: id, d: Math.round(d * 1000), party: true })),
+  ];
+  const rv = valuesAt(src, 1);
+  const x = src.x ?? {};
+  const def: SkillDef = {
+    id: `${classId}.${src.k}`, key: src.k, classId, name: { en: src.n[0], th: src.n[1] }, desc: { en: src.how[0], th: src.how[1] }, type,
+    reqLevel: src.j, jobReq: src.j, asc: src.a, tree: src.at, pre: src.pre ?? [], preAny: !!src.any, maxRank: src.mx,
+    mp: rv.mp, cdMs: rv.cdMs, castMs: x.castMs ?? 0, range: Math.round((src.r ?? 0) * PX_PER_M), radius: Math.round((src.rad ?? 0) * PX_PER_M),
+    target: src.t ?? 'self', dmgType: src.d ?? 'none', power: src.p ?? 0, perRank: src.pr ?? 0.1, hits: src.h ?? 1,
+    element: src.el === undefined ? (src.d === 'mag' || src.d === 'heal' ? el : null) : src.el,
+    effects, vfx: src.v ?? 'none', icon: ROLE_ICON[src.ty]! + (idx % 3), gauge: src.g, src,
+  };
+  if (x.dash) def.dash = 1; if (x.knockback) def.knockback = x.knockback; if (x.knockdown) def.knockdown = true; if (x.shieldPct) def.shieldPct = x.shieldPct;
+  if (x.summon) def.summon = x.summon; if (x.chain) def.chain = x.chain; if (x.cleanse) def.cleanse = true; if (x.lifesteal) def.lifesteal = x.lifesteal;
+  if (src.ps) def.passive = src.ps.map(([stat, kind, value]) => ({ stat, kind, value }));
+  return def;
+}
+function buildSkills(classId: string, el: Element): SkillDef[] {
+  const kit = KITS[classId]; if (!kit) throw new Error(`No V4 skill kit for ${classId}`);
+  return kit.skills.map((src, i) => toSkillDef(classId, el, src, i));
 }
 
-function buildSkills(classId: string, role: Role, el: Element): SkillDef[] {
-  const kit = kitFor(role);
-  const words = ELEMENT_WORDS[el];
-  return kit.map((t, i) => {
-    const w = words[i % words.length]!;
-    const fx = [...(t.fx ?? [])];
-    // Role-specific transformations so classes sharing a kit still differ.
-    let pw = t.pw; let target = t.tg; const x: Partial<SkillDef> = { ...(t.x ?? {}) };
-    if (role === 'tank' && i === 1) fx.push({ s: 'taunt', d: 4000 });
-    if (role === 'tank') pw *= 0.8;
-    if (role === 'assassin' && t.dt === 'phys') { pw *= 1.15; if (i === 7) fx.splice(0, fx.length, { s: 'stealth', d: 5000, self: true }); }
-    if (role === 'summoner' && (i === 4 || i === 12)) { x.summon = `${el}_spirit`; target = 'self'; }
-    if (role === 'support' && t.dt === 'mag') pw *= 1.1;
-    if (el === 'fire' && t.dt !== 'none' && t.dt !== 'heal' && i % 3 === 0) fx.push({ s: 'burn', d: 4000, c: 0.35 });
-    if (el === 'ice' && t.dt !== 'none' && t.dt !== 'heal' && i % 3 === 0) fx.push({ s: 'chill', d: 3000, c: 0.5 });
-    if (el === 'dark' && t.dt !== 'none' && t.dt !== 'heal' && i % 4 === 0) fx.push({ s: 'curse', d: 5000, c: 0.3 });
-    if (el === 'earth' && t.dt !== 'none' && t.dt !== 'heal' && i % 4 === 1) fx.push({ s: 'slow', d: 3000, c: 0.4 });
-    if (el === 'water' && t.dt !== 'none' && t.dt !== 'heal' && i % 4 === 2) fx.push({ s: 'poison', d: 5000, c: 0.4 });
-    const isPassive = t.type === 'passive';
-    const name: L10n = isPassive ? { en: `${w[0]} ${t.n[0]}`, th: `${t.n[1]}${w[1]}` } : { en: `${w[0]} ${t.n[0]}`, th: `${t.n[1]}${w[1]}` };
-    return {
-      id: `${classId}_s${String(i + 1).padStart(2, '0')}`, classId, name,
-      desc: { en: describe(t, pw), th: describe(t, pw, true) },
-      type: t.type ?? 'active', reqLevel: REQ[i]!, maxRank: t.type === 'ultimate' ? 3 : isPassive ? 5 : 10,
-      mp: t.mp, cdMs: t.cd, castMs: t.dt === 'mag' && t.pw >= 3 ? 600 : 0, range: t.rg, radius: t.rad ?? 0, target,
-      dmgType: t.dt, power: Math.round(pw * 100) / 100, perRank: 0.08, hits: t.hits ?? 1,
-      element: t.dt === 'phys' && role !== 'warrior' && role !== 'assassin' ? null : el,
-      effects: fx, vfx: t.v, icon: i, ...x,
-    } satisfies SkillDef;
-  });
-}
-function describe(t: T, pw: number, th = false): string {
-  const tgt: Record<string, [string, string]> = { enemy: ['single target', 'เป้าหมายเดียว'], aoe_self: ['area around you', 'รอบตัว'], aoe_target: ['area at target', 'พื้นที่เป้าหมาย'], line: ['line', 'แนวเส้นตรง'], cone: ['cone', 'รูปกรวย'], party: ['party', 'ปาร์ตี้'], self: ['self', 'ตนเอง'] };
-  if (t.type === 'passive') return th ? 'สกิลติดตัว เพิ่มค่าสถานะถาวร' : 'Passive: permanently improves stats.';
-  const kind = t.dt === 'heal' ? (th ? 'รักษา' : 'Heals') : t.dt === 'none' ? (th ? 'เสริมพลัง' : 'Empowers') : (th ? 'โจมตี' : 'Deals');
-  const pct = t.dt === 'none' ? '' : ` ${Math.round(pw * 100)}%${t.hits && t.hits > 1 ? ` ×${t.hits}` : ''}`;
-  const fx = (t.fx ?? []).map((f) => f.s).join(', ');
-  return th ? `${kind}${pct} (${tgt[t.tg]![1]})${fx ? ` + ${fx}` : ''}` : `${kind}${pct} ${t.dt === 'phys' ? 'physical' : t.dt === 'mag' ? 'magic' : ''} (${tgt[t.tg]![0]})${fx ? ` + ${fx}` : ''}`;
-}
-
-export const CLASSES: Record<string, ClassDef> = Object.fromEntries(RAW.map(([id, en, th, role, el, weapons, base, growth, g, m, pal]) => [id, {
+export const CLASSES: Record<string, ClassDef> = Object.fromEntries(RAW.map(([id, en, th, role, el, weapons, base, growth, , , pal]) => [id, {
   id, name: { en, th }, role, element: el, weapons, base, growth,
-  gauge: { name: { en: g[0], th: g[1] }, max: 100, perHit: role === 'tank' ? 8 : 6, effect: { en: m[0], th: m[1] } }, mechanic: { en: m[0], th: m[1] },
-  palette: { hair: pal[0], body: pal[1], trim: pal[2] }, skills: buildSkills(id, role, el),
+  gauge: { name: { en: KITS[id]!.gauge.name[0], th: KITS[id]!.gauge.name[1] }, max: KITS[id]!.gauge.max, perHit: KITS[id]!.gauge.gain.hit ?? 0, effect: { en: KITS[id]!.gauge.desc[0], th: KITS[id]!.gauge.desc[1] }, def: KITS[id]!.gauge },
+  mechanic: { en: KITS[id]!.gauge.desc[0], th: KITS[id]!.gauge.desc[1] }, normal: KITS[id]!.normal, builds: KITS[id]!.builds,
+  palette: { hair: pal[0], body: pal[1], trim: pal[2] }, skills: buildSkills(id, el),
 } satisfies ClassDef]));
 export const CLASS_IDS = Object.keys(CLASSES);
 export const ALL_SKILLS: Record<string, SkillDef> = Object.fromEntries(Object.values(CLASSES).flatMap((c) => c.skills.map((s) => [s.id, s])));
 export const STARTER_CLASSES = ['vanguard', 'blade_sentinel', 'wild_archer', 'shadow_rogue', 'dawn_priest', 'flame_weaver', 'frost_sage', 'beast_tamer', 'melody_bard', 'fortune_dealer'];
+/** V4 kit source for a class (gauge, normal attack, 18 skills, builds). */
+export function classKit(classId: string): ClassKitSrc | undefined { return KITS[classId]; }
+export const skillId = (classId: string, key: string) => `${classId}.${key}`;

@@ -69,6 +69,8 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   resetStats: (c) => { const r = c.svc.resetStats(); c.world.refreshPlayer(c.entityId); return r; },
   learnSkill: (c, a) => { const r = c.svc.learnSkill(String(a.skill)); c.world.refreshPlayer(c.entityId); return r; },
   resetSkills: (c) => c.svc.resetSkills(),
+  /** V4: atomic commit of a pending skill draft { draft: {skillId: rank}, rev, opId } (server-authoritative). */
+  skillCommit: (c, a) => { const d = a.draft; if (!d || typeof d !== 'object' || Array.isArray(d) || Object.keys(d).length > 18) return fail('INVALID'); const draft: Record<string, number> = {}; for (const [k, v] of Object.entries(d as Record<string, unknown>)) { if (typeof k !== 'string' || k.length > 64 || typeof v !== 'number') return fail('INVALID'); draft[k] = v; } const r = c.svc.commitSkills(draft, a.rev === undefined ? undefined : Number(a.rev), a.opId ? String(a.opId).slice(0, 64) : undefined); c.world.refreshPlayer(c.entityId); return r; },
   hotbar: (c, a) => c.svc.setHotbar(Number(a.i), a.id ?? null),
   ascend: (c) => c.svc.ascend(),
   setTitle: (c, a) => { const r = c.svc.setTitle(a.id ?? null); c.world.refreshPlayer(c.entityId); return r; },
