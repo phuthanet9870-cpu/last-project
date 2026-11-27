@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 — 2026-11-27 — Task 7: LiveOps / rankings / Hearthcards
+- Memberships (simulated Crystal only, no auto-renew): Weekly (60 free Crystal/day), Monthly (50/day + 5% EXP), Festival (×2 event mission rewards and Event Tokens), Permanent Hearth (500 Gold/day + 3% drop), Grand Lantern (+5% EXP/Gold). Time-limited passes extend when re-bought; daily claims once per Asia/Bangkok day.
+- Gacha: 4 banners — Standard, Seasonal Wishes (monthly featured mythic), Fashion Box, Gem Box — each with its own pity counter; odds shown in UI. Paid random rewards remain disabled.
+- Events: third rotating weekly event (Gold Rush, ×1.5 monster Gold); event countdown and calendar with start times; event missions grant Event Tokens; Seasonal Shop; login reminders for the event and unclaimed membership dailies. Server applies the current week's EXP/drop/gold multipliers live.
+- Rankings: online `/api/rankings/:kind` for level, cp, pvp, tcg, pet, life, mastery and `class:<id>` (whitelisted SQL expressions; unknown kinds → 400); combat power is now persisted on every save. Artifact boards are simulated and labelled [sim]. Weekly champion: worker job writes `weekly_champions`; the server grants/removes «Champion of the Week».
+- Hearthcards: interactive tutorial duel with step hints and a one-time reward; card exchange (3 same-rarity spare cards → 1 of next rarity); starter cards are account-bound (no trade/dust/exchange); card trading in online direct trade (recorded in trade_history); cosmetics bought with card dust (card backs, playmats, animated table) applied to the duel screen.
+- Fix (found by test): admin grant of `card_dust`/`star_dust` gave inventory items instead of currency (name exists in both registries); currencies now take precedence and unknown names are rejected.
+- Fix (found by test): the last action of an online PvP card duel threw a server TypeError (side read after the match was cleared), so the finishing player got an error reply.
+- Tests: unit 60, E2E 33/33, multiplayer 21/21, online browser E2E 3/3.
+
 ## 0.7.0 — 2026-11-27 — Task 6: market & economy
 - Auto-bid (proxy) auctions: bids are private maxima, winner pays one increment above the runner-up, unused reservation released.
 - Market: filters (type, rarity, max level, usable by my class, has stat), Best Sellers (24h), Wishlist with price alerts, personal trade history, per-item price chart (1h/24h/7d), exchange candles (1m/5m/1h).

@@ -4,14 +4,14 @@
  *  - RemoteAdapter: sends intents to the authoritative game-server over WebSocket (online mode).
  */
 import {
-  DUNGEONS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, createCharacter, deserializePlayer, executeCommand, publicEntity, serializePlayer, viewFor, EVENTS, CONFIG,
+  DUNGEONS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, createCharacter, deserializePlayer, executeCommand, publicEntity, serializePlayer, viewFor, EVENTS, CONFIG, activeEventAt,
   type Appearance, type Fx, type PlayerState, type Result, type Session, type Currency,
 } from '@hb/game-core';
 
 export type PubEntity = ReturnType<typeof publicEntity>;
 export interface Adapter {
   mode: 'local' | 'online'; p: PlayerState; mapId: string; myId: string; dev: boolean;
-  send(cmd: string, args?: Record<string, any>): Promise<Result>;
+  send(cmd: string, args?: Record<string, any>): Promise<Result>; rankings(kind: string): Promise<{ rank: number; name: string; value: number; simulated?: boolean }[]>;
   tick(dtMs: number): void; entities(): PubEntity[]; drainFx(): Fx[]; bal(c: Currency): bigint;
   market(): any; tcg(): any; dungeonInfo(): any; bossInfo(): any; arenaInfo(): any; partyMembers(): PubEntity[];
   save(): boolean; onMapChange?: (mapId: string) => void; serverTime(): number; ping: number; activeEvent(): (typeof EVENTS)[number] | null;
@@ -41,9 +41,10 @@ export class LocalAdapter implements Adapter {
   }
   get p() { return this.svc.p; } get mapId() { return this.world.mapId; } get myId() { return `pl_${this.svc.p.id}`; }
   visitView() { return this.world.mapId === 'pet_farm' ? this.session.visit ?? null : null; }
-  activeEvent() { const wk = Math.floor(Date.now() / (7 * 86400_000)); return EVENTS[wk % EVENTS.length] ?? null; }
+  activeEvent() { return activeEventAt(Date.now()); }
+  async rankings(kind: string) { const r = await this.send('rankings', { kind }); return r.ok ? (r.data as any[]) : []; }
   private getWorld(mapId: string, fresh: boolean): World {
-    const ev = this.activeEvent(); const em = { exp: ev?.expMult ?? 1, drop: ev?.dropMult ?? 1 };
+    const ev = this.activeEvent(); const em = { exp: ev?.expMult ?? 1, drop: ev?.dropMult ?? 1, gold: ev?.goldMult ?? 1 };
     if (fresh) return new World({ mapId, rng: new Rng(Date.now() & 0xffff), eventMult: em, worldBossIntervalMs: 4 * 60_000 });
     let w = this.worlds.get(mapId); if (!w) { const def = MAPS[mapId]!; w = new World({ mapId, rng: new Rng(def.seed * 97), bots: def.biome === 'town' ? 7 : def.safe || def.instanced ? 0 : def.biome === 'crater' ? 5 : 3, eventMult: em, worldBossIntervalMs: 4 * 60_000 }); this.worlds.set(mapId, w); }
     return w;
@@ -104,7 +105,7 @@ export class RemoteAdapter implements Adapter {
   private ents: PubEntity[] = []; private entMap = new Map<string, any>(); private fx: Fx[] = []; private marketSnap: any = { listings: [], buyOrders: [], auctions: [], book: { bids: [], asks: [] }, priceHistory: {}, exchangeHistory: [] }; private tcgSnap: any = null; private extra: any = {};
   onMapChange?: (m: string) => void; private timeOffset = 0;
   static async connect(url: string, token: string, characterId: string): Promise<RemoteAdapter> {
-    const a = new RemoteAdapter(); await new Promise<void>((res, rej) => {
+    const a = new RemoteAdapter(); a.httpBase = url.replace(/^ws/, 'http').replace(/\/ws\/?$/, ''); await new Promise<void>((res, rej) => {
       a.ws = new WebSocket(`${url}?token=${encodeURIComponent(token)}&character=${encodeURIComponent(characterId)}`);
       a.ws.onmessage = (ev) => { const m = JSON.parse(ev.data); a.onMessage(m); if (m.type === 'welcome') res(); };
       a.ws.onerror = () => rej(new Error('WebSocket connection failed')); a.ws.onclose = () => a.fx.push({ t: 'notice', msg: 'Disconnected from server. Reload to reconnect.' });
@@ -136,7 +137,9 @@ export class RemoteAdapter implements Adapter {
   dungeonInfo() { return this.extra.dungeon ?? null; } bossInfo() { return this.extra.boss ?? { boss: null, nextAt: 0 }; } arenaInfo() { return this.extra.arena ?? null; }
   visitView() { return this.mapId === 'pet_farm' ? this.extra.visit ?? null : null; }
   partyMembers() { const ids: string[] = this.extra.party ?? []; return this.ents.filter((e) => ids.includes(e.id)); }
-  save() { return true; } serverTime() { return Date.now() + this.timeOffset; } activeEvent() { return EVENTS[0] ?? null; }
+  save() { return true; } serverTime() { return Date.now() + this.timeOffset; } activeEvent() { return activeEventAt(this.serverTime()); }
+  private httpBase = '';
+  async rankings(kind: string) { try { const r = await fetch(`${this.httpBase}/api/rankings/${encodeURIComponent(kind)}`); if (!r.ok) return []; const j = await r.json(); return (j.rows ?? []).map((x: any) => ({ rank: x.rank, name: x.name, value: x.value })); } catch { return []; } }
 }
 export function reviveBig(v: any): any { if (typeof v === 'string' && /^-?\d+n$/.test(v)) return BigInt(v.slice(0, -1)); if (Array.isArray(v)) return v.map(reviveBig); if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, reviveBig(x)])); return v; }
 export { CONFIG };

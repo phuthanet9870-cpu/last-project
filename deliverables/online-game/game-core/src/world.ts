@@ -50,7 +50,7 @@ export interface DungeonRun { runId: string; bossEntity?: string; dungeonId: str
 export interface BossSession { id: string; bossId: string; entityId: string; startedAt: number; contributions: Record<string, { dmg: number; heal: number; tank: number }>; settled: boolean }
 
 const ELEMENT_COLOR: Record<Element, string> = { neutral: '#ffffff', fire: '#ff7a30', water: '#4aa8ff', earth: '#c0a060', wind: '#a0ffb0', ice: '#a0f0ff', light: '#fff0a0', dark: '#b070ff', spirit: '#70ffe0' };
-export interface WorldOptions { mapId: string; instanceId?: string; rng?: Rng; now?: () => number; bots?: number; worldBossIntervalMs?: number; eventMult?: { exp: number; drop: number } }
+export interface WorldOptions { mapId: string; instanceId?: string; rng?: Rng; now?: () => number; bots?: number; worldBossIntervalMs?: number; eventMult?: { exp: number; drop: number; gold?: number } }
 
 let ENT = 0;
 const eid = (p: string) => `${p}${(++ENT).toString(36)}`;
@@ -61,7 +61,7 @@ const BOT_LINES = ['Anyone up for Mossy Hollow?', 'LF party for slimes~', 'Selli
 export class World {
   map: GenMap; mapId: string; instanceId: string; entities = new Map<string, Entity>(); services = new Map<string, PlayerService>();
   fx: Fx[] = []; rng: Rng; now: () => number; nodesDepleted = new Map<string, number>(); dungeon: DungeonRun | null = null; boss: BossSession | null = null;
-  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number }; arena: ArenaState | null = null;
+  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number; gold?: number }; arena: ArenaState | null = null;
   private lastTick = 0; private opts: WorldOptions;
 
   constructor(opts: WorldOptions) {

@@ -6,7 +6,7 @@ import type { WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
 import {
   CONFIG as GAME, DYNAMIC_KEYS, STARTER_DECKS, absoluteAction, applyAction, newMatch, perspective, validateDeck, type TcgAction, type TcgState, publicEntity, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
-  type Currency, type PlayerState, type Result, type Session,
+  activeEventAt, playerCP, CURRENCIES, type Currency, type PlayerState, type Result, type Session,
 } from '../../../packages/game-core/src/index.js';
 import { pool, tx } from './db.js';
 import { CONFIG } from './env.js';
@@ -14,10 +14,10 @@ import type { Redis } from 'ioredis';
 
 interface Conn { tcgPvp?: { id: string; side: 0 | 1 } | null; phase: number; aoi?: { ids: string[]; at: number; inst: string }; known: Map<string, string>; mapSent: string; ws: WebSocket; accountId: string; role: string; charId: string; svc: PlayerService; world: World; session: Session; lastSnap: number; dirty: boolean; muted: boolean; lastPersist: number }
 interface Invite { kind: 'party' | 'trade' | 'duel' | 'guild' | 'marriage' | 'tcg'; from: string; at: number; data?: any }
-interface Trade { id: string; a: string; b: string; offer: Record<string, { items: string[]; gold: bigint }>; lock: Record<string, boolean>; confirm: Record<string, boolean>; done: boolean }
+interface Trade { id: string; a: string; b: string; offer: Record<string, { items: string[]; gold: bigint; cards?: Record<string, number> }>; lock: Record<string, boolean>; confirm: Record<string, boolean>; done: boolean }
 const ok = (data?: unknown, msg?: string): Result => ({ ok: true, data, msg });
 const fail = (err: string, msg?: string): Result => ({ ok: false, err, msg: msg ?? err });
-const ECON_CMDS = new Set(['marketList', 'marketBuy', 'marketCancel', 'buyOrder', 'cancelBuyOrder', 'auctionCreate', 'auctionBid', 'auctionBuyNow', 'exchangePlace', 'exchangeCancel', 'buy', 'sell', 'bulkSell', 'refine', 'craft', 'gacha', 'mailClaim', 'mailClaimAll', 'guildDonate', 'teleport', 'completeQuest']);
+const ECON_CMDS = new Set(['marketList', 'marketBuy', 'marketCancel', 'buyOrder', 'cancelBuyOrder', 'auctionCreate', 'auctionBid', 'auctionBuyNow', 'exchangePlace', 'exchangeCancel', 'buy', 'sell', 'bulkSell', 'refine', 'craft', 'gacha', 'mailClaim', 'mailClaimAll', 'guildDonate', 'teleport', 'completeQuest', 'buyMembership', 'claimMembership', 'tcgExchange', 'tcgCosmetic', 'claimEvent']);
 const SERVER_ONLY = new Set(['dev']);
 
 export class GameServer {
@@ -53,7 +53,7 @@ export class GameServer {
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [accountId])).rowCount! > 0;
     const c: Conn = { phase: this.conns.size % 2, known: new Map(), mapSent: '', ws, accountId, role, charId, svc, world, session: {}, lastSnap: 0, dirty: true, muted, lastPersist: Date.now() };
     this.conns.set(charId, c);
-    svc.onEvent = () => { c.dirty = true; }; // any domain event (loot, gold, level, quest…) re-syncs the owner's state, even when it happens inside the tick
+    svc.onEvent = () => { c.dirty = true; }; this.applyChampion(c); // any domain event (loot, gold, level, quest…) re-syncs the owner's state, even when it happens inside the tick
     await this.redis?.sadd('hb:online', charId).catch(() => undefined); await this.redis?.set(`hb:presence:${charId}`, map, 'EX', 120).catch(() => undefined);
     this.send(c, { type: 'welcome', myId: e.id, mapId: map, player: this.playerJson(c), serverTime: Date.now(), protocolVersion: 1 });
     if (off.minutes) svc.note(`Farm settled ${off.minutes} min while offline.`);
@@ -131,7 +131,7 @@ export class GameServer {
       // ---- real two-player trade (§38) ----
       case 'tradeOpen': { const t = this.target(c, a.target); if (!t) return fail('PLAYER_NOT_NEARBY'); const d = Math.hypot(c.world.entities.get(me)!.x - c.world.entities.get(`pl_${t.charId}`)!.x, c.world.entities.get(me)!.y - c.world.entities.get(`pl_${t.charId}`)!.y); if (d > 200) return fail('TOO_FAR'); this.invites.set(t.charId, { kind: 'trade', from: c.charId, at: Date.now() }); this.notice(t, `${c.svc.p.name} wants to trade (tradeAccept).`); return ok({ pending: true }); }
       case 'tradeAccept': { const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'trade') return fail('NO_INVITE'); this.invites.delete(c.charId); const tr: Trade = { id: `tr_${randomBytes(6).toString('hex')}`, a: inv.from, b: c.charId, offer: { [inv.from]: { items: [], gold: 0n }, [c.charId]: { items: [], gold: 0n } }, lock: {}, confirm: {}, done: false }; this.trades.set(tr.id, tr); for (const id of [tr.a, tr.b]) { const x = this.conns.get(id); if (x) this.notice(x, 'Trade window opened'); } return ok({ id: tr.id }); }
-      case 'tradeOffer': { const tr = this.tradeOf(c.charId); if (!tr) return fail('NO_TRADE'); const items: string[] = (a.items ?? []).map(String).slice(0, 12); const gold = BigInt(String(a.gold ?? '0').replace(/\D/g, '') || '0'); for (const u of items) { const it = c.svc.findInv(u); if (!it || it.locked || it.bound) return fail('ITEM_NOT_TRADEABLE'); } if (c.svc.gold() < gold) return fail('NOT_ENOUGH_GOLD'); tr.offer[c.charId] = { items, gold }; tr.lock = {}; tr.confirm = {}; this.tradeUpdate(tr); return ok(); }
+      case 'tradeOffer': { const tr = this.tradeOf(c.charId); if (!tr) return fail('NO_TRADE'); const items: string[] = (a.items ?? []).map(String).slice(0, 12); const gold = BigInt(String(a.gold ?? '0').replace(/\D/g, '') || '0'); for (const u of items) { const it = c.svc.findInv(u); if (!it || it.locked || it.bound) return fail('ITEM_NOT_TRADEABLE'); } if (c.svc.gold() < gold) return fail('NOT_ENOUGH_GOLD'); const cards: Record<string, number> = {}; for (const [id, n] of Object.entries((a.cards ?? {}) as Record<string, unknown>).slice(0, 12)) { const k = Math.floor(Number(n)); if (!(k > 0)) continue; if (c.svc.spareCards(id) < k) return fail('CARD_NOT_TRADEABLE', 'Card is in a deck, account-bound or not owned'); cards[id] = k; } tr.offer[c.charId] = { items, gold, cards }; tr.lock = {}; tr.confirm = {}; this.tradeUpdate(tr); return ok(); }
       case 'tradeLock': { const tr = this.tradeOf(c.charId); if (!tr) return fail('NO_TRADE'); tr.lock[c.charId] = true; this.tradeUpdate(tr); return ok(); }
       case 'tradeConfirm': { const tr = this.tradeOf(c.charId); if (!tr) return fail('NO_TRADE'); if (!tr.lock[tr.a] || !tr.lock[tr.b]) return fail('NOT_LOCKED'); tr.confirm[c.charId] = true; if (tr.confirm[tr.a] && tr.confirm[tr.b]) return this.settleTrade(tr); this.tradeUpdate(tr); return ok({ waiting: true }); }
       case 'tradeCancel': { this.cancelTradesOf(c.charId); return ok(); }
@@ -202,8 +202,9 @@ export class GameServer {
       }
       case 'tcgAction': case 'tcgView': {
         if (!c.tcgPvp) return executeCommand(this.ctx(c), cmd, a); const m = this.tcgMatches.get(c.tcgPvp.id); if (!m) { c.tcgPvp = null; return fail('NO_MATCH'); }
-        if (cmd === 'tcgAction') { const err = applyAction(m.state, c.tcgPvp.side, absoluteAction(a.action as TcgAction, c.tcgPvp.side)); if (err) return fail(err); }
-        this.tcgPush(m); return ok(perspective(m.state, c.tcgPvp.side));
+        const side = c.tcgPvp.side; // tcgPush clears tcgPvp when this action ends the match: keep the side for the reply
+        if (cmd === 'tcgAction') { const err = applyAction(m.state, side, absoluteAction(a.action as TcgAction, side)); if (err) return fail(err); }
+        this.tcgPush(m); return ok(perspective(m.state, side));
       }
       case 'tcgStart': if (c.tcgPvp) return fail('MATCH_IN_PROGRESS'); return executeCommand(this.ctx(c), cmd, a);
       case 'propose': return fail('NOT_AVAILABLE_ONLINE', 'Online marriage requires partner acceptance flow (not yet implemented server-side)');
@@ -230,6 +231,19 @@ export class GameServer {
   private tradeUpdate(tr: Trade) { for (const id of [tr.a, tr.b]) { const x = this.conns.get(id); if (x) this.send(x, { type: 'trade', trade: { id: tr.id, a: tr.a, b: tr.b, offer: tr.offer, lock: tr.lock, confirm: tr.confirm } }); } }
   private cancelTradesOf(charId: string) { for (const t of this.trades.values()) if (!t.done && (t.a === charId || t.b === charId)) { t.done = true; for (const id of [t.a, t.b]) { const x = this.conns.get(id); if (x && id !== charId) this.notice(x, 'Trade cancelled'); } } }
   /** Validate both sides, then move items + gold in one server-side step and persist both players + trade_history in one DB transaction. */
+  champCheckedAt = 0; champion: { week: string; charId: string } | null = null;
+  /** Weekly champion: the worker writes weekly_champions; online characters gain/lose title_weekly to match the current week. */
+  async syncWeeklyChampion() {
+    try {
+      const r = await pool.query(`SELECT week, character_id FROM weekly_champions WHERE kind='pvp' ORDER BY awarded_at DESC LIMIT 1`); const row = r.rows[0]; this.champion = row ? { week: row.week, charId: row.character_id } : null;
+      for (const c of this.conns.values()) this.applyChampion(c);
+    } catch { /* table missing before migration 002: ignore */ }
+  }
+  applyChampion(c: Conn) {
+    const p = c.svc.p; const is = this.champion?.charId === c.charId; const has = p.titles.includes('title_weekly');
+    if (is && !has) { p.titles.push('title_weekly'); this.notice(c, 'You are the Champion of the Week! Title unlocked.'); c.dirty = true; }
+    if (!is && has) { p.titles = p.titles.filter((t) => t !== 'title_weekly'); if (p.title === 'title_weekly') p.title = null; c.dirty = true; }
+  }
   private async settleTrade(tr: Trade): Promise<Result> {
     const A = this.conns.get(tr.a), B = this.conns.get(tr.b); if (!A || !B || A.world !== B.world) { tr.done = true; return fail('PARTNER_GONE'); }
     const oa = tr.offer[tr.a]!, ob = tr.offer[tr.b]!;
@@ -237,13 +251,16 @@ export class GameServer {
     if (ia.some((i) => !i || i.locked || i.bound) || ib.some((i) => !i || i.locked || i.bound)) { tr.done = true; return fail('ITEM_CHANGED'); }
     if (A.svc.freeSlots() + ia.length < ib.length || B.svc.freeSlots() + ib.length < ia.length) { tr.done = true; return fail('INVENTORY_FULL'); }
     if (A.svc.gold() < oa.gold || B.svc.gold() < ob.gold) { tr.done = true; return fail('NOT_ENOUGH_GOLD'); }
+    for (const [X, o] of [[A, oa], [B, ob]] as const) for (const [id, n] of Object.entries(o.cards ?? {})) if (X.svc.spareCards(id) < n) { tr.done = true; return fail('CARD_CHANGED'); }
     const legs: { account: string; currency: Currency; amount: bigint }[] = [];
     if (oa.gold > 0n) legs.push({ account: walletId(A.svc.p), currency: 'gold', amount: -oa.gold }, { account: walletId(B.svc.p), currency: 'gold', amount: oa.gold });
     if (ob.gold > 0n) legs.push({ account: walletId(B.svc.p), currency: 'gold', amount: -ob.gold }, { account: walletId(A.svc.p), currency: 'gold', amount: ob.gold });
     if (legs.length) this.ledger.post(legs, 'direct_trade', `trade:${tr.id}`);
     for (const i of ia) A.svc.p.inventory.splice(A.svc.p.inventory.indexOf(i!), 1); for (const i of ib) B.svc.p.inventory.splice(B.svc.p.inventory.indexOf(i!), 1);
     A.svc.p.inventory.push(...(ib as any)); B.svc.p.inventory.push(...(ia as any)); tr.done = true;
-    await this.persist([A, B], async (cl) => { await cl.query('INSERT INTO trade_history(id,a_char,b_char,a_items,b_items,a_gold,b_gold) VALUES ($1,$2,$3,$4,$5,$6,$7)', [tr.id, tr.a, tr.b, JSON.stringify(ia.map((i) => i!.defId)), JSON.stringify(ib.map((i) => i!.defId)), oa.gold.toString(), ob.gold.toString()]); });
+    const moveCards = (from: Conn, to: Conn, cards: Record<string, number>) => { for (const [id, n] of Object.entries(cards)) { from.svc.p.tcg.collection[id] = (from.svc.p.tcg.collection[id] ?? 0) - n; to.svc.p.tcg.collection[id] = (to.svc.p.tcg.collection[id] ?? 0) + n; } };
+    moveCards(A, B, oa.cards ?? {}); moveCards(B, A, ob.cards ?? {});
+    await this.persist([A, B], async (cl) => { await cl.query('INSERT INTO trade_history(id,a_char,b_char,a_items,b_items,a_gold,b_gold) VALUES ($1,$2,$3,$4,$5,$6,$7)', [tr.id, tr.a, tr.b, JSON.stringify([...ia.map((i) => i!.defId), ...Object.entries(oa.cards ?? {}).map(([k, n]) => `card:${k}x${n}`)]), JSON.stringify([...ib.map((i) => i!.defId), ...Object.entries(ob.cards ?? {}).map(([k, n]) => `card:${k}x${n}`)]), oa.gold.toString(), ob.gold.toString()]); });
     for (const x of [A, B]) { this.notice(x, 'Trade completed'); x.dirty = true; }
     return ok({ done: true });
   }
@@ -293,7 +310,7 @@ export class GameServer {
       await tx(async (cl) => {
         for (const e of entries) await cl.query('INSERT INTO currency_ledger(tx_id,account,currency,amount,reason,world_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [e.txId, e.account, e.currency, e.amount.toString(), e.reason, CONFIG.worldId]);
         for (const acct of dirty) { const m = this.ledger.balances.get(acct); if (!m) continue; for (const [cur, b] of m) await cl.query('INSERT INTO wallets(account,currency,available,reserved,updated_at) VALUES ($1,$2,$3,$4,now()) ON CONFLICT (account,currency) DO UPDATE SET available=EXCLUDED.available, reserved=EXCLUDED.reserved, updated_at=now()', [acct, cur, b.available.toString(), b.reserved.toString()]); }
-        for (const c of conns) { const e = c.world.entities.get(`pl_${c.charId}`); if (e) c.world.persistVitals(e, c.svc); const p = c.svc.p; const st = { ...p, wallet: undefined }; await cl.query('UPDATE characters SET state=$2, level=$3, map_id=$4, pvp_rating=$5, updated_at=now() WHERE id=$1', [c.charId, JSON.stringify(st), p.level, p.map, p.pvp.rating]); c.lastPersist = Date.now(); }
+        for (const c of conns) { const e = c.world.entities.get(`pl_${c.charId}`); if (e) c.world.persistVitals(e, c.svc); const p = c.svc.p; const st = { ...p, wallet: undefined }; await cl.query('UPDATE characters SET state=$2, level=$3, map_id=$4, pvp_rating=$5, combat_power=$6, updated_at=now() WHERE id=$1', [c.charId, JSON.stringify(st), p.level, p.map, p.pvp.rating, playerCP(p)]); c.lastPersist = Date.now(); }
         if (entries.some((e) => /market|auction|exchange|buy_order|sales_collection|crystal_hold/.test(e.reason)) || conns.length === 0) await cl.query('INSERT INTO market_state(world_id,data,version) VALUES ($1,$2,1) ON CONFLICT (world_id) DO UPDATE SET data=EXCLUDED.data, version=market_state.version+1, updated_at=now()', [CONFIG.worldId, JSON.stringify(this.market.serialize())]);
         if (extra) await extra(cl);
       });
@@ -302,6 +319,8 @@ export class GameServer {
 
   // ---------------- tick & sync ----------------
   private tick(dt: number) {
+    const ev = activeEventAt(Date.now()); for (const w of this.worlds.values()) w.eventMult = { exp: ev.expMult, drop: ev.dropMult, gold: ev.goldMult }; // weekly LiveOps rotation, applied live
+    if (Date.now() - this.champCheckedAt > Number(process.env.CHAMPION_SYNC_MS ?? 60_000)) { this.champCheckedAt = Date.now(); void this.syncWeeklyChampion(); }
     for (const [key, w] of this.worlds) { const hasPlayers = [...w.entities.values()].some((e) => e.kind === 'player'); if (!hasPlayers && MAPS[w.mapId]!.instanced) { this.worlds.delete(key); continue; } if (hasPlayers || w.boss) w.tick(dt); }
     this.settleMatches();
     const now = Date.now();
@@ -336,7 +355,8 @@ export class GameServer {
   async grant(charId: string, what: string, qty: number, actor: string, reason: string) {
     const c = this.conns.get(charId); if (!c) throw new Error('Player must be online for grants in this version'); if (qty <= 0 || qty > 1_000_000) throw new Error('qty out of range');
     const before = { gold: c.svc.gold().toString(), items: c.svc.countItem(what) };
-    if (ITEMS[what]) c.svc.addItem(what, Math.min(qty, 999), { source: 'gm_grant' }); else c.svc.earn(what as Currency, qty, 'gm_compensation', `gm:${Date.now()}:${charId}`);
+    if ((CURRENCIES as string[]).includes(what)) c.svc.earn(what as Currency, qty, 'gm_compensation', `gm:${Date.now()}:${charId}`); // currency names win: some (card_dust, star_dust) are also display item ids
+    else if (ITEMS[what]) c.svc.addItem(what, Math.min(qty, 999), { source: 'gm_grant' }); else throw new Error(`Unknown grant '${what}'`);
     await this.persist([c], async (cl) => { await cl.query('INSERT INTO admin_audit_logs(actor,action,target,reason,before,after) VALUES ($1,$2,$3,$4,$5,$6)', [actor, `grant:${what}:${qty}`, charId, reason, JSON.stringify(before), JSON.stringify({ gold: c.svc.gold().toString(), items: c.svc.countItem(what) })]); });
     c.dirty = true; this.notice(c, `A Game Master granted you ${qty}× ${what}`);
   }

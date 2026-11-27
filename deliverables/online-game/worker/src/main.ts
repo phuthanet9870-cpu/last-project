@@ -8,6 +8,7 @@ const DB = process.env.DATABASE_URL ?? 'postgres://hb:hb_dev_pw@localhost:5432/h
 const REDIS = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
 const connection = { host: REDIS.hostname, port: Number(REDIS.port || 6379) };
 const pool = new pg.Pool({ connectionString: DB, max: 4 });
+const isoWeek = () => { const d = new Date(Date.now() + 7 * 3600_000); const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${String(Math.ceil(((+t - +y) / 86400_000 + 1) / 7)).padStart(2, '0')}`; };
 const bangkokDay = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 
 /** Each job records (job_key) once; a retry or a duplicate scheduler run becomes a no-op (idempotency by DB unique key, not by lock). */
@@ -27,6 +28,13 @@ export const JOBS: Record<string, () => Promise<unknown>> = {
     return { unbalanced: unbalanced.length, mismatch: mismatch.length };
   }),
   chatRetention: () => once('chat_retention', bangkokDay(), async () => ({ deleted: (await pool.query(`DELETE FROM chat_messages WHERE at < now() - interval '30 days'`)).rowCount })),
+  weeklyChampion: () => once('weekly_champion', isoWeek(), async () => {
+    // Highest PvP rating with at least one PvP win this week's state; ties broken by name. Server grants title_weekly on its next sync.
+    const r = await pool.query(`SELECT id, name, pvp_rating FROM characters WHERE deleted_at IS NULL AND COALESCE((state->'pvp'->>'wins')::int,0) > 0 ORDER BY pvp_rating DESC, name LIMIT 1`);
+    const top = r.rows[0]; if (!top) return { champion: null };
+    await pool.query(`INSERT INTO weekly_champions(week,kind,character_id,name,value) VALUES ($1,'pvp',$2,$3,$4) ON CONFLICT (week, kind) DO NOTHING`, [isoWeek(), top.id, top.name, top.pvp_rating]);
+    return { champion: top.name, rating: top.pvp_rating };
+  }),
   sessionCleanup: () => once('session_cleanup', bangkokDay(), async () => ({ deleted: (await pool.query(`DELETE FROM account_sessions WHERE expires_at < now() - interval '7 days'`)).rowCount })),
 };
 if (process.argv.includes('--once')) { // run all jobs once (used by tests / cron fallback without Redis)
@@ -37,6 +45,7 @@ const q = new Queue('hearthbound', { connection });
 await q.upsertJobScheduler('daily', { pattern: '1 0 * * *', tz: 'Asia/Bangkok' }, { name: 'dailyReset' });
 await q.upsertJobScheduler('reconcile', { every: 60 * 60_000 }, { name: 'reconcileLedger' });
 await q.upsertJobScheduler('chat', { pattern: '17 3 * * *', tz: 'Asia/Bangkok' }, { name: 'chatRetention' });
+await q.upsertJobScheduler('weekly', { pattern: '7 0 * * 1', tz: 'Asia/Bangkok' }, { name: 'weeklyChampion' });
 await q.upsertJobScheduler('sessions', { pattern: '27 3 * * *', tz: 'Asia/Bangkok' }, { name: 'sessionCleanup' });
 new Worker('hearthbound', async (job) => { const fn = JOBS[job.name]; if (!fn) throw new Error(`unknown job ${job.name}`); return fn(); }, { connection, concurrency: 1 })
   .on('completed', (j, r) => console.log(`[worker] ${j.name} →`, JSON.stringify(r))).on('failed', (j, e) => console.error(`[worker] ${j?.name} failed`, e.message));

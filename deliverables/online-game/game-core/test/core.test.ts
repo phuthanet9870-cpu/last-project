@@ -273,3 +273,45 @@ describe('market & economy additions (v0.7)', () => {
     const free0 = A.svc.bal('crystal_free'); expect(A.svc.spendCrystal(100, 't')).toBe(true); expect(A.svc.bal('crystal_free')).toBe(free0 - 100n); expect(A.svc.bal('crystal')).toBe(10n);
   });
 });
+
+import { GACHA_BANNERS, MEMBERSHIPS, TCG_CARDS, activeEventAt, eventEndsAt, seasonalFeatured, executeCommand, tcgHint, WEEK_MS } from '../src/index.js';
+describe('LiveOps / rankings / TCG additions (v0.8)', () => {
+  it('memberships: costs simulated crystal, daily claim once per day, bonuses apply, permanent cannot be re-bought', () => {
+    const { svc, p } = mk('blade_sentinel', Date.now()); /* membership bonuses read the wall clock in playerModifiers */ svc.earn('crystal', 10000, 't'); const exp0 = playerStats(p).derived.expBonus;
+    expect(svc.buyMembership('monthly').ok).toBe(true); expect(playerStats(p).derived.expBonus).toBe(exp0 + 5);
+    const f0 = svc.bal('crystal_free'); expect(svc.claimMembership('monthly').ok).toBe(true); expect(svc.bal('crystal_free')).toBe(f0 + 50n); expect(svc.claimMembership('monthly').err).toBe('ALREADY_CLAIMED');
+    const until = p.memberships!.monthly!.until!; svc.buyMembership('monthly'); expect(p.memberships!.monthly!.until).toBe(until + 30 * 86400_000); // extends, not resets
+    expect(svc.buyMembership('hearth').ok).toBe(true); expect(svc.buyMembership('hearth').err).toBe('ALREADY_OWNED'); expect(svc.claimMembership('festival').err).toBe('NOT_ACTIVE');
+    const poor = mk(); poor.svc.spendCrystal(Number(poor.svc.bal('crystal_free')), 'x'); expect(poor.svc.buyMembership('weekly').err).toBe('NOT_ENOUGH_CRYSTAL');
+    expect(Object.keys(MEMBERSHIPS)).toEqual(['weekly', 'monthly', 'festival', 'hearth', 'grand']);
+  });
+  it('gacha: four banners, pity is tracked per banner, seasonal mythic is the featured item', () => {
+    const { svc, p } = mk(); svc.earn('crystal', 200000, 't'); expect(Object.keys(GACHA_BANNERS)).toEqual(['standard', 'seasonal', 'fashion', 'gems']);
+    svc.gachaDraw(10, false, 'gems'); expect(p.gacha.pityBy!.standard ?? 0).toBe(0); expect(svc.gachaDraw(1, false, 'nope' as any).err).toBe('INVALID_BANNER');
+    let mythics = 0; for (let i = 0; i < 30; i++) { const r = svc.gachaDraw(10, false, 'seasonal'); for (const x of r.data!) if (x.rarity === 'mythic') { mythics++; expect(x.itemId).toBe(seasonalFeatured(svc.now())); } }
+    expect((p.gacha.pityBy!.seasonal ?? 0)).toBeLessThan(CFG.gachaPity); void mythics;
+  });
+  it('event rotation: weekly event with countdown; gold rush multiplies monster gold; missions grant event tokens (doubled by festival pass)', () => {
+    const t = 3 * WEEK_MS + 1000; expect(eventEndsAt(t)).toBe(4 * WEEK_MS); expect(activeEventAt(t).id).toBe(activeEventAt(t + 1000).id); expect(activeEventAt(t).id).not.toBe(activeEventAt(t + WEEK_MS).id);
+    const a = mk(); const b = mk(); const g0 = a.svc.gold(); a.svc.onKill('slime', 1, 0, 100, [], { exp: 1, drop: 1, gold: 1.5 }); b.svc.onKill('slime', 1, 0, 100, [], { exp: 1, drop: 1 }); expect(a.svc.gold() - g0).toBe(150n);
+    const { svc, p } = mk(); svc.earn('crystal', 1000, 't'); p.events.progress.evm_kill = 99; expect(svc.claimEventMission('ev_lantern_festival', 'evm_kill').ok).toBe(true); expect(svc.bal('event_token')).toBe(20n);
+    svc.buyMembership('festival'); p.events.progress.evm_craft = 9; svc.claimEventMission('ev_lantern_festival', 'evm_craft'); expect(svc.bal('event_token')).toBe(60n); expect(svc.countItem('deco_lantern')).toBe(6);
+  });
+  it('TCG: starter cards are bound (no dust/exchange), exchange 3 → 1 of next rarity, cosmetics cost dust', () => {
+    const { svc, p } = mk(); const starter = p.tcg.decks[0]!.cards[0]!; expect(p.tcg.bound![starter]).toBeGreaterThan(0); expect(svc.spareCards(starter)).toBe(0); expect(svc.dustCard(starter).ok).toBe(false);
+    const commons = Object.values(TCG_CARDS).filter((c) => c.rarity === 'common' && !c.id.startsWith('tok_')).slice(0, 3).map((c) => c.id); for (const c of commons) p.tcg.collection[c] = (p.tcg.collection[c] ?? 0) + 3;
+    expect(svc.exchangeCards([commons[0]!, commons[1]!, 'nope']).ok).toBe(false); const before = { ...p.tcg.collection };
+    const r = svc.exchangeCards(commons); expect(r.ok).toBe(true); expect(TCG_CARDS[r.data!]!.rarity).toBe('uncommon'); for (const c of commons) expect(p.tcg.collection[c]).toBe(before[c]! - 1);
+    const rare = Object.values(TCG_CARDS).find((c) => c.rarity === 'rare')!.id; p.tcg.collection[rare] = (p.tcg.collection[rare] ?? 0) + 1; expect(svc.exchangeCards([commons[0]!, commons[1]!, rare]).err).toBe('SAME_RARITY');
+    expect(svc.tcgCosmetic('back_ember', true).err).toBe('NOT_ENOUGH_DUST'); svc.earn('card_dust', 500, 't'); expect(svc.tcgCosmetic('back_ember', true).ok).toBe(true); expect(p.tcg.cosmetics!.back).toBe('back_ember'); expect(svc.bal('card_dust')).toBe(300n);
+    expect(svc.tcgCosmetic('back_classic', false).ok).toBe(true); expect(svc.tcgCosmetic('mat_night', false).err).toBe('NOT_OWNED');
+  });
+  it('TCG tutorial gives hints and a one-time reward; local rankings include you and labelled sims', () => {
+    const { svc, p } = mk(); const world = new World({ mapId: 'emberglen', rng: new Rng(3), bots: 0 }); world.addPlayer(svc); const ctx = { world, svc, session: {}, market: new MarketService(p.wallet), mode: 'local' as const } as any;
+    const r = executeCommand(ctx, 'tcgStart', { mode: 'tutorial' }); expect(r.ok).toBe(true); expect((r.data as any).hint.en.length).toBeGreaterThan(5); expect(ctx.session.tcg.state.sides[1].hero).toBe(10);
+    let guard = 0; while (ctx.session.tcg.state.winner === null && guard++ < 400) executeCommand(ctx, 'tcgAction', { action: aiChooseAction(ctx.session.tcg.state, 0) });
+    const won = ctx.session.tcg.state.winner === 0; expect(p.tcg.tutorialDone ?? false).toBe(won); expect(tcgHint(ctx.session.tcg.state).en).toMatch(won ? /won/ : /lost|draw|again/);
+    const rows = executeCommand(ctx, 'rankings', { kind: 'pet' }).data as any[]; expect(rows.some((x) => x.name === p.name && !x.simulated)).toBe(true); expect(rows.filter((x) => x.simulated).every((x) => x.name.includes('[sim]'))).toBe(true);
+    expect((executeCommand(ctx, 'rankings', { kind: 'class:dawn_priest' }).data as any[]).some((x) => x.name === p.name)).toBe(false);
+  });
+});
