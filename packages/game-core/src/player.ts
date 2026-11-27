@@ -401,20 +401,7 @@ export class PlayerService {
   allocate(stat: keyof Primary, n = 1): Result { if (n <= 0 || this.p.statPoints < n) return fail('NO_POINTS'); this.p.allocated[stat] += n; this.p.statPoints -= n; return ok(); }
   resetStats(): Result { const total = Object.values(this.p.allocated).reduce((a, b) => a + b, 0); if (!this.spend('gold', 1000 + this.p.level * 50, 'stat_reset')) return fail('NOT_ENOUGH_GOLD'); this.p.allocated = zeroPrimary(); this.p.statPoints += total; this.clampVitals(); return ok(); }
   /** V4 allocation rules (prerequisites AND/OR, job level, ascension stage, max rank, point budget). Returns an error code or null. */
-  validateSkillDraft(draft: Record<string, number>): { code: string; msg?: string } | null {
-    const cls = CLASSES[this.p.classId]!; const byId = new Map(cls.skills.map((s) => [s.id, s]));
-    let total = 0;
-    for (const [id, r] of Object.entries(draft)) {
-      const s = byId.get(id); if (!s) return { code: 'INVALID_SKILL', msg: id }; if (!Number.isInteger(r) || r < 0) return { code: 'INVALID_RANK', msg: id };
-      if (r === 0) continue; total += r;
-      if (r > s.maxRank) return { code: 'MAX_RANK', msg: `${s.name.en} max ${s.maxRank}` };
-      if (this.p.jobLevel < s.jobReq) return { code: 'JOB_LEVEL_TOO_LOW', msg: `${s.name.en} requires job level ${s.jobReq}` };
-      if (this.p.ascension < s.asc - 1) return { code: 'ASCENSION_REQUIRED', msg: `${s.name.en} requires Ascension ${s.asc}` };
-      if (s.pre.length) { const met = s.pre.map(([k, pr]) => (draft[`${cls.id}.${k}`] ?? 0) >= pr); if (s.preAny ? !met.some(Boolean) : !met.every(Boolean)) return { code: 'PREREQUISITE', msg: `${s.name.en} requires ${s.pre.map(([k, pr]) => `${byId.get(`${cls.id}.${k}`)?.name.en} ${pr}`).join(s.preAny ? ' or ' : ' and ')}` }; }
-    }
-    if (total > skillPointBudget(this.p)) return { code: 'NO_SKILL_POINTS', msg: `${total} > ${skillPointBudget(this.p)}` };
-    return null;
-  }
+  validateSkillDraft(draft: Record<string, number>): { code: string; msg?: string } | null { return validateSkillDraft(this.p, draft); }
   /**
    * Atomic commit of a pending allocation (spec: Undo/Confirm on the client, one transaction on the server).
    * - `rev` must equal the current revision (stale tabs/devices are rejected: STALE_REVISION)
@@ -791,9 +778,46 @@ export function serializePlayer(p: PlayerState): string { return JSON.stringify(
 export function deserializePlayer(s: string): PlayerState { const o = JSON.parse(s); if (o.v !== 1) throw new Error('UNSUPPORTED_SAVE_VERSION'); o.wallet = Ledger.deserialize(o.wallet); migrateSkillsV4(o as PlayerState); return o as PlayerState; }
 
 // ---- Skill System V4 helpers ----
+/** V4 allocation rules shared by server commit and client preview (prerequisites AND/OR, job level, ascension stage, max rank, point budget). */
+export function validateSkillDraft(p: Pick<PlayerState, 'classId' | 'jobLevel' | 'ascension'>, draft: Record<string, number>): { code: string; msg?: string } | null {
+    const cls = CLASSES[p.classId]!; const byId = new Map(cls.skills.map((s) => [s.id, s]));
+    let total = 0;
+    for (const [id, r] of Object.entries(draft)) {
+      const s = byId.get(id); if (!s) return { code: 'INVALID_SKILL', msg: id }; if (!Number.isInteger(r) || r < 0) return { code: 'INVALID_RANK', msg: id };
+      if (r === 0) continue; total += r;
+      if (r > s.maxRank) return { code: 'MAX_RANK', msg: `${s.name.en} max ${s.maxRank}` };
+      if (p.jobLevel < s.jobReq) return { code: 'JOB_LEVEL_TOO_LOW', msg: `${s.name.en} requires job level ${s.jobReq}` };
+      if (p.ascension < s.asc - 1) return { code: 'ASCENSION_REQUIRED', msg: `${s.name.en} requires Ascension ${s.asc}` };
+      if (s.pre.length) { const met = s.pre.map(([k, pr]) => (draft[`${cls.id}.${k}`] ?? 0) >= pr); if (s.preAny ? !met.some(Boolean) : !met.every(Boolean)) return { code: 'PREREQUISITE', msg: `${s.name.en} requires ${s.pre.map(([k, pr]) => `${byId.get(`${cls.id}.${k}`)?.name.en} ${pr}`).join(s.preAny ? ' or ' : ' and ')}` }; }
+    }
+    if (total > skillPointBudget(p)) return { code: 'NO_SKILL_POINTS', msg: `${total} > ${skillPointBudget(p)}` };
+    return null;
+  }
+
 /** Skill points available in total: 1 per job level (job level 1 = 1 point, spent on the starter skill). PROVIDED_SPEC (job level → skill points), amount CUSTOM_DESIGN. */
 export function skillPointBudget(p: Pick<PlayerState, 'jobLevel'>): number { return Math.max(1, p.jobLevel); }
 export function spentPoints(ranks: Record<string, number>): number { return Object.values(ranks).reduce((a, b) => a + Math.max(0, b), 0); }
+/**
+ * Auto Allocate (spec V4): fills a DRAFT from a recommended build, one rank at a time, keeping every intermediate state legal.
+ * Nothing is committed — the player reviews the draft and presses Confirm. Entries that are not yet legal (job level/ascension) are skipped.
+ */
+export function autoAllocateDraft(p: Pick<PlayerState, 'classId' | 'jobLevel' | 'ascension' | 'skillRanks'>, seq: [string, number][]): Record<string, number> {
+  const draft: Record<string, number> = { ...p.skillRanks };
+  for (let pass = 0; pass < 2; pass++) for (const [key, target] of seq) {
+    const id = `${p.classId}.${key}`;
+    while ((draft[id] ?? 0) < target) { const next = { ...draft, [id]: (draft[id] ?? 0) + 1 }; if (validateSkillDraft(p, next)) break; draft[id] = next[id]!; }
+  }
+  // leftover points: raise the build's own skills toward max rank, in build order (still legal at every step)
+  const cls = CLASSES[p.classId]!;
+  const raise = (id: string, to: number) => { while ((draft[id] ?? 0) < to) { const next = { ...draft, [id]: (draft[id] ?? 0) + 1 }; if (validateSkillDraft(p, next)) return false; draft[id] = next[id]!; } return true; };
+  // then unlock the ultimate through its prerequisite chain, then passives, then everything else (tree order) — CUSTOM_DESIGN
+  const ult = cls.skills.find((s) => s.type === 'ultimate');
+  if (ult) { const chain = (k: string, r: number): void => { const s = cls.skills.find((x) => x.key === k)!; for (const [pk, pr] of s.preAny ? s.pre.slice(0, 1) : s.pre) chain(pk, pr); raise(s.id, r); }; chain(ult.key, 1); }
+  for (const [key] of seq) { const id = `${p.classId}.${key}`; raise(id, cls.skills.find((s) => s.id === id)?.maxRank ?? 0); }
+  for (const s of cls.skills.filter((x) => x.type === 'passive')) raise(s.id, s.maxRank);
+  for (const s of cls.skills) raise(s.id, s.maxRank);
+  return draft;
+}
 /** New characters know their class's first Ascension I skill at rank 1. */
 export function starterRanks(classId: string): Record<string, number> { return { [CLASSES[classId]!.skills[0]!.id]: 1 }; }
 /**

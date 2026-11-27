@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_SKILLS, CLASSES, CLASS_IDS, MarketService, PlayerService, Rng, TILE, World, classKit, createCharacter, deserializePlayer, executeCommand, gaugeCast, playerStats,
-  serializePlayer, skillPointBudget, validateKit, valuesAt,
+  serializePlayer, skillPointBudget, validateKit, valuesAt, autoAllocateDraft, validateSkillDraft,
 } from '../src/index.js';
 
 const mk = (cls = 'blade_sentinel') => { const clock = { t: 1_800_000_000_000 }; const p = createCharacter({ accountId: 'acc', name: 'Vfour', classId: cls, appearance: { body: 0, hair: 0, hairColor: '#000', skin: '#fc9', eyes: '#000' }, now: clock.t }); const svc = new PlayerService(p, new Rng(7), () => clock.t); return { p, svc, clock }; };
@@ -72,6 +72,20 @@ describe('V4 allocation', () => {
   it('reset refunds all points (scroll first, else gold)', () => {
     const { svc, p } = mk('vanguard'); p.jobLevel = 10; p.skillPoints = 9; svc.commitSkills({ [CLASSES.vanguard!.skills[0]!.id]: 5 }); svc.earn('gold', 5000, 't');
     svc.addItem('skill_reset_scroll', 1); const g0 = svc.gold(); const r = svc.resetSkills(); expect(r.ok).toBe(true); expect(p.skillPoints).toBe(9); expect(svc.gold()).toBe(g0); expect(svc.countItem('skill_reset_scroll')).toBe(0);
+  });
+});
+
+describe('V4 builds', () => {
+  it('every one of the 52 builds auto-allocates into a legal draft at job 70 / Ascension III using all points', () => {
+    for (const c of CLASS_IDS) for (const b of CLASSES[c]!.builds) {
+      const p = { classId: c, jobLevel: 70, ascension: 2, skillRanks: { [CLASSES[c]!.skills[0]!.id]: 1 } };
+      const d = autoAllocateDraft(p, b.seq); expect(validateSkillDraft(p, d), `${c}/${b.id}`).toBeNull();
+      const spent = Object.values(d).reduce((x, y) => x + y, 0); expect(spent, `${c}/${b.id}`).toBe(70); expect(Object.keys(d).some((k) => CLASSES[c]!.skills.find((x) => x.id === k)?.type === 'ultimate'), `${c}/${b.id} reaches ultimate`).toBe(true);
+    }
+  });
+  it('auto allocate at low job level only takes legal ranks (no commit)', () => {
+    const { p } = mk('frost_sage'); p.jobLevel = 6; const before = JSON.stringify(p.skillRanks);
+    const d = autoAllocateDraft(p, CLASSES.frost_sage!.builds[0]!.seq); expect(validateSkillDraft(p, d)).toBeNull(); expect(JSON.stringify(p.skillRanks)).toBe(before);
   });
 });
 
