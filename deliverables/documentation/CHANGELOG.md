@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — 2026-11-27 — Task 8: content expansion
+- Three new zones fill the Lv30–90 gap: **Coral Coast** (Lv32–44, east of Amber Hills; sea + coral tiles), **Starfall Ruins** (Lv47–62; ruin tiles, pillars), **Emberpeak Caldera** (Lv68–86; ash + animated lava, lava blocks movement). 13 new monsters incl. 2 guard elites, 3 NPCs (Captain Mara, Scholar Ilya, Volka the Forgewarden), 4 new materials.
+- Two new story dungeons with their own maps and bosses: **Tidal Grotto** (Lv35, Abyssal Kraken, 2 phases) and **Starfall Vault** (Lv55, Vault Archon, summons in 2 phases).
+- Main story continues mq11–mq18 (Lv30→75) through the new zones and dungeons; 6 new side quests.
+- Fix (task 7 limitation): event missions now belong to one occurrence of a weekly event — progress/claims reset when a new week starts, only the running event counts and can be claimed.
+- Fix (task 7 limitation): weekly champion = most PvP rating gained in rated matches during the last 7 days (sum of per-match deltas), not all-time rating. Worker supports `--once --job <name> --period <p>` for backfills/tests.
+- Dev panel: `weaken` op (sets a monster to ~0.1% HP) to keep long fights out of automated tests.
+- Tests: unit 65, E2E 35/35, multiplayer 24/24, online browser E2E 3/3.
+
 ## 0.9.0 — 2026-11-27 — Guild & wedding
 - Wedding: proposal now creates an **engagement** (partner consent online); the marriage completes at the new **Blossom Wedding Plaza** (portal south of Emberglen) with Planner Rosa: both partners at the altar, 5,000 Gold, ceremony phases (guests gather → vows → rings → celebration with petals), HUD banner, friends notified online, guests receive a cake slice once. The ceremony is cancelled if a partner leaves before the celebration. Couple bonus applies only after the wedding. Online couple teleport (10 min cooldown, not in instances). Artifact: simulated partner and guests.
 - Guild (online, DB-backed): shared guild storage table (anyone deposits, officers/leader withdraw; capacity 50 + 10/level; atomic with the player save; activity log), promote/demote, remove member (rank-checked), leadership transfer, announcements (HTML stripped), disband (storage must be empty), leaders must transfer before leaving; membership re-synced from the DB at login.

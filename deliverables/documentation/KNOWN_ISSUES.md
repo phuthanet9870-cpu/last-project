@@ -16,8 +16,8 @@
 ## Severity: Low
 - Guild war winner on a 0:0 Siege score is decided by the arena tie-break rule (the test war ran only 3 s, so no objective play happened). Guild kick/transfer/disband are implemented but not covered by an automated test. The artifact guild is single-player (members and rival guilds are simulated).
 - Wedding guests online must be in the plaza and near the aisle to receive cake; there is no RSVP/invitation list, scheduled booking or wedding photo.
-- Weekly champion uses all-time PvP rating (characters with at least one win), not rating gained during the week. Membership bonuses read the wall clock (not the injected test clock).
-- Event missions are claimed by mission id forever: when an event returns in a later rotation its missions cannot be claimed again (no per-occurrence reset yet).
+- Membership bonuses read the wall clock (not the injected test clock).
+- New-zone balance (Lv30–90) follows the existing HP/ATK formulas but has not been play-tested; the E2E dungeon run uses the dev `weaken` op. Solo simulation: a Lv90 priest with an Astral staff needs ~2.5 min of auto-attacks for the Abyssal Kraken. No content beyond Lv~90 yet (cap 120); no raids.
 10. Thai translation covers UI keys and content names; many panel strings are English only.
 11. Fullscreen toggle and key remapping not implemented. Projectiles are not blocked by walls (they fly over terrain).
 12. World boss schedule rotates by hour; configured Bangkok times are not wired to the real clock (artifact spawns every 4 minutes for testing).
