@@ -7,7 +7,7 @@ export const S = 2; // pixel scale
 type Ctx = CanvasRenderingContext2D;
 const cache = new Map<string, HTMLCanvasElement>();
 export function canvas(w: number, h: number): [HTMLCanvasElement, Ctx] { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d')!; x.imageSmoothingEnabled = false; return [c, x]; }
-function cached(key: string, w: number, h: number, draw: (x: Ctx) => void): HTMLCanvasElement { let c = cache.get(key); if (c) return c; const [cv, x] = canvas(w, h); draw(x); cache.set(key, cv); return cv; }
+function cached(key: string, w: number, h: number, draw: (x: Ctx) => void): HTMLCanvasElement { const c = cache.get(key); if (c) return c; const [cv, x] = canvas(w, h); draw(x); cache.set(key, cv); return cv; }
 
 export function shade(hex: string, f: number): string {
   const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;

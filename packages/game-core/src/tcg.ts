@@ -41,7 +41,7 @@ for (const el of ELEMENTS) {
     const [se, sth, type, rarity, cost, atk, hp, kw, onPlay, trap, field] = t;
     // element flavor
     const kws = [...kw]; let a = atk, h = hp;
-    if (type === 'creature') { if (el === 'fire') a += 1, h = Math.max(1, h - 1); if (el === 'earth') h += 1; if (el === 'wind' && !kws.includes('swift') && cost <= 3) kws.push('swift'); if (el === 'light' && cost >= 3 && !kws.includes('shield')) kws.push('shield'); if (el === 'dark' && cost === 4) kws.push('lifelink'); if (el === 'ice' && cost === 3) h += 1; }
+    if (type === 'creature') { if (el === 'fire') { a += 1; h = Math.max(1, h - 1); } if (el === 'earth') h += 1; if (el === 'wind' && !kws.includes('swift') && cost <= 3) kws.push('swift'); if (el === 'light' && cost >= 3 && !kws.includes('shield')) kws.push('shield'); if (el === 'dark' && cost === 4) kws.push('lifelink'); if (el === 'ice' && cost === 3) h += 1; }
     const id = `tc_${el}_${se.toLowerCase().replace(/\s+/g, '_')}`;
     const text = cardText(type, kws, onPlay, trap, field, a, h);
     C.push({ id, name: { en: type === 'hero' ? se : `${en} ${se}`, th: type === 'hero' ? sth : `${sth}${th}` }, type, element: el, rarity, cost, atk: a, hp: h, keywords: kws, onPlay, trap, field, text, craft: { common: 20, uncommon: 50, rare: 100, epic: 400, legendary: 1600, mythic: 3200 }[rarity] });

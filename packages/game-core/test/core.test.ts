@@ -141,3 +141,17 @@ describe('save/load', () => {
   it('round-trips BigInt wallet and full state', () => { const { svc, p } = mk(); svc.earn('gold', 12345, 't'); const s = serializePlayer(p); const q = deserializePlayer(s); expect(q.wallet.available(`p:${p.id}`, 'gold')).toBe(svc.gold()); expect(q.equipment.main!.defId).toBe(p.equipment.main!.defId); });
   it('rejects unknown save versions', () => { expect(() => deserializePlayer('{"v":99}')).toThrow(); });
 });
+
+import { applyStatus, tickStatuses, absorbShield, hasCC, statusModifiers, cleanse } from '../src/index.js';
+describe('status effect engine', () => {
+  it('stacking, DoT ticks, expiry and modifier removal', () => {
+    const l: any[] = []; applyStatus(l, 'poison', 'src', 3000, 100); applyStatus(l, 'poison', 'src', 3000, 100); expect(l[0].stacks).toBe(2);
+    const r = tickStatuses(l, 1000); expect(r.damage).toBe(24); tickStatuses(l, 2500); expect(l.length).toBe(0);
+    applyStatus(l, 'atk_up', 's', 5000, 0); expect(statusModifiers(l).some((m) => m.stat === 'atk' && m.value === 20)).toBe(true); tickStatuses(l, 6000); expect(statusModifiers(l)).toEqual([]);
+  });
+  it('shield absorbs before HP; CC resist shortens duration; cleanse removes debuffs only', () => {
+    const l: any[] = []; applyStatus(l, 'shield', 's', 5000, 0, 0, 50); expect(absorbShield(l, 80)).toBe(30); expect(l[0].shieldHp).toBe(0);
+    const c: any[] = []; applyStatus(c, 'stun', 's', 2000, 0, 50); expect(c[0].remainingMs).toBe(1000); expect(hasCC(c, 'stun')).toBe(true);
+    applyStatus(c, 'regen', 's', 2000, 10); expect(cleanse(c, 'debuff')).toBe(1); expect(c.map((x) => x.id)).toEqual(['regen']);
+  });
+});

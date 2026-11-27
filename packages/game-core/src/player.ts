@@ -322,7 +322,7 @@ export class PlayerService {
 
   // ---- progression (§9) ----
   gainExp(amount: number, source: string, eventMult = 1): number {
-    const d = playerStats(this.p).derived; let gained = Math.floor(amount * (1 + d.expBonus / 100) * eventMult);
+    const d = playerStats(this.p).derived; const gained = Math.floor(amount * (1 + d.expBonus / 100) * eventMult);
     let levels = 0;
     const capLvl = CONFIG.levelCap;
     this.p.jobExp += Math.floor(gained * 0.6);
@@ -534,7 +534,7 @@ export class PlayerService {
   /** Offline farm settlement (§26): server/local timestamps, capped accumulation, food-limited, idempotent (lastSettle advances). */
   settleFarm(): { minutes: number; exp: number; foodUsed: number } {
     const now = this.now(); const elapsed = Math.min(CONFIG.farmMaxAccumulationMs, Math.max(0, now - this.p.farm.lastSettle));
-    const pets = this.p.pets.filter((x) => x.onFarm); let minutes = Math.floor(elapsed / 60000);
+    const pets = this.p.pets.filter((x) => x.onFarm); const minutes = Math.floor(elapsed / 60000);
     if (minutes <= 0 || pets.length === 0) { if (pets.length === 0) this.p.farm.lastSettle = now; return { minutes: 0, exp: 0, foodUsed: 0 }; }
     const foodPerMin = pets.length * 0.2; const maxByFood = foodPerMin > 0 ? Math.floor(this.p.farm.food / foodPerMin) : 0; const fedMin = Math.min(minutes, maxByFood);
     const foodUsed = Math.ceil(fedMin * foodPerMin); this.p.farm.food = Math.max(0, this.p.farm.food - foodUsed);

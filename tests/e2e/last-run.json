@@ -1,168 +1,168 @@
 {
-  "when": "2026-11-27T00:15:42.771Z",
-  "passed": 18,
+  "when": "2026-11-27T00:31:25.565Z",
+  "passed": 27,
   "total": 27,
   "results": [
     {
       "name": "01 open game start screen",
       "ok": true,
-      "ms": 169,
+      "ms": 175,
       "detail": ""
     },
     {
       "name": "02 guest/local mode + character creation + class selection",
       "ok": true,
-      "ms": 1321,
+      "ms": 1351,
       "detail": "class=dawn_priest"
     },
     {
       "name": "03 character movement + collision + camera follow",
       "ok": true,
-      "ms": 6724,
-      "detail": "x 912→996.0000000000002→362.02799999999576"
+      "ms": 6715,
+      "detail": "x 912→996→362.0279999999958"
     },
     {
       "name": "04 NPC interaction + accept quest + talk objective",
       "ok": true,
-      "ms": 905,
+      "ms": 834,
       "detail": "mq01 complete, mq02 accepted"
     },
     {
       "name": "05 travel through portal to field",
       "ok": true,
-      "ms": 819,
+      "ms": 774,
       "detail": "whisperwood"
     },
     {
       "name": "06 combat: attack monsters, skills, EXP, level, loot, gold",
       "ok": true,
-      "ms": 12196,
-      "detail": "kills=5 level 2→2 gold 550→586"
+      "ms": 11771,
+      "detail": "kills=5 level 2→2 gold 550→583"
     },
     {
       "name": "07 inventory + equipment UI",
       "ok": true,
-      "ms": 166,
+      "ms": 68,
       "detail": "equipped staff"
     },
     {
       "name": "08 refinement at blacksmith (+5)",
       "ok": true,
-      "ms": 21,
+      "ms": 13,
       "detail": "+5"
     },
     {
       "name": "09 gems + monster card + skill stone",
-      "ok": false,
-      "ms": 15,
-      "detail": "{\"ok\":false,\"err\":\"NOT_GEM\",\"msg\":\"NOT_GEM\"}"
+      "ok": true,
+      "ms": 16,
+      "detail": "gem socketed, card inserted, stone inscribed+slotted"
     },
     {
       "name": "10 capture + hatch pet, summon, feed, farm offline settle",
       "ok": true,
-      "ms": 3969,
+      "ms": 3199,
       "detail": "pets=2"
     },
     {
       "name": "11 mount unlock + ride",
-      "ok": false,
-      "ms": 15,
-      "detail": "{\"ok\":false,\"err\":\"CANNOT_RIDE_HERE\",\"msg\":\"CANNOT_RIDE_HERE\"}"
+      "ok": true,
+      "ms": 365,
+      "detail": "riding ok"
     },
     {
       "name": "12 gathering + crafting",
       "ok": true,
-      "ms": 68,
+      "ms": 34,
       "detail": "gathered herb, crafted potion"
     },
     {
       "name": "13 marketplace list + buy + buy order + auction bid + exchange",
-      "ok": false,
-      "ms": 4608,
-      "detail": "Do not know how to serialize a BigInt"
+      "ok": true,
+      "ms": 4583,
+      "detail": "bought listing, listed item, buy order, bid placed, exchange filled (crystal=1505), ledger balanced"
     },
     {
       "name": "14 direct trade with simulated player",
       "ok": true,
-      "ms": 9,
+      "ms": 7,
       "detail": "trade settled"
     },
     {
       "name": "15 party + guild + friend + mail + marriage",
       "ok": true,
-      "ms": 46,
+      "ms": 16,
       "detail": "party, friend, guild, mail, marriage ok"
     },
     {
       "name": "16 dungeon run (waves + boss) with reward once",
-      "ok": false,
-      "ms": 31767,
-      "detail": "dungeon cleared"
+      "ok": true,
+      "ms": 1672,
+      "detail": "cleared daily_exp_1"
     },
     {
       "name": "17 world boss spawn + contribution settlement",
       "ok": true,
-      "ms": 2482,
+      "ms": 2661,
       "detail": "boss coins 20"
     },
     {
       "name": "18 PvP arena 1v1 vs AI (simulated) + rating",
-      "ok": false,
-      "ms": 14,
-      "detail": "join"
+      "ok": true,
+      "ms": 492,
+      "detail": "win=true rating=1019"
     },
     {
       "name": "19 Hearthcards duel vs AI to completion",
-      "ok": false,
-      "ms": 535,
-      "detail": "page.evaluate: TypeError: Cannot read properties of null (reading 'view')\n    at eval (eval at evaluate (:311:30), <anonymous>:1:70)\n    at eval (eval at evaluate (:311:30), <anonymous>:1:83)\n    at eval (eval at evaluate (:311:30), <anonymous>:1:93)\n    at eval (<anonymous>)\n    at UtilityScript.ev"
+      "ok": true,
+      "ms": 701,
+      "detail": "winner=0"
     },
     {
       "name": "20 events: login, missions, pass, gacha (simulated currency)",
       "ok": true,
-      "ms": 18,
+      "ms": 8,
       "detail": "login, pass, 10x wish ok; payments disabled"
     },
     {
       "name": "21 all menu windows open without errors",
-      "ok": false,
-      "ms": 34271,
-      "detail": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.mbtn[aria-label=\"Creator\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"mbtn\" title=\"Creator ()\" aria-label=\"Creator\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visibl"
+      "ok": true,
+      "ms": 4193,
+      "detail": "22 windows"
     },
     {
       "name": "22 developer System Registry view",
-      "ok": false,
-      "ms": 348,
-      "detail": "rows 0"
+      "ok": true,
+      "ms": 305,
+      "detail": "581 registry rows"
     },
     {
       "name": "23 save → reload → continue keeps progress",
       "ok": true,
-      "ms": 1105,
+      "ms": 1000,
       "detail": "level 60 restored"
     },
     {
       "name": "24 export save produces valid file",
       "ok": true,
-      "ms": 5,
-      "detail": "64584 bytes"
+      "ms": 4,
+      "detail": "67748 bytes"
     },
     {
       "name": "25 mobile viewport renders HUD + joystick",
       "ok": true,
-      "ms": 1165,
+      "ms": 1122,
       "detail": "joystick visible"
     },
     {
       "name": "26 Thai language switch",
-      "ok": false,
-      "ms": 30005,
-      "detail": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.win button:has-text(\"ภาษาไทย\")')\u001b[22m\n"
+      "ok": true,
+      "ms": 284,
+      "detail": "thai ok"
     },
     {
       "name": "27 performance: frame rate in town",
       "ok": true,
-      "ms": 2018,
+      "ms": 2012,
       "detail": "61 fps (headless, software rendering)"
     }
   ],

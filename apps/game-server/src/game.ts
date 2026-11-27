@@ -5,7 +5,7 @@
 import type { WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
 import {
-  CONFIG as GAME, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, publicEntity, serializePlayer, viewFor, walletId, elo,
+  CONFIG as GAME, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
   type Currency, type PlayerState, type Result, type Session,
 } from '../../../packages/game-core/src/index.js';
 import { pool, tx } from './db.js';
@@ -108,7 +108,7 @@ export class GameServer {
     switch (cmd) {
       // ---- chat (world/whisper are cross-map) ----
       case 'chat': { if (c.muted) return fail('MUTED', 'You are muted by a moderator'); const ch = String(a.ch ?? 'local'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160).trim(); if (!msg) return fail('EMPTY');
-        if (ch === 'world' || ch === 'trade' || ch === 'help') for (const x of this.conns.values()) { if (!x.svc.p.blocked.includes(c.svc.p.name)) x.world === c.world ? null : this.send(x, { type: 'snap', entities: [], fx: [{ t: 'chat', ch, from: c.svc.p.name, msg }] }); }
+        if (ch === 'world' || ch === 'trade' || ch === 'help') for (const x of this.conns.values()) { if (!x.svc.p.blocked.includes(c.svc.p.name) && x.world !== c.world) this.send(x, { type: 'snap', entities: [], fx: [{ t: 'chat', ch, from: c.svc.p.name, msg }] }); }
         if (ch === 'party') { const e = c.world.entities.get(me); const m = e?.partyId ? c.world.parties.get(e.partyId) ?? [] : []; for (const id of m) { const t = this.conns.get(id.replace('pl_', '')); if (t) this.send(t, { type: 'snap', entities: [], fx: [{ t: 'chat', ch, from: c.svc.p.name, msg }] }); } this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
         c.world.chat(me, ch, msg); this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
       case 'whisper': { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.to ?? '').toLowerCase()); if (!t) return fail('PLAYER_OFFLINE'); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160); this.send(t, { type: 'snap', entities: [], fx: [{ t: 'chat', ch: 'whisper', from: c.svc.p.name, msg }] }); this.chatOut.push(['whisper', msg, c.charId, t.charId, c.svc.p.name]); return ok(); }

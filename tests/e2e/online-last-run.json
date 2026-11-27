@@ -1,0 +1,21 @@
+{
+  "when": "2026-11-27T00:27:18.250Z",
+  "results": [
+    {
+      "name": "two browser clients see each other in online mode",
+      "ok": true,
+      "detail": "[\"Ivy8dtc\",\"Oak8dtc\"]"
+    },
+    {
+      "name": "chat between browsers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dev/cheat commands rejected by server",
+      "ok": true,
+      "detail": "FORBIDDEN"
+    }
+  ],
+  "errors": []
+}

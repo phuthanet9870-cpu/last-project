@@ -6,7 +6,7 @@ import { Audio } from './audio.js';
 import { L, setLang, t } from './i18n.js';
 import { act, initPanels, openArena, openBoss, openCardBook, openCharacter, openCrafting, openDev, openDungeons, openEvents, openHelp, openInventory, openMail, openMarket, openMounts, openNpc, openPets, openQuests, openRankings, openSettings, openSkills, openSocial, openTcg, openCreator } from './panels.js';
 import { Renderer, lookOf } from './render.js';
-import { buildHud, chatLine, closeAll, h, hideTip, isOpen, refreshAll, toast, updateHud, type HudRefs } from './ui.js';
+import { buildHud, chatLine, closeAll, confirmDialog, h, hideTip, isOpen, refreshAll, toast, updateHud, type HudRefs } from './ui.js';
 
 const DEV = (() => { try { const q = new URLSearchParams(location.search); if (q.get('dev') === '0') return false; } catch { /* */ } return true; })(); // artifact testing mode: dev panel enabled
 const app = document.getElementById('app')!;
@@ -92,7 +92,7 @@ function startGame(a: Adapter) {
   const cv = h('canvas', { class: 'game', 'aria-label': 'Game world' }) as HTMLCanvasElement; const root = h('div', { class: 'game-root' }, cv); app.append(root);
   const r = new Renderer(cv); let target: PubEntity | null = null; let auto = false; const keys = new Set<string>(); let joy = { x: 0, y: 0 };
   const resize = () => { r.resize(Math.floor(window.innerWidth), Math.floor(window.innerHeight)); r.zoom = 0.75 + settings.zoom * 0.75; }; window.addEventListener('resize', resize); resize();
-  const apply = () => { audio.vol.master = settings.master; audio.vol.music = settings.music; audio.vol.sfx = settings.sfx; audio.muted = !!settings.muted; audio.apply(); Object.assign(r.settings, { particles: settings.particles, weather: settings.weather, lighting: settings.lighting, reducedMotion: settings.reducedMotion, lowPerf: settings.lowPerf, showNames: settings.showNames }); r.zoom = 0.75 + settings.zoom * 0.75; document.body.classList.toggle('hc', !!settings.highContrast); document.documentElement.style.setProperty('--ui', String(0.85 + settings.uiScale * 0.3)); a.send('settings', { settings: { autoLoot: settings.autoLoot } }); persistSettings(); };
+  const apply = () => { audio.vol.master = settings.master; audio.vol.music = settings.music; audio.vol.sfx = settings.sfx; audio.muted = !!settings.muted; audio.apply(); Object.assign(r.settings, { particles: settings.particles, weather: settings.weather, lighting: settings.lighting, reducedMotion: settings.reducedMotion, lowPerf: settings.lowPerf, showNames: settings.showNames }); r.zoom = 0.75 + settings.zoom * 0.75; document.body.classList.toggle('hc', !!settings.highContrast); document.documentElement.style.setProperty('--ui', String(0.85 + settings.uiScale * 0.3)); relabel(); a.send('settings', { settings: { autoLoot: settings.autoLoot } }); persistSettings(); };
   const exportSave = () => { if (!(a instanceof LocalAdapter)) { toast('Online saves live on the server', 'info'); return; } const blob = new Blob([a.exportSave()], { type: 'application/json' }); const u = URL.createObjectURL(blob); const link = h('a', { href: u, download: `hearthbound_${a.p.name}_${new Date().toISOString().slice(0, 10)}.json` }); document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000); toast('Save file exported', 'ok'); };
   const quit = () => { a.save(); running = false; closeAll(); audio.stop(); window.removeEventListener('resize', resize); title(); };
   initPanels({ a, target: () => target, audio, settings, applySettings: apply, exportSave, importSave: () => { quit(); importFlow(); }, quit, setNight: (v) => r.setNight(v) });
@@ -131,7 +131,10 @@ function startGame(a: Adapter) {
     ...(a.dev ? [{ key: '`', label: t('dev'), icon: 'gun', open: openDev }] : []),
     { key: 'Z', label: 'Auto', icon: 'knuckle', open: () => { auto = !auto; toast(`Auto-battle ${auto ? 'ON' : 'OFF'}`, 'info'); } },
   ];
-  const hud: HudRefs = buildHud(root, { onHotbar: useHotbar, onChat: (ch, m) => a.send('chat', { ch, msg: m }), onRespawn: () => a.send('respawn'), menu, onJoy: (dx, dy) => { joy = { x: dx, y: dy }; }, onMobileAttack: attack, onMobilePickup: interact, onMobileInteract: interact });
+  const relabel = () => { if (!hud) return; setLang(settings.lang); const keys = ['character', 'inventory', 'skills', 'quests', 'pets', 'mounts', 'cards', 'crafting', 'market', 'social', 'mail', 'dungeon', '', 'pvp', 'tcg', 'rank', 'events', 'help', '', 'settings']; hud.menu.querySelectorAll('.mbtn').forEach((b, i) => { const k = keys[i]; if (k) { (b.querySelector('.ml') as HTMLElement).textContent = t(k); b.setAttribute('aria-label', t(k)); } }); };
+  // eslint-disable-next-line prefer-const
+  let hud!: HudRefs;
+  hud = buildHud(root, { onHotbar: useHotbar, onChat: (ch, m) => a.send('chat', { ch, msg: m }), onRespawn: () => a.send('respawn'), menu, onJoy: (dx, dy) => { joy = { x: dx, y: dy }; }, onMobileAttack: attack, onMobilePickup: interact, onMobileInteract: interact });
   chatLine(hud, 'system', 'System', `Welcome, ${a.p.name}! ${a.mode === 'local' ? 'Artifact mode — other players are simulated (·sim).' : 'Connected to server.'} Press H for help.`);
   const onMap = (mapId: string) => { r.setMap(mapId); target = null; r.selected = null; audio.setMood(MAPS[mapId]!.bgm); toast(L(MAPS[mapId]!.name), 'info'); hideTip(); };
   a.onMapChange = onMap; onMap(a.mapId); apply();
@@ -164,14 +167,15 @@ function startGame(a: Adapter) {
   let last = performance.now(); let fps = 60, fpsAcc = 0, fpsN = 0, lastDx = 0, lastDy = 0, hudAcc = 0, autoAcc = 0, uiAcc = 0;
   const loop = (now: number) => {
     if (!running) return; const dt = Math.min(100, now - last); last = now;
-    let dx = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + joy.x; let dy = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + joy.y;
+    const dx = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + joy.x; const dy = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + joy.y;
     if (dx !== lastDx || dy !== lastDy) { a.send('move', { dx, dy }); lastDx = dx; lastDy = dy; }
     a.tick(dt);
     if (auto) { autoAcc += dt; if (autoAcc > 400) { autoAcc = 0; autoStep(); } }
     const fx = a.drainFx(); const ents = a.entities(); const byId = new Map(ents.map((x) => [x.id, x]));
     for (const f of fx) {
       if (f.t === 'chat') chatLine(hud, f.ch, f.from, f.msg);
-      if (f.t === 'notice' && (!f.to || f.to === a.myId)) { toast(f.msg, f.msg.startsWith('+') ? 'gold' : 'info'); if (!f.to) chatLine(hud, 'system', 'System', f.msg); }
+      if (f.t === 'notice' && (!f.to || f.to === a.myId)) { toast(f.msg, f.msg.startsWith('+') ? 'gold' : 'info'); if (!f.to) chatLine(hud, 'system', 'System', f.msg);
+        const inv = /\((partyAccept|tradeAccept|duelAccept|guildAccept)\)|invites you to a party/.exec(f.msg); if (inv && a.mode === 'online') { const cmd = inv[1] ?? 'partyAccept'; confirmDialog(f.msg.replace(/\(.*?\)/, ''), () => act(cmd, {}, 'Accepted'), 'Accept'); } }
       if (f.t === 'level' && f.id === a.myId) { audio.play('level'); toast(`Level up! ${a.p.level}`, 'gold'); refreshAll(); }
       if (f.t === 'dmg' && (f.src === a.myId || f.tgt === a.myId)) audio.play(f.crit ? 'crit' : 'hit');
       if (f.t === 'death' && f.id === a.myId) audio.play('death');

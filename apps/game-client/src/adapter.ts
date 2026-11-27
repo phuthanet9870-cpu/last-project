@@ -111,6 +111,7 @@ export class RemoteAdapter implements Adapter {
     if (m.type === 'snap') { this.ents = m.entities; this.fx.push(...m.fx); if (m.extra) this.extra = m.extra; if (m.mapId && m.mapId !== this.mapId) { this.mapId = m.mapId; this.onMapChange?.(m.mapId); } }
     if (m.type === 'market') this.marketSnap = reviveBig(m.market);
     if (m.type === 'tcg') this.tcgSnap = m.tcg;
+    if (m.type === 'trade') { const t = m.trade; const mine = t.offer[this.p.id]; const other = Object.entries(t.offer as Record<string, any>).find(([k]) => k !== this.p.id)?.[1]; this.fx.push({ t: 'notice', msg: `Trade: you offer ${mine?.items.length ?? 0} item(s) + ${String(mine?.gold ?? 0).replace('n', '')}G · partner offers ${other?.items.length ?? 0} item(s) + ${String(other?.gold ?? 0).replace('n', '')}G · locked ${Object.keys(t.lock).length}/2 · confirmed ${Object.keys(t.confirm).length}/2` }); }
     if (m.type === 'res') { this.pending.get(m.id)?.(m.result); this.pending.delete(m.id); }
   }
   send(cmd: string, args: Record<string, any> = {}): Promise<Result> {

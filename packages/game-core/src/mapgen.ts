@@ -54,7 +54,7 @@ function generate(def: MapDef): GenMap {
     for (let i = 0; i < (vertical ? h : w); i++) {
       p += rng.int(-1, 1); p = Math.max(6, Math.min((vertical ? w : h) - 7, p));
       for (let k = -1; k <= 1; k++) { const t = def.biome === 'snow' ? T.Ice : k === 0 ? T.DeepWater : T.Water; vertical ? set(p + k, i, t) : set(i, p + k, t); }
-      vertical ? (set(p - 2, i, T.Sand), set(p + 2, i, T.Sand)) : (set(i, p - 2, T.Sand), set(i, p + 2, T.Sand));
+      if (vertical) { set(p - 2, i, T.Sand); set(p + 2, i, T.Sand); } else { set(i, p - 2, T.Sand); set(i, p + 2, T.Sand); }
     }
   }
   // borders
