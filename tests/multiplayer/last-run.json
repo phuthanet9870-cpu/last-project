@@ -1,9 +1,9 @@
 {
-  "when": "2026-11-27T20:51:13.610Z",
+  "when": "2026-11-27T20:53:51.091Z",
   "server": "http://localhost:2567",
-  "durationMs": 105082,
-  "passed": 29,
-  "total": 29,
+  "durationMs": 118700,
+  "passed": 30,
+  "total": 30,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwzgfqas13sdq, ch_mwzgfqb1b5alv"
+      "detail": "ch_mwzgitb31b0i5, ch_mwzgitbdbkir2"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -96,6 +96,11 @@
       "detail": "map whisperwood"
     },
     {
+      "name": "Skill V4 on the server: atomic draft commit, stale revision + replay idempotency, passive hotbar refused, persisted",
+      "ok": true,
+      "detail": "no points yet at job 1 (rev 0); ids are V4"
+    },
+    {
       "name": "arena mode queue: Lantern Siege 1v1 matches two real players",
       "ok": true,
       "detail": "siege match created for both"
@@ -103,22 +108,22 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwzgfqas13sdq\":16,\"ch_mwzgfqb1b5alv\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwzgitb31b0i5\":16,\"ch_mwzgitbdbkir2\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
       "ok": true,
-      "detail": "online=2 p95 tick=0.70ms ledger ok=true"
+      "detail": "online=2 p95 tick=0.65ms ledger ok=true"
     },
     {
       "name": "Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title",
       "ok": true,
-      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:47; title_weekly → B"
+      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:49; title_weekly → B"
     },
     {
       "name": "guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds",
       "ok": true,
-      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lan3xozl score [0,0]"
+      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lanwy1ke score [0,0]"
     },
     {
       "name": "worker: weekly champion = most PvP rating gained in the last 7 days (not all-time rating)",

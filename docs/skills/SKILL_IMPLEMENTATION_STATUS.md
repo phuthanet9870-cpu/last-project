@@ -11,7 +11,7 @@
 | 7 | Pending allocation, Undo / Clear / Confirm | IMPLEMENTED_TESTED | E2E step 41 |
 | 8 | Server atomic commit, revision, idempotency | IMPLEMENTED_TESTED | unit "atomic draft commit"; multiplayer step "Skill V4 on the server" |
 | 9 | ≥ 52 recommended builds + Auto Allocate into a draft | IMPLEMENTED_TESTED | all 52 → legal 70-point draft incl. ultimate; E2E Auto Allocate + Confirm |
-| 10 | 26 unique class gauges (§13) | IMPLEMENTED_TESTED (engine) / PARTIAL (per-class assertions) | 26 distinct keys tested; dedicated assertions for Moon Oracle phase, Spirit Monk Ki requirement, Blade Sentinel Edge gain, Fortune dice. The other 22 gauges run in the balance simulation but have no per-class assertion yet. |
+| 10 | 26 unique class gauges (§13) | IMPLEMENTED_TESTED | per-class parametrized test for all 26 (gains, spend scaling, requirements, phase advance) + combat tests for Moon Oracle phase, Spirit Monk Ki, Blade Sentinel Edge, Fortune dice |
 | 11 | Normal attack separate from the tree | IMPLEMENTED_TESTED | per-class `normal`; test "normal attack is separate" |
 | 12 | Passives apply only after commit | IMPLEMENTED_TESTED | test "passives apply only after commit" |
 | 13 | Physical vs magical damage | IMPLEMENTED_TESTED | existing combat tests + per-skill `dmgType` |

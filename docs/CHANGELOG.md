@@ -11,7 +11,7 @@
 - Balance: headless combat simulation of all 26 classes vs a neutral training dummy, 3 calibration passes into `skills/balance.ts` (SIMULATION_ONLY). Damage roles now within 894–1,562 single-target DPS (was 238–5,300).
 - Migration: saves are migrated on load — old skill ranks are fully refunded, never remapped (see docs/skills/SKILL_MIGRATION_REPORT.md). **Production rollout needs owner approval.**
 - Gap pass 3 (from 0.14): craft queue, world boss Bangkok schedule + daily rotation, personal chat mute, fullscreen.
-- Fixes found by tests: knockdown only applied together with knockback; auto-combat could stall trying to cast an out-of-range skill; skill-tree nodes overlapped their neighbours' buttons.
+- Fixes found by tests: a full gauge's bonus (Focus crit, Radiance blind, Grace heal, Bond, Battery) emptied the gauge before a spending skill could spend it, so those skills lost their spend bonus exactly at full gauge; knockdown only applied together with knockback; auto-combat could stall trying to cast an out-of-range skill; skill-tree nodes overlapped their neighbours' buttons.
 - Docs: docs/skills/ (SKILL_SYSTEM_V4, reference matrix with provenance labels, class skill database, tree registry, builds, stone modifiers, balance, migration, test report, implementation status + asset registry).
 
 ## 0.14.0 — 2026-11-27 — Registry gap pass 2

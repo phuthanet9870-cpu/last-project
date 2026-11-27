@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_SKILLS, CLASSES, CLASS_IDS, MarketService, PlayerService, Rng, TILE, World, classKit, createCharacter, deserializePlayer, executeCommand, gaugeCast, playerStats,
-  serializePlayer, skillPointBudget, validateKit, valuesAt, autoAllocateDraft, validateSkillDraft,
+  serializePlayer, skillPointBudget, validateKit, valuesAt, autoAllocateDraft, validateSkillDraft, gaugeGain, gaugeCheck,
 } from '../src/index.js';
 
 const mk = (cls = 'blade_sentinel') => { const clock = { t: 1_800_000_000_000 }; const p = createCharacter({ accountId: 'acc', name: 'Vfour', classId: cls, appearance: { body: 0, hair: 0, hairColor: '#000', skin: '#fc9', eyes: '#000' }, now: clock.t }); const svc = new PlayerService(p, new Rng(7), () => clock.t); return { p, svc, clock }; };
@@ -140,6 +140,16 @@ describe('V4 gauges in combat', () => {
     const w = new World({ mapId: 'whisperwood', rng: new Rng(9), bots: 0 }); const me = w.addPlayer(svc, { x: 20 * TILE, y: 20 * TILE }); me.mp = me.maxMp = 9999;
     const m = w.spawnMonster('forest_slime', me.x + 30, me.y); m.maxHp = m.hp = 1e7; expect(w.castSkill(me.id, sk.id, m.id)).toBeNull();
     expect(me.lastRoll!.length).toBe(2); for (const d of me.lastRoll!) { expect(d).toBeGreaterThanOrEqual(1); expect(d).toBeLessThanOrEqual(6); }
+  });
+  it.each(CLASS_IDS)('%s gauge: declared gains fill it, spending skills scale damage/heal, requirements block until met', (c) => {
+    const def = CLASSES[c]!.gauge.def; const opts = { element: CLASSES[c]!.element as string, isDamage: true, isHeal: false, summons: false };
+    if (def.kind === 'phase') { const r1 = gaugeCast(def, 0, undefined, opts); expect(r1.value).toBe(1 % def.max); expect(r1.mods.phase).toBe(0); return; }
+    for (const ev of Object.keys(def.gain) as (keyof typeof def.gain)[]) if ((def.gain[ev] ?? 0) > 0 && ev !== 'cast') expect(gaugeGain(def, 0, ev as any).value, `${c} ${ev}`).toBeGreaterThan(0);
+    expect(gaugeGain(def, def.max, 'hit').value).toBeLessThanOrEqual(def.max);
+    const spenders = CLASSES[c]!.skills.filter((s) => s.gauge?.cost && s.gauge.scale && (s.dmgType === 'phys' || s.dmgType === 'mag' || s.dmgType === 'heal'));
+    for (const s of spenders) { const r = gaugeCast(def, def.max, s.gauge, { ...opts, isDamage: s.dmgType !== 'heal', isHeal: s.dmgType === 'heal' }); expect(s.dmgType === 'heal' ? r.mods.healMult : r.mods.mult, `${c}.${s.key}`).toBeGreaterThan(1); expect(r.value).toBeLessThan(def.max + 1e-9); }
+    for (const s of CLASSES[c]!.skills.filter((x) => x.gauge?.need)) { expect(gaugeCheck(def, s.gauge!.need! - 0.5, s.gauge)).toBe('NOT_ENOUGH_GAUGE'); expect(gaugeCheck(def, s.gauge!.need!, s.gauge)).toBeNull(); }
+    expect(spenders.length + CLASSES[c]!.skills.filter((x) => x.gauge?.gain || x.gauge?.cost).length, `${c} has skills that use its gauge`).toBeGreaterThan(0);
   });
   it('cooldown reduction is capped at 20%', () => {
     const { p } = mk('wild_archer'); p.allocated.dex = 999; expect(playerStats(p).derived.cdr).toBeLessThanOrEqual(20);

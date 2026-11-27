@@ -55,9 +55,10 @@ export function gaugeCast(def: GaugeDef, value: number, use: GaugeUse | undefine
   }
   // --- passive effects that depend on the current value (before spending) ---
   const full = v >= def.max - 1e-9;
+  const consumeFull = () => { if (!use?.cost) v = 0; }; // a full-gauge bonus empties the gauge unless the skill itself spends it (then it also gets the spend bonus)
   switch (def.effect) {
-    case 'crit': if (def.kind === 'stacks') m.critBonus += v * 5; else if (def.kind === 'resource' && full && o.isDamage) { m.critBonus += 100; v = 0; } break;
-    case 'heal': if (full && o.isHeal) { m.healMult *= 1.5; v = 0; } break;
+    case 'crit': if (def.kind === 'stacks') m.critBonus += v * 5; else if (def.kind === 'resource' && full && o.isDamage) { m.critBonus += 100; consumeFull(); } break;
+    case 'heal': if (full && o.isHeal) { m.healMult *= 1.5; consumeFull(); } break;
     case 'selfburn':
       if (def.key === 'heat') { if (v >= 70 && o.element === 'fire') m.mult *= 1.2; if (full) m.selfHpCostPct = 5; }
       else { if (o.isDamage) m.mult *= 1 + 0.3 * (v / def.max); if (v >= 60) m.selfHpCostPct = 3; }
@@ -66,10 +67,10 @@ export function gaugeCast(def: GaugeDef, value: number, use: GaugeUse | undefine
     case 'chainBoost': if (v >= 5) m.extraChain = 1; break;
     case 'summonBoost':
       if (def.kind === 'stacks') m.summonMult = 1 + v * 0.15; else m.summonMult = 1 + v * 0.005;
-      if (def.key === 'battery' && full && o.summons) { m.summonDurMult = 1.5; v = 0; }
-      if (def.key === 'bond' && full && o.isDamage) { m.mult *= 2; v = 0; }
+      if (def.key === 'battery' && full && o.summons) { m.summonDurMult = 1.5; consumeFull(); }
+      if (def.key === 'bond' && full && o.isDamage) { m.mult *= 2; consumeFull(); }
       break;
-    case 'empower': if (def.key === 'radiance' && full && o.isDamage) { m.blindAll = true; v = 0; } break;
+    case 'empower': if (def.key === 'radiance' && full && o.isDamage) { m.blindAll = true; consumeFull(); } break;
     default: break;
   }
   // --- spend (g.cost) → scale bonus ---

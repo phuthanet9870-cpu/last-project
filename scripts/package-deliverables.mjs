@@ -22,6 +22,7 @@ copyFileSync(resolve(root, 'docs/ONLINE_README.md'), resolve(OG, 'README.md'));
 const DOC = resolve(D, 'documentation'); mkdirSync(DOC, { recursive: true });
 copyFileSync(resolve(root, 'MASTER_PROMPT.md'), resolve(DOC, 'MASTER_PROMPT_MMORPG.md'));
 for (const f of readdirSync(resolve(root, 'docs'))) if (f.endsWith('.md') && !['PLAYABLE_README.md', 'ONLINE_README.md'].includes(f)) copyFileSync(resolve(root, 'docs', f), resolve(DOC, f));
+if (existsSync(resolve(root, 'docs/skills'))) cpSync(resolve(root, 'docs/skills'), resolve(DOC, 'skills'), { recursive: true }); // Skill System V4 docs + generated JSON
 // releases
 mkdirSync(R, { recursive: true });
 for (const z of ['MMORPG_PLAYABLE.zip', 'MMORPG_SOURCE_CODE.zip']) if (existsSync(resolve(R, z))) rmSync(resolve(R, z));

@@ -3,7 +3,7 @@
  * Usage: start server (pnpm server) then `pnpm test:multiplayer` (SERVER=http://localhost:2567).
  */
 import WebSocket from 'ws';
-import { aiChooseAction } from '../../packages/game-core/src/index.js';
+import { aiChooseAction, CLASSES } from '../../packages/game-core/src/index.js';
 import pg from 'pg';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -134,16 +134,24 @@ await step('disconnect → reconnect restores persisted state', async () => {
   const A2 = new Client(); await A2.connect(tokA, charA); assert(A2.state.inventory.length === inv, `inv ${inv} vs ${A2.state.inventory.length}`); assert(A2.gold() === gold, `gold ${gold} vs ${A2.gold()}`); (A as any).__c = A2; return `map ${A2.mapId}`;
 });
 await step('Skill V4 on the server: atomic draft commit, stale revision + replay idempotency, passive hotbar refused, persisted', async () => {
-  const A2: Client = (A as any).__c; const st0 = A2.state; const cls = st0.classId as string; const pts = st0.skillPoints as number; const rev = st0.skillRev as number;
-  const first = Object.keys(st0.skillRanks)[0]!; assert(first.startsWith(`${cls}.`), `V4 id ${first}`);
-  if (pts < 1) return `no points yet at job ${st0.jobLevel} (rev ${rev}); ids are V4`;
-  const opId = `mp_${Date.now()}`; const r = await A2.cmd('skillCommit', { draft: { [first]: (st0.skillRanks[first] ?? 1) + 1 }, rev, opId }); assert(r.ok, JSON.stringify(r)); await sleep(300);
-  const replay = await A2.cmd('skillCommit', { draft: { [first]: (st0.skillRanks[first] ?? 1) + 1 }, rev, opId }); assert(replay.ok && replay.data?.duplicate, `replay ${JSON.stringify(replay)}`);
-  const stale = await A2.cmd('skillCommit', { draft: { [first]: 9 }, rev }); assert(!stale.ok && stale.err === 'STALE_REVISION', JSON.stringify(stale));
-  const passive = Object.keys(st0.skillRanks).find((k) => k.includes('.') && false); void passive;
-  const pas = await A2.cmd('hotbar', { i: 5, id: `${cls}.__not_a_skill__` }); assert(!pas.ok, 'invalid hotbar id refused');
-  await sleep(1500); const row = await db.query(`SELECT state->'skillRanks' AS r, state->>'skillRev' AS rev FROM characters WHERE id=$1`, [charA]);
-  return `commit ok (rev ${rev}→${A2.state.skillRev}), replay applied once, stale rejected; db rev ${row.rows[0].rev ?? '(next flush)'}`;
+  // give the character job levels through the database while it is offline (no dev commands for normal players), then reconnect
+  const A1: Client = (A as any).__c; A1.ws.close(); await sleep(900);
+  await db.query(`UPDATE characters SET state = jsonb_set(jsonb_set(state, '{jobLevel}', '12'), '{skillPoints}', '11') WHERE id=$1`, [charA]);
+  const A2 = new Client(); await A2.connect(tokA, charA); (A as any).__c = A2;
+  const st0 = A2.state; const cls = CLASSES[st0.classId]!; const rev = st0.skillRev as number; assert(st0.jobLevel === 12 && st0.skillPoints === 11, `job ${st0.jobLevel} pts ${st0.skillPoints}`);
+  const first = cls.skills[0]!.id; assert(st0.skillRanks[first] === 1, `starter ${JSON.stringify(st0.skillRanks)}`);
+  const pas = cls.skills.find((s) => s.type === 'passive' && !s.pre.length && s.asc === 1 && s.jobReq <= 12)!;
+  const opId = `mp_${Date.now()}`; const draft = { [first]: 3, [pas.id]: 2 };
+  const r = await A2.cmd('skillCommit', { draft, rev, opId }); assert(r.ok, JSON.stringify(r)); await sleep(300);
+  assert(A2.state.skillRanks[first] === 3 && A2.state.skillRanks[pas.id] === 2 && A2.state.skillPoints === 7, `after ${JSON.stringify(A2.state.skillRanks)} pts ${A2.state.skillPoints}`);
+  const replay = await A2.cmd('skillCommit', { draft, rev, opId }); assert(replay.ok && replay.data?.duplicate && A2.state.skillPoints === 7, `replay ${JSON.stringify(replay)}`);
+  const stale = await A2.cmd('skillCommit', { draft: { [first]: 4 }, rev }); assert(!stale.ok && stale.err === 'STALE_REVISION', JSON.stringify(stale));
+  const illegal = await A2.cmd('skillCommit', { draft: { [cls.skills.find((s) => s.asc === 3)!.id]: 1 }, rev: A2.state.skillRev }); assert(!illegal.ok, 'ascension III skill refused');
+  const hb = await A2.cmd('hotbar', { i: 5, id: pas.id }); assert(!hb.ok && hb.err === 'PASSIVE_NOT_ALLOWED', JSON.stringify(hb));
+  A2.ws.close(); await sleep(900); const row = await db.query(`SELECT state->'skillRanks' AS r, (state->>'skillRev')::int AS rev, (state->>'skillPoints')::int AS pts FROM characters WHERE id=$1`, [charA]);
+  assert(row.rows[0].r[first] === 3 && row.rows[0].pts === 7, `db ${JSON.stringify(row.rows[0])}`);
+  const A3 = new Client(); await A3.connect(tokA, charA); (A as any).__c = A3;
+  return `job 12: commit {starter→3, ${pas.key}→2} ok, replay applied once, stale + illegal refused, passive hotbar refused; Postgres rev ${row.rows[0].rev}, points ${row.rows[0].pts}`;
 });
 await step('arena mode queue: Lantern Siege 1v1 matches two real players', async () => {
   const A2: Client = (A as any).__c; assert((await A2.cmd('arenaJoin', { mode: '1v1', type: 'siege' })).ok, 'A queued'); const q = await B.cmd('arenaJoin', { mode: '1v1', type: 'siege' }); assert(q.ok, JSON.stringify(q)); await sleep(700);
