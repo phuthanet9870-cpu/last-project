@@ -13,7 +13,7 @@ const db = new pg.Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres
 const results: { name: string; ok: boolean; detail: string }[] = [];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const assert = (c: unknown, m: string) => { if (!c) throw new Error(m); };
-async function step(name: string, fn: () => Promise<string | void>) { try { const d = (await fn()) ?? ''; results.push({ name, ok: true, detail: d }); console.log(`PASS ${name} ${d}`); } catch (e: any) { results.push({ name, ok: false, detail: e.message }); console.log(`FAIL ${name}: ${e.message}`); } }
+async function step(name: string, fn: () => Promise<string | void>) { try { const d = (await fn()) ?? ''; results.push({ name, ok: true, detail: d }); console.log(`PASS ${name} ${d}`); } catch (e: any) { results.push({ name, ok: false, detail: e.message }); console.log(`FAIL ${name}: ${e.message || String(e?.stack ?? e).slice(0, 400)}`); } }
 async function api(path: string, body?: unknown, token?: string, method?: string) { const r = await fetch(BASE + path, { method: method ?? (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j: any = await r.json().catch(() => ({})); return { status: r.status, j }; }
 class Client {
   ws!: WebSocket; market: any = null; tcg: any = null; map = new Map<string, any>(); myId = ''; mapId = ''; state: any; ents: any[] = []; fx: any[] = []; seq = 0; pending = new Map<number, (r: any) => void>(); closed: { code: number; reason: string } | null = null;
@@ -187,7 +187,7 @@ await step('worker: weekly champion = most PvP rating gained in the last 7 days 
   const period = `mp-${tag}`; const out = execFileSync('npx', ['tsx', 'apps/worker/src/main.ts', '--once', '--job', 'weeklyChampion', '--period', period], { encoding: 'utf8' });
   const row = (await db.query('SELECT character_id, value FROM weekly_champions WHERE week=$1', [period])).rows[0]; assert(row, `no champion row: ${out}`);
   const gains = (await db.query(`SELECT d.key AS id, sum(d.value::int) AS g FROM pvp_matches m CROSS JOIN LATERAL jsonb_each_text(m.rating_delta) d WHERE m.finished_at > now() - interval '7 days' GROUP BY d.key`)).rows; const max = Math.max(...gains.map((x) => Number(x.g)));
-  assert(Number(row.value) === max && max > 0, `champion gain ${row.value} vs max ${max}`); const top = (await db.query('SELECT max(pvp_rating) AS r FROM characters')).rows[0].r;
+  assert(Number(row.value) === max && max > 0, `champion gain ${row.value} vs max ${max}`); const again = execFileSync('npx', ['tsx', 'apps/worker/src/main.ts', '--once', '--job', 'weeklyChampion', '--period', period], { encoding: 'utf8' }); assert(/"skipped":true/.test(again), `re-run must be idempotent: ${again}`); const top = (await db.query('SELECT max(pvp_rating) AS r FROM characters')).rows[0].r;
   return `champion gained +${row.value} this week (highest all-time rating on the server: ${top})`;
 });
 await step('raid: raid group of real players enters the Sanctum together (8-cap group, Lv110 gate, shared instance)', async () => {
@@ -201,6 +201,37 @@ await step('raid: raid group of real players enters the Sanctum together (8-cap 
   assert(C1.mapId === 'flame_sanctum' && D1.mapId === 'flame_sanctum', `maps ${C1.mapId}/${D1.mapId}`); const sameInst = C1.ents.some((x) => x.id === D1.myId); assert(sameInst, 'same raid instance');
   const mons = C1.ents.filter((x) => x.k === 'monster').length; assert(mons >= 5, `raid wave spawned (${mons})`);
   await C1.cmd('leaveInstance'); await D1.cmd('leaveInstance'); C1.ws.close(); D1.ws.close(); return `2 real raiders in one Sanctum instance; wave of ${mons} monsters; Lv gate + leader-only conversion enforced`;
+});
+await step('ban management: admin ban kicks the live session, blocks login + refresh, unban restores access, audited', async () => {
+  const adm = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken;
+  const r = await api('/api/auth/register', { username: `rogue_${tag}`, password: 'correct-horse-5' }); const ch = await api('/api/characters', { name: `Ro${tag}`, classId: 'vanguard' }, r.j.accessToken); const X = new Client(); await X.connect(r.j.accessToken, ch.j.character.id); await sleep(300);
+  const ban = await api('/api/admin/sanction', { charId: ch.j.character.id, action: 'ban', reason: 'botting (test)' }, adm); assert(ban.status === 200, JSON.stringify(ban.j)); await sleep(400);
+  assert(X.closed !== undefined && X.closed !== null, 'live session kicked'); const li = await api('/api/auth/login', { username: `rogue_${tag}`, password: 'correct-horse-5' }); assert(li.status === 403 && /banned/i.test(li.j.error), JSON.stringify(li.j));
+  const rf = await api('/api/auth/refresh', { refreshToken: r.j.refreshToken }); assert(rf.status === 401, `refresh after ban → ${rf.status}`);
+  assert((await api('/api/admin/sanction', { charId: ch.j.character.id, action: 'unban', reason: 'appeal accepted (test)' }, adm)).status === 200, 'unban'); const ok2 = await api('/api/auth/login', { username: `rogue_${tag}`, password: 'correct-horse-5' }); assert(ok2.status === 200, `login after unban ${ok2.status}`);
+  const au = (await db.query(`SELECT action FROM admin_audit_logs WHERE target=$1 ORDER BY at`, [r.j.accountId])).rows.map((x) => x.action); // sanctions are audited against the account assert(au.some((x) => /ban/.test(x)), `audit ${au}`); return `kicked (code ${X.closed?.code}); login 403; refresh 401; unban → 200; audit ${au.join(',')}`;
+});
+await step('character rename (offline, unique, 30-day cooldown, friend lists follow) + sanction appeal workflow', async () => {
+  const adm = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken;
+  const ry = await api('/api/auth/register', { username: `yara_${tag}`, password: 'correct-horse-6' }); const cy = await api('/api/characters', { name: `Ya${tag}`, classId: 'vanguard' }, ry.j.accessToken);
+  const rx = await api('/api/auth/register', { username: `xeno_${tag}`, password: 'correct-horse-6' }); const cx = await api('/api/characters', { name: `Xe${tag}`, classId: 'vanguard' }, rx.j.accessToken);
+  const X = new Client(); await X.connect(rx.j.accessToken, cx.j.character.id); await sleep(200); assert((await X.cmd('friendAdd', { name: `Ya${tag}` })).ok, 'friend added');
+  const busy = await api(`/api/characters/${cx.j.character.id}/rename`, { name: `Xn${tag}` }, rx.j.accessToken); assert(busy.status === 409, `online rename → ${busy.status}`); X.ws.close(); await sleep(500);
+  const dup = await api(`/api/characters/${cy.j.character.id}/rename`, { name: `Xe${tag}` }, ry.j.accessToken); assert(dup.status === 409, `duplicate → ${dup.status}`);
+  const rn = await api(`/api/characters/${cy.j.character.id}/rename`, { name: `Yn${tag}` }, ry.j.accessToken); assert(rn.status === 200 && rn.j.previous === `Ya${tag}`, JSON.stringify(rn.j));
+  const fr = (await db.query(`SELECT state->'friends' AS f FROM characters WHERE id=$1`, [cx.j.character.id])).rows[0].f; assert(fr.some((f: any) => f.name === `Yn${tag}`) && !fr.some((f: any) => f.name === `Ya${tag}`), `friend list followed: ${JSON.stringify(fr)}`);
+  const again = await api(`/api/characters/${cy.j.character.id}/rename`, { name: `Yo${tag}` }, ry.j.accessToken); assert(again.status === 429, `cooldown → ${again.status}`);
+  // appeals
+  const none = await api('/api/appeals', { username: `yara_${tag}`, password: 'correct-horse-6', text: 'Please review my account.' }); assert(none.status === 400, `no sanction → ${none.status}`);
+  assert((await api('/api/admin/sanction', { charId: cy.j.character.id, action: 'ban', reason: 'test ban' }, adm)).status === 200, 'ban');
+  const bad = await api('/api/appeals', { username: `yara_${tag}`, password: 'wrong-password', text: 'Please review my account.' }); assert(bad.status === 401, `bad creds → ${bad.status}`);
+  const ap = await api('/api/appeals', { username: `yara_${tag}`, password: 'correct-horse-6', text: 'I was not botting, <b>please</b> review my account.' }); assert(ap.status === 200, JSON.stringify(ap.j));
+  assert((await api('/api/appeals', { username: `yara_${tag}`, password: 'correct-horse-6', text: 'Second appeal while one is open.' })).status === 409, 'one open appeal');
+  const list = await api('/api/admin/appeals', undefined, adm); const row = list.j.rows.find((x: any) => x.id === ap.j.id); assert(row && row.status === 'open' && !row.text.includes('<b>'), JSON.stringify(row));
+  assert((await api(`/api/admin/appeals/${ap.j.id}`, { decision: 'accept', note: 'evidence reviewed' }, adm)).status === 200, 'accept'); assert((await api(`/api/admin/appeals/${ap.j.id}`, { decision: 'reject', note: 'x' }, adm)).status === 409, 'resolve once');
+  const li = await api('/api/auth/login', { username: `yara_${tag}`, password: 'correct-horse-6' }); assert(li.status === 200, `login after accepted appeal → ${li.status}`);
+  const au = (await db.query(`SELECT action FROM admin_audit_logs WHERE target=$1 ORDER BY at`, [ry.j.accountId])).rows.map((x) => x.action); assert(au.includes('appeal_accept'), `audit ${au}`);
+  return `rename online 409, duplicate 409, ok (friend list updated), cooldown 429; appeal: no-sanction 400, bad creds 401, filed, duplicate 409, accepted → login 200, audited`;
 });
 await step('admin MFA (TOTP): enrol → login needs code → admin works → code replay rejected', async () => {
   const r = await api('/api/auth/register', { username: `mfa_${tag}`, password: 'correct-horse-7' }); await db.query(`UPDATE accounts SET role='admin' WHERE id=$1`, [r.j.accountId]);

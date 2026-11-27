@@ -80,3 +80,9 @@ export async function mfaEnable(accountId: string, code: string) {
   await pool.query('UPDATE account_sessions SET revoked_at=now() WHERE account_id=$1 AND revoked_at IS NULL', [accountId]); // sign in again with the second factor
   await pool.query(`INSERT INTO security_events(kind,account_id,detail) VALUES ('mfa_enabled',$1,'{}')`, [accountId]); return { enabled: true };
 }
+
+/** Password check that does not require an active account (used by sanction appeals). Constant-ish timing for unknown users. */
+export async function verifyCredentials(username: string, password: string): Promise<{ id: string; status: string } | null> {
+  const a = (await pool.query('SELECT id, status, password_hash FROM accounts WHERE username=$1', [String(username ?? '').toLowerCase()])).rows[0];
+  if (!a) { await hash('dummy-password-timing', ARGON); return null; } return (await verify(a.password_hash, String(password ?? ''))) ? { id: a.id, status: a.status } : null;
+}

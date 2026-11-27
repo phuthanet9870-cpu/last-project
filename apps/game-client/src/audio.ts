@@ -14,21 +14,23 @@ export const RADIO = [
 ];
 export class Audio {
   ctx: AudioContext | null = null; master!: GainNode; music!: GainNode; sfx!: GainNode; vol = { master: 0.6, music: 0.5, sfx: 0.7, ambient: 0.4 }; muted = false;
-  private timer: number | null = null; private step = 0; private mood = 'town'; private seed = 1; radio: string | null = null; shuffle = false; favorites: string[] = [];
+  private timer: number | null = null; private step = 0; private mood = 'town'; private seed = 1; radio: string | null = null; shuffle = false; favorites: string[] = []; playlist: string[] | null = null; private plIdx = 0;
   ensure() {
     if (this.ctx) return; try { const AC = (window as any).AudioContext || (window as any).webkitAudioContext; if (!AC) return; this.ctx = new AC(); } catch { return; }
     const c = this.ctx!; this.master = c.createGain(); this.music = c.createGain(); this.sfx = c.createGain(); this.music.connect(this.master); this.sfx.connect(this.master); this.master.connect(c.destination); this.apply();
   }
   apply() { if (!this.ctx) return; this.master.gain.value = this.muted ? 0 : this.vol.master; this.music.gain.value = this.vol.music * 0.35; this.sfx.gain.value = this.vol.sfx * 0.5; }
   setMood(m: string) { if (this.radio) return; if (m === this.mood && this.timer) return; this.mood = MOODS[m] ? m : 'town'; this.seed = m.length * 7 + 3; this.restart(); }
-  playRadio(id: string | null) { this.radio = id; const st = RADIO.find((r) => r.id === id); if (st) { this.mood = st.mood; this.seed = id!.length * 13; } this.restart(); }
-  nextTrack() { this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff; this.step = 0; }
+  /** Custom playlist (L436): plays the given stations in order, advancing every ~64 beats or on Next. */
+  playPlaylist(ids: string[]) { if (!ids.length) return; this.playlist = [...ids]; this.plIdx = 0; this.playRadio(ids[0]!, true); }
+  playRadio(id: string | null, keepPlaylist = false) { if (!keepPlaylist) this.playlist = null; this.radio = id; const st = RADIO.find((r) => r.id === id); if (st) { this.mood = st.mood; this.seed = id!.length * 13; } this.restart(); }
+  nextTrack() { if (this.playlist?.length) { this.plIdx = (this.plIdx + 1) % this.playlist.length; this.playRadio(this.playlist[this.plIdx]!, true); return; } this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff; this.step = 0; }
   restart() { if (this.timer) clearInterval(this.timer); this.ensure(); if (!this.ctx) return; const md = MOODS[this.mood]!; const stepMs = 60000 / md.bpm / 2; this.step = 0; this.timer = window.setInterval(() => this.tickMusic(), stepMs); }
   stop() { if (this.timer) clearInterval(this.timer); this.timer = null; }
   private rnd(n: number) { const x = Math.sin(this.seed * 9301 + n * 49297) * 233280; return x - Math.floor(x); }
   private tickMusic() {
     if (!this.ctx || this.ctx.state !== 'running') return; const md = MOODS[this.mood]!; const s = this.step++; const bar = Math.floor(s / 8) % 4; const t = this.ctx.currentTime;
-    if (s % 64 === 63 && this.radio && this.shuffle) this.nextTrack();
+    if (s % 64 === 63 && this.radio && (this.shuffle || this.playlist)) this.nextTrack();
     const prog = [0, 5, 3, 4][bar]!; const deg = md.scale;
     if (this.rnd(s % 32) > 0.35) { const note = md.root + 12 + deg[Math.floor(this.rnd(s % 32 + 100) * deg.length)]! + (prog > 3 ? 0 : 0); this.tone(note + prog, t, 0.22, md.wave, 0.09, this.music); }
     if (s % 4 === 0) this.tone(md.root - 12 + prog, t, 0.45, md.bass, 0.12, this.music);
@@ -39,7 +41,9 @@ export class Audio {
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + 0.02);
   }
   noise(t: number, dur: number, gain: number) { const c = this.ctx!; const b = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length); const s = c.createBufferSource(); s.buffer = b; const g = c.createGain(); g.gain.value = gain; s.connect(g); g.connect(this.sfx); s.start(t); }
+  played: Record<string, number> = {}; // per-kind SFX counter (diagnostics + tests)
   play(kind: 'hit' | 'crit' | 'skill' | 'heal' | 'level' | 'coin' | 'ui' | 'death' | 'refine_ok' | 'refine_fail' | 'step' | 'card') {
+    this.played[kind] = (this.played[kind] ?? 0) + 1;
     this.ensure(); if (!this.ctx || this.ctx.state !== 'running') return; const t = this.ctx.currentTime;
     switch (kind) {
       case 'hit': this.noise(t, 0.06, 0.25); this.tone(45, t, 0.08, 'square', 0.1, this.sfx); break;

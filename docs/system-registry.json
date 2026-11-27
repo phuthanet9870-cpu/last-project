@@ -1,12 +1,12 @@
 {
- "generated": "2026-11-27T15:27:28.693Z",
+ "generated": "2026-11-27T16:10:49.993Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 370,
-  "PARTIAL": 68,
+  "COMPLETE": 472,
+  "PARTIAL": 56,
   "NOT_STARTED": 31,
   "BLOCKED": 8,
-  "TESTING": 101,
+  "TESTING": 11,
   "SIMULATED": 3
  },
  "systems": [
@@ -62,8 +62,8 @@
    "id": "L007",
    "name": "Character Appearance",
    "section": "Account and world",
-   "status": "PARTIAL",
-   "evidence": "creation-time body/hair/colour/skin/eyes; no later appearance change",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
@@ -118,8 +118,8 @@
    "id": "L014",
    "name": "Class Gauge",
    "section": "Class",
-   "status": "TESTING",
-   "evidence": "gauge fills on hits, empowers next skill ×1.5",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -182,8 +182,8 @@
    "id": "L022",
    "name": "Skill Reset",
    "section": "Progression",
-   "status": "TESTING",
-   "evidence": "resetSkills command + UI",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -206,8 +206,8 @@
    "id": "L025",
    "name": "Ascension 3",
    "section": "Progression",
-   "status": "TESTING",
-   "evidence": "same mechanism as L023/L024",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -222,16 +222,16 @@
    "id": "L027",
    "name": "Milestone Reward",
    "section": "Progression",
-   "status": "TESTING",
-   "evidence": "mail reward every 10 levels",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L028",
    "name": "Combat Power",
    "section": "Progression",
-   "status": "TESTING",
-   "evidence": "combatPower() shown in UI and stored server-side",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -358,8 +358,8 @@
    "id": "L044",
    "name": "Stat Guide",
    "section": "Stats",
-   "status": "TESTING",
-   "evidence": "Help → Stats tab",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -494,8 +494,8 @@
    "id": "L061",
    "name": "Knockdown",
    "section": "Combat",
-   "status": "TESTING",
-   "evidence": "knockdown status after heavy skills",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -718,8 +718,8 @@
    "id": "L089",
    "name": "Stone Refining",
    "section": "Skills",
-   "status": "TESTING",
-   "evidence": "refineStone",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -814,8 +814,8 @@
    "id": "L101",
    "name": "Auto Navigation",
    "section": "World map",
-   "status": "TESTING",
-   "evidence": "quest Navigate button uses A* moveTo",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -1022,8 +1022,8 @@
    "id": "L127",
    "name": "Quest Navigation",
    "section": "Quests",
-   "status": "TESTING",
-   "evidence": "Navigate button",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -1054,16 +1054,16 @@
    "id": "L131",
    "name": "Story Journal",
    "section": "Quests",
-   "status": "TESTING",
-   "evidence": "Quest journal tab",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L132",
    "name": "Tutorial",
    "section": "Quests",
-   "status": "TESTING",
-   "evidence": "tutorial quest mq01 + Help",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 4",
    "mode": "artifact+online"
   },
   {
@@ -1150,8 +1150,8 @@
    "id": "L143",
    "name": "Item Binding",
    "section": "Items",
-   "status": "TESTING",
-   "evidence": "bound flag blocks market/trade",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1174,8 +1174,8 @@
    "id": "L146",
    "name": "Warehouse",
    "section": "Items",
-   "status": "TESTING",
-   "evidence": "warehouse via Oswin",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1190,8 +1190,8 @@
    "id": "L148",
    "name": "Item Dismantling",
    "section": "Items",
-   "status": "TESTING",
-   "evidence": "dismantle → dust/ore",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1286,8 +1286,8 @@
    "id": "L160",
    "name": "Wedding Ring",
    "section": "Equipment",
-   "status": "TESTING",
-   "evidence": "wedding ring item",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1390,24 +1390,24 @@
    "id": "L173",
    "name": "Random Option",
    "section": "Enhancement",
-   "status": "TESTING",
-   "evidence": "random options on drops + reroll",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L174",
    "name": "Option Stone",
    "section": "Enhancement",
-   "status": "TESTING",
-   "evidence": "Enchant Stone",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L175",
    "name": "Enchanter",
    "section": "Enhancement",
-   "status": "TESTING",
-   "evidence": "Isolde enchanter",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1438,8 +1438,8 @@
    "id": "L179",
    "name": "Gem Grade",
    "section": "Enhancement",
-   "status": "TESTING",
-   "evidence": "3 gem grades + fusion",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1454,8 +1454,8 @@
    "id": "L181",
    "name": "Gem Removal",
    "section": "Enhancement",
-   "status": "TESTING",
-   "evidence": "unsocket 500G",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1582,24 +1582,24 @@
    "id": "L197",
    "name": "Pet Combat",
    "section": "Pets",
-   "status": "TESTING",
-   "evidence": "pet AI follows/attacks owner target",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L198",
    "name": "Pet Active Skill",
    "section": "Pets",
-   "status": "TESTING",
-   "evidence": "pet active skill on cooldown",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L199",
    "name": "Pet Passive Skill",
    "section": "Pets",
-   "status": "TESTING",
-   "evidence": "owner passive bonus per species + Shell Rune owner DEF",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1622,8 +1622,8 @@
    "id": "L202",
    "name": "Pet Star Upgrade",
    "section": "Pets",
-   "status": "TESTING",
-   "evidence": "star-up with duplicate",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1638,16 +1638,16 @@
    "id": "L204",
    "name": "Pet Dismantling",
    "section": "Pets",
-   "status": "TESTING",
-   "evidence": "release → star dust",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L205",
    "name": "Star Dust",
    "section": "Pets",
-   "status": "TESTING",
-   "evidence": "star dust from release/duplicates",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1750,24 +1750,24 @@
    "id": "L218",
    "name": "Mount Stable",
    "section": "Mount",
-   "status": "TESTING",
-   "evidence": "Hale stable shop",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L219",
    "name": "Mount Enhancement",
    "section": "Mount",
-   "status": "TESTING",
-   "evidence": "mount upgrade with star dust",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L220",
    "name": "Duplicate Mount Conversion",
    "section": "Mount",
-   "status": "TESTING",
-   "evidence": "duplicate whistle → star dust",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1830,8 +1830,8 @@
    "id": "L228",
    "name": "Floor Unlock",
    "section": "Dungeons",
-   "status": "PARTIAL",
-   "evidence": "floors gated by level; no clear-to-unlock",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
@@ -1854,32 +1854,32 @@
    "id": "L231",
    "name": "Dungeon Timer",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "10-minute timer",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L232",
    "name": "Gem Dungeon",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "daily gem dungeon floors",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L233",
    "name": "Refine Mine",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "refinement mine floors",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L234",
    "name": "Pet Dungeon",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "pet dungeon floors",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1894,16 +1894,16 @@
    "id": "L236",
    "name": "Stone Dungeon",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "skill stone dungeon floors",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L237",
    "name": "Daily Reward Limit",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "2 runs/day/floor",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1918,16 +1918,16 @@
    "id": "L239",
    "name": "Dungeon Failure",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "timer expiry → failed state",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L240",
    "name": "Daily Dungeon Reset",
    "section": "Dungeons",
-   "status": "TESTING",
-   "evidence": "Asia/Bangkok day key reset",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -1950,16 +1950,16 @@
    "id": "L243",
    "name": "Boss Entry",
    "section": "World boss",
-   "status": "TESTING",
-   "evidence": "Sunken Crater entry",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L244",
    "name": "Boss Scaling",
    "section": "World boss",
-   "status": "TESTING",
-   "evidence": "HP scaled by participants at spawn",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2006,8 +2006,8 @@
    "id": "L250",
    "name": "World Boss Shop",
    "section": "World boss",
-   "status": "TESTING",
-   "evidence": "boss coin shop",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2118,8 +2118,8 @@
    "id": "L264",
    "name": "Arena Shop",
    "section": "PvP",
-   "status": "TESTING",
-   "evidence": "arena shop",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2134,16 +2134,16 @@
    "id": "L266",
    "name": "Auto Play",
    "section": "Auto play",
-   "status": "TESTING",
-   "evidence": "Z auto-battle: attacks, skills, potions, loot, stops on death/full bag",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L267",
    "name": "Automatic Combat",
    "section": "Auto play",
-   "status": "TESTING",
-   "evidence": "auto-battle",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -2166,16 +2166,16 @@
    "id": "L270",
    "name": "Inventory Full Stop",
    "section": "Auto play",
-   "status": "TESTING",
-   "evidence": "auto stops when bag full",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L271",
    "name": "Automatic Repair",
    "section": "Auto play",
-   "status": "TESTING",
-   "evidence": "auto-battle uses Tinker Kit below 20% durability",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -2198,16 +2198,16 @@
    "id": "L274",
    "name": "Mining",
    "section": "Life skills",
-   "status": "TESTING",
-   "evidence": "ore nodes + pickaxe",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L275",
    "name": "Ore Vein",
    "section": "Life skills",
-   "status": "TESTING",
-   "evidence": "ore veins in Amber Hills/Frostmere",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2334,16 +2334,16 @@
    "id": "L291",
    "name": "Gold Sources",
    "section": "Economy",
-   "status": "TESTING",
-   "evidence": "ledger faucet tracking (admin economy)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L292",
    "name": "Gold Sinks",
    "section": "Economy",
-   "status": "TESTING",
-   "evidence": "ledger sink tracking",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2494,8 +2494,8 @@
    "id": "L311",
    "name": "My Shop",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "My Listings tab",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2526,8 +2526,8 @@
    "id": "L315",
    "name": "Market Slot Limit",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "12 shared slots enforced",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2558,16 +2558,16 @@
    "id": "L319",
    "name": "Instant Buy",
    "section": "Exchange",
-   "status": "PARTIAL",
-   "evidence": "instant = aggressive limit order",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
    "id": "L320",
    "name": "Instant Sell",
    "section": "Exchange",
-   "status": "PARTIAL",
-   "evidence": "instant = aggressive limit order",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2646,8 +2646,8 @@
    "id": "L330",
    "name": "Friend List",
    "section": "Social",
-   "status": "TESTING",
-   "evidence": "friends list (local)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2686,8 +2686,8 @@
    "id": "L335",
    "name": "Party Combat",
    "section": "Social",
-   "status": "TESTING",
-   "evidence": "party bots fight leader target; online party shares EXP",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2702,8 +2702,8 @@
    "id": "L337",
    "name": "Shared Loot Eligibility",
    "section": "Social",
-   "status": "TESTING",
-   "evidence": "EXP share within 600px",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2806,8 +2806,8 @@
    "id": "L350",
    "name": "Wedding Equipment",
    "section": "Social",
-   "status": "TESTING",
-   "evidence": "ring + costume",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2830,8 +2830,8 @@
    "id": "L353",
    "name": "Card Set",
    "section": "TCG",
-   "status": "PARTIAL",
-   "evidence": "per-element sets; no set completion rewards",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
@@ -2862,8 +2862,8 @@
    "id": "L357",
    "name": "Deck Management",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "deck builder",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2886,16 +2886,16 @@
    "id": "L360",
    "name": "Duelists’ Tower",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "Duel Tower 10 floors",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L361",
    "name": "Casual Duel",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "casual vs AI",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2950,16 +2950,16 @@
    "id": "L368",
    "name": "Card Pack",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "card packs",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L369",
    "name": "Pack Opening",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "pack opening with pity",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2998,16 +2998,16 @@
    "id": "L374",
    "name": "Duplicate Card Dismantling",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "dust cards",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L375",
    "name": "Card Dust",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "card dust currency",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3038,16 +3038,16 @@
    "id": "L379",
    "name": "Classic Battle Table",
    "section": "TCG",
-   "status": "PARTIAL",
-   "evidence": "single classic table",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 33 — classic + animated tables (TCG cosmetics)",
    "mode": "artifact+online"
   },
   {
    "id": "L380",
    "name": "Card Duel Status",
    "section": "TCG",
-   "status": "TESTING",
-   "evidence": "duel status display",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 19",
    "mode": "artifact+online"
   },
   {
@@ -3158,8 +3158,8 @@
    "id": "L394",
    "name": "Adventure Pass Premium",
    "section": "Commerce",
-   "status": "TESTING",
-   "evidence": "premium track via simulated Crystal",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3182,8 +3182,8 @@
    "id": "L397",
    "name": "Grand Lantern Pass (original membership)",
    "section": "Commerce",
-   "status": "TESTING",
-   "evidence": "grand membership (+5% EXP/Gold permanent)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3206,16 +3206,16 @@
    "id": "L400",
    "name": "Seasonal Shop",
    "section": "Commerce",
-   "status": "TESTING",
-   "evidence": "seasonal shop (event tokens from event missions)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L401",
    "name": "Lantern Calendar (event calendar)",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "weekly rotating event + calendar list",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3230,32 +3230,32 @@
    "id": "L403",
    "name": "Weekly Reward",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "weekly quest",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L404",
    "name": "Seasonal Event",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "3 rotating weekly events",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L405",
    "name": "Festival Event",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "Lantern Festival + Festival Pass doubling",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts (festival pass doubling)",
    "mode": "artifact+online"
   },
   {
    "id": "L406",
    "name": "EXP Boost Event",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "EXP multiplier event",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3278,24 +3278,24 @@
    "id": "L409",
    "name": "Achievement",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "19 achievements",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L410",
    "name": "Achievement Reward",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "titles as rewards",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L411",
    "name": "Milestone Announcement",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "level milestone mail + refine announcements",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3310,8 +3310,8 @@
    "id": "L413",
    "name": "Unclaimed Reward Mail",
    "section": "Events",
-   "status": "TESTING",
-   "evidence": "overflow mail",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3366,8 +3366,8 @@
    "id": "L420",
    "name": "Achievement Ranking",
    "section": "Rankings",
-   "status": "PARTIAL",
-   "evidence": "achievement points shown; simulated board",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
@@ -3422,8 +3422,8 @@
    "id": "L427",
    "name": "Milestone Title",
    "section": "Rankings",
-   "status": "TESTING",
-   "evidence": "titles",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3438,24 +3438,24 @@
    "id": "L429",
    "name": "Title Display",
    "section": "Rankings",
-   "status": "TESTING",
-   "evidence": "title shown over head",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L430",
    "name": "Background Music",
    "section": "Audio",
-   "status": "TESTING",
-   "evidence": "procedural BGM per area",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L431",
    "name": "Combat Sound Effect",
    "section": "Audio",
-   "status": "TESTING",
-   "evidence": "procedural SFX",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -3470,40 +3470,40 @@
    "id": "L433",
    "name": "Sound Settings",
    "section": "Audio",
-   "status": "TESTING",
-   "evidence": "volume sliders",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L434",
    "name": "In-game Radio",
    "section": "Audio",
-   "status": "TESTING",
-   "evidence": "5 radio stations",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L435",
    "name": "Music Player",
    "section": "Audio",
-   "status": "TESTING",
-   "evidence": "radio player",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L436",
    "name": "Playlist",
    "section": "Audio",
-   "status": "PARTIAL",
-   "evidence": "station = playlist; no custom playlists",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
    "id": "L437",
    "name": "Favorite Songs",
    "section": "Audio",
-   "status": "TESTING",
-   "evidence": "favorites",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -3518,8 +3518,8 @@
    "id": "L439",
    "name": "Music Mood Filter",
    "section": "Audio",
-   "status": "PARTIAL",
-   "evidence": "stations are moods",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
@@ -3782,8 +3782,8 @@
    "id": "L472",
    "name": "Memory Saver",
    "section": "UI",
-   "status": "TESTING",
-   "evidence": "low performance mode",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
@@ -3798,16 +3798,16 @@
    "id": "L474",
    "name": "Wiki Access",
    "section": "UI",
-   "status": "TESTING",
-   "evidence": "wiki/help window",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 37",
    "mode": "artifact+online"
   },
   {
    "id": "L475",
    "name": "Gacha Reveal Animation",
    "section": "UI",
-   "status": "PARTIAL",
-   "evidence": "toast reveal; no animation",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 38",
    "mode": "artifact+online"
   },
   {
@@ -3926,8 +3926,8 @@
    "id": "B14",
    "name": "Random Number Generator",
    "section": "Backend",
-   "status": "PARTIAL",
-   "evidence": "seeded sfc32 (server-held); not CSPRNG for paid rewards",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts — server injects a crypto.randomInt-backed SecureRng for gacha draws and card packs (game.ts join)",
    "mode": "artifact+online"
   },
   {
@@ -3974,16 +3974,16 @@
    "id": "B20",
    "name": "Scheduled Jobs",
    "section": "Backend",
-   "status": "TESTING",
-   "evidence": "apps/worker BullMQ schedules + idempotent job keys",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"worker: weekly champion\"",
    "mode": "artifact+online"
   },
   {
    "id": "B21",
    "name": "Daily / Weekly Reset",
    "section": "Backend",
-   "status": "TESTING",
-   "evidence": "lazy per-character Asia/Bangkok day/week reset",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -4022,8 +4022,8 @@
    "id": "B26",
    "name": "Rate Limiting",
    "section": "Backend",
-   "status": "TESTING",
-   "evidence": "login + command rate limits (Redis)",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"HTTP hardening\"",
    "mode": "artifact+online"
   },
   {
@@ -4046,8 +4046,8 @@
    "id": "B29",
    "name": "Ban Management",
    "section": "Backend",
-   "status": "TESTING",
-   "evidence": "/api/admin/sanction",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"ban management\"",
    "mode": "artifact+online"
   },
   {
@@ -4159,7 +4159,7 @@
    "name": "Character creation and profile",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "create/select/delete; no rename/restore",
+   "evidence": "create/select/delete + rename (offline, unique, 30-day cooldown, friend/spouse references follow); no restore of deleted characters",
    "mode": "artifact+online"
   },
   {
@@ -4191,7 +4191,7 @@
    "name": "Movement and control",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "WASD/click-to-move A*/joystick; 4-direction sprites for 8-direction movement; no knockback/prediction",
+   "evidence": "WASD/click-to-move A*/joystick, knockback/knockdown; 4-direction sprites for 8-direction movement; no client-side prediction",
    "mode": "artifact+online"
   },
   {
@@ -4271,7 +4271,7 @@
    "name": "Equipment",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "13 slots; no presets/transmog/durability",
+   "evidence": "13 slots, durability + repair/Tinker Kit; no equipment presets/transmog",
    "mode": "artifact+online"
   },
   {
@@ -4383,7 +4383,7 @@
    "name": "Central marketplace",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "listings, filters, wishlist, best sellers, history, collection box, buy orders, auto-bid auctions; no player stalls",
+   "evidence": "listings, filters, wishlist, best sellers, history, collection box, buy orders, auto-bid auctions, instant (IOC) exchange orders; no player stalls",
    "mode": "artifact+online"
   },
   {
@@ -4606,8 +4606,8 @@
    "id": "S63",
    "name": "Moderation and player safety",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "reports + sanctions; no appeal workflow",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"ban management\"; multiplayer: tests/multiplayer/two-clients.test.ts \"character rename\" — reports, mute/suspend/ban, appeals (credential-verified, one open per account, admin accept/reject, audited)",
    "mode": "artifact+online"
   },
   {
@@ -4647,7 +4647,7 @@
    "name": "Testing strategy",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "unit (incl. RFC 6238 vectors) + 36 E2E + 27 multiplayer + online browser + load (250 players) tests; no soak test, no external security test",
+   "evidence": "110 unit (incl. RFC 6238 vectors + coverage suite) + 38 E2E + 30 multiplayer + online browser + load (250 players) tests; no soak test, no external security test",
    "mode": "artifact+online"
   },
   {

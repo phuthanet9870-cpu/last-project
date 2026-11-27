@@ -5,7 +5,7 @@
  */
 import { CONFIG } from './config.js';
 import { CLASSES } from './classes.js';
-import { DUNGEONS, MAPS, MONSTERS, NPCS, PETS, QUESTS, MOUNTS } from './content.js';
+import { ACHIEVEMENTS, DUNGEONS, MAPS, MONSTERS, NPCS, PETS, QUESTS, MOUNTS } from './content.js';
 export interface FarmVisit { owner: string; simulated: boolean; likes: number; pets: { species: string; level: number }[]; decorations: { itemId: string; x: number; y: number; rot: number }[] }
 import { EconomyError } from './economy.js';
 import { ITEMS, type Slot } from './items.js';
@@ -151,6 +151,9 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   tcgChallenge: (c, a) => { const t = c.world.entities.get(String(a.target)); if (!t || t.kind !== 'bot') return fail('INVALID_TARGET', 'Select a player to challenge'); const r = COMMANDS.tcgStart!(c, { mode: 'casual' }); if (r.ok && c.session.tcg) c.session.tcg.oppName = `${t.name} [sim]`; return r; },
   friendsStatus: (c) => ok(c.svc.p.friends.map((f) => { const e = [...c.world.entities.values()].find((x) => (x.kind === 'bot' || x.kind === 'player') && x.name === f.name); return { name: f.name, online: !!e, map: e ? c.world.mapId : null, simulated: e?.kind === 'bot' }; })),
   tcgView: (c) => (c.session.tcg ? ok({ ...viewFor(c.session.tcg.state, 0), hint: c.session.tcg.mode === 'tutorial' ? tcgHint(c.session.tcg.state) : undefined }) : fail('NO_MATCH')),
+  claimCardSet: (c, a) => c.svc.claimCardSet(String(a.element)),
+  changeAppearance: (c, a) => { const r = c.svc.changeAppearance(a.appearance ?? {}); if (r.ok) c.world.refreshPlayer(c.entityId); return r; },
+  exchangeInstant: (c, a) => wrapEco(() => { const r = c.market.exchangeInstant(c.svc, a.side === 'sell' ? 'sell' : 'buy', big(a.qty)); return { filled: String(r.filled), avgPrice: String(r.avgPrice), cancelled: String(r.cancelled) }; }),
   tcgExchange: (c, a) => c.svc.exchangeCards(Array.isArray(a.cards) ? a.cards.map(String) : []),
   tcgCosmetic: (c, a) => c.svc.tcgCosmetic(String(a.id), !!a.buy),
   // --- memberships (§47, simulated Crystal) ---
@@ -304,7 +307,7 @@ export function tcgHint(s: TcgState): { en: string; th: string } {
 }
 function localRankings(c: CommandContext, kind: string) {
   const p = c.svc.p; const r = new Rng(dayHash(kind)); const names = ['Mirabel', 'Kestrel', 'Oakley', 'Juniper', 'Rowan', 'Sable', 'Wren', 'Thistle', 'Bramble', 'Fennick', 'Lark', 'Tamsin'];
-  const mine = kind === 'cp' ? playerCP(p) : kind === 'pvp' ? p.pvp.rating : kind === 'tcg' ? p.tcg.rating : kind === 'pet' ? Math.max(0, ...p.pets.map((x) => x.level)) : kind === 'life' ? Object.values(p.professions ?? {}).reduce((s, x) => s + (x?.lvl ?? 0), 0) + Object.values(p.gathering).reduce((s, x) => s + x.lvl, 0) : kind === 'mastery' ? p.mastery : kind.startsWith('class:') ? (p.classId === kind.slice(6) ? p.level : 0) : p.level;
+  const mine = kind === 'achievements' ? ACHIEVEMENTS.filter((x) => p.achievements.includes(x.id)).reduce((s, x) => s + x.points, 0) : kind === 'cp' ? playerCP(p) : kind === 'pvp' ? p.pvp.rating : kind === 'tcg' ? p.tcg.rating : kind === 'pet' ? Math.max(0, ...p.pets.map((x) => x.level)) : kind === 'life' ? Object.values(p.professions ?? {}).reduce((s, x) => s + (x?.lvl ?? 0), 0) + Object.values(p.gathering).reduce((s, x) => s + x.lvl, 0) : kind === 'mastery' ? p.mastery : kind.startsWith('class:') ? (p.classId === kind.slice(6) ? p.level : 0) : p.level;
   const base = Math.max(10, mine); const rows = names.map((n) => ({ name: `${n} [sim]`, value: Math.max(1, Math.round(base * (0.55 + r.next() * 0.8))), simulated: true }));
   if (!kind.startsWith('class:') || p.classId === kind.slice(6)) rows.push({ name: p.name, value: mine, simulated: false });
   return rows.sort((a, b) => b.value - a.value).map((x, i) => ({ rank: i + 1, ...x }));

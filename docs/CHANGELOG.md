@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0 — 2026-11-27 — Registry gap pass
+- New coverage test suite (`packages/game-core/test/coverage.test.ts`, 36 tests) plus E2E steps 37–38: 90 systems that were implemented but untested (TESTING) now have tests that assert their behaviour. The 11 remaining TESTING systems have no such assertion yet and stay TESTING.
+- Fix (found by test): level milestone mail (every 10 levels) was skipped when one EXP gain crossed several levels (raid/quest rewards). Every crossed milestone is now mailed.
+- New: appearance salon (hair/colours, 5,000 G; other players see it), character rename (offline, unique, 30-day cooldown, friend lists and spouse references follow), daily dungeon floors unlock by clearing the previous floor, TCG element-set completion rewards, achievement-points ranking (local + `/api/rankings/achievements`), instant immediate-or-cancel exchange orders, radio mood filter + favourites playlist, gacha reveal animation (respects reduced motion), sanction appeals (credential-verified for banned accounts, one open appeal, admin accept/reject, audited).
+- Security: gacha draws and card packs on the server use a crypto-backed RNG (`SecureRng` + `crypto.randomInt`) instead of the seeded simulation RNG.
+- Registry: COMPLETE 370 → 472, TESTING 101 → 11, PARTIAL 68 → 56. Stale evidence corrected (durability and knockback already existed).
+
 ## 0.12.0 — 2026-11-27 — Task 9: production readiness (not a release)
 - Security: admin **TOTP MFA** (RFC 6238, node:crypto only, AES-256-GCM-encrypted secrets, single use per 30 s step, required for admin APIs in production); dashboard code field.
 - Security: CSP, X-Frame-Options, COOP, Permissions-Policy and HSTS (when behind TLS); admin dashboard script moved out of inline HTML so CSP needs no `unsafe-inline` scripts; CORS origin list.

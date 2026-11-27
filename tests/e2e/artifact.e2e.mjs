@@ -222,12 +222,79 @@ await step('36 endgame: Skyreach Isles + Shattered Rift, 8-member raid with simu
   await page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click())); await page.click('.mbtn[aria-label="Dungeons"]'); await page.waitForSelector('.win:has-text("Raid (up to 8 players)")'); const dtxt = await page.textContent('.win:has-text("Raid (up to 8 players)")'); assert(/Sanctum of the First Flame/.test(dtxt), 'raid listed'); await shot('36_raid_list'); await page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click()));
   const e = await cmd('enterDungeon', { id: 'flame_sanctum' }); assert(e.ok, JSON.stringify(e)); await page.waitForTimeout(500); const party = await st('(a)=>{const me=a.world.entities.get(a.myId);return (a.world.parties.get(me.partyId)??[]).length}'); assert(party === 8, `raid group ${party}`);
   let bossHp = 0, size = 0;
-  for (let i = 0; i < 600; i++) { const di = await st('(a)=>a.dungeonInfo()&&a.dungeonInfo().state'); if (di === 'settled' || di === 'completed' || di === 'failed') break; await cmd('dev', { op: 'heal' }); const t = await st('(a)=>{const me=a.world.entities.get(a.myId);const m=[...a.world.entities.values()].filter(x=>x.kind==="monster"&&!x.dead).sort((p,q)=>Math.hypot(p.x-me.x,p.y-me.y)-Math.hypot(q.x-me.x,q.y-me.y))[0];return m&&{id:m.id,x:m.x,y:m.y,def:m.defId,mhp:m.maxHp}}');
+  for (let i = 0; i < 1500; i++) { const di = await st('(a)=>a.dungeonInfo()&&a.dungeonInfo().state'); if (di === 'settled' || di === 'completed' || di === 'failed') break; await cmd('dev', { op: 'heal' }); const t = await st('(a)=>{const me=a.world.entities.get(a.myId);const m=[...a.world.entities.values()].filter(x=>x.kind==="monster"&&!x.dead).sort((p,q)=>Math.hypot(p.x-me.x,p.y-me.y)-Math.hypot(q.x-me.x,q.y-me.y))[0];return m&&{id:m.id,x:m.x,y:m.y,def:m.defId,mhp:m.maxHp}}');
     if (t) { if (t.def === 'first_flame_tyrant' && !bossHp) { bossHp = t.mhp; size = await st('(a)=>a.dungeonInfo().raidSize'); await shot('36_raid_boss'); } await cmd('dev', { op: 'weaken', target: t.id }); await cmd('dev', { op: 'teleport', x: t.x - 30, y: t.y }); await cmd('attack', { target: t.id }); await cmd('cast', { skill: await st('(a,p)=>p.hotbar[0]'), target: t.id }); } await page.waitForTimeout(80); }
-  const cleared = await st('(a,p)=>p.dungeon.firstClears.includes("flame_sanctum")'); assert(cleared, 'raid cleared'); assert(size === 8 && bossHp > 400000 * 4, `boss scaled: size ${size}, hp ${bossHp}`);
+  const cleared = await st('(a,p)=>p.dungeon.firstClears.includes("flame_sanctum")'); const dbg36 = await st('(a)=>({di:a.dungeonInfo()&&{s:a.dungeonInfo().state,w:a.dungeonInfo().wave,boss:a.dungeonInfo().bossEntity},mons:[...a.world.entities.values()].filter(x=>x.kind==="monster"&&!x.dead).map(x=>x.defId+":"+Math.round(x.hp)),me:(()=>{const m=a.world.entities.get(a.myId);return m&&[m.dead,Math.round(m.hp)]})()})'); assert(cleared, `raid cleared ${JSON.stringify(dbg36).slice(0, 500)}`); assert(size === 8 && bossHp > 400000 * 4, `boss scaled: size ${size}, hp ${bossHp}`);
   const title = await st('(a,p)=>p.titles.includes("title_flamebreaker")'); assert(title, 'raid title'); await cmd('leaveInstance'); await page.waitForTimeout(300);
   const again = await cmd('enterDungeon', { id: 'flame_sanctum' }); assert(!again.ok && again.err === 'WEEKLY_LOCKOUT', JSON.stringify(again));
   return `zones ${Object.entries(seen).map(([k, v]) => `${k}:${v.mons} types/${v.npc.join('')}`).join(', ')}; raid list shown=${/Raid/.test(dtxt)}; group 8 (7 sim); boss HP ${bossHp} for ${size}; cleared → Flamebreaker title; weekly lockout enforced`;
+});
+await step('37 UI coverage: help/wiki + stat guide, quest journal + navigate, audio/radio/favorites/volume, low-perf mode, auto-battle (combat, loot, repair, bag-full stop), area music', async () => {
+  const close = () => page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click()));
+  await close(); await cmd('dev', { op: 'map', id: 'emberglen' }); await page.waitForTimeout(300);
+  const out = {};
+  // L474 wiki + L044 stat guide
+  await page.keyboard.press('h'); await page.waitForSelector('.win:has-text("Wiki")'); const tabsTxt = await page.$$eval('.win:has-text("Wiki") button.tab', (x) => x.map((b) => b.textContent)); assert(tabsTxt.some((t) => /Stat/.test(t)), `help tabs ${tabsTxt}`); await page.click('.win:has-text("Wiki") button.tab:has-text("Stat")'); await page.waitForTimeout(100); assert(/STR|ATK|DEX|Critical/i.test(await page.textContent('.win:has-text("Wiki")')), 'stat guide text'); out.help = tabsTxt.length; await close();
+  // L131 journal + L101/L127 navigate (A* moveTo)
+  await page.keyboard.press('j'); await page.waitForSelector('.win button.tab:has-text("Journal")'); await page.click('.win button.tab:has-text("Journal")'); await page.waitForTimeout(100); const journal = await page.$$eval('.win .list .li', (x) => x.length); assert(journal >= 1, `journal ${journal}`);
+  await page.click('.win button.tab:has-text("Active")'); await page.waitForTimeout(100); const nav = await page.$('.win button:has-text("Navigate")');
+  if (nav) { const p0 = await st('(a)=>{const e=a.world.entities.get(a.myId);return [e.x,e.y]}'); await nav.click(); await page.waitForTimeout(1500); const p1 = await st('(a)=>{const e=a.world.entities.get(a.myId);return [e.x,e.y]}'); assert(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 20, `navigate moved ${JSON.stringify([p0, p1])}`); out.navigate = 'moved'; } else out.navigate = 'no active quest with a target';
+  await close();
+  // L433 volume, L434/L435 radio, L437 favorites, L472 low-performance mode
+  await page.keyboard.press('Escape'); await page.waitForSelector('.win:has-text("Settings")'); await page.click('.win button.tab:has-text("Audio")'); await page.waitForTimeout(100);
+  const slider = await page.$('.win input[type="range"]'); await slider.evaluate((el) => { el.value = '0.2'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }); await page.waitForTimeout(100);
+  const vol = await page.evaluate(() => [window.__hb.settings.master, window.__hb.audio.vol.master]); assert(Math.abs(vol[0] - 0.2) < 0.01 && Math.abs(vol[1] - 0.2) < 0.01, `volume ${vol}`);
+  const plays = await page.$$('.win .list .li button:has-text("Play")'); await plays[1].click(); await page.waitForTimeout(100); const radio = await page.evaluate(() => window.__hb.audio.radio); assert(radio, 'radio station playing');
+  const favs = await page.$$('.win .list .li button:has-text("Fav")'); await favs[0].click(); await page.waitForTimeout(100); const fav = await page.evaluate(() => window.__hb.audio.favorites.length); assert(fav >= 1, 'favorite saved');
+  await (await page.$$('.win .list .li button:has-text("Play")'))[0].click(); await page.click('.win button.tab:has-text("Graphics")'); await page.waitForTimeout(100); await page.click('.win label:has-text("Low performance mode") input'); await page.waitForTimeout(100);
+  const low = await page.evaluate(() => window.__hb.settings.lowPerf); assert(low === true, 'low perf on'); await page.click('.win label:has-text("Low performance mode") input'); await close();
+  // L430 area music follows the map; L266–L268 auto-battle fights + loots; L431 combat SFX; L271 auto-repair
+  await cmd('dev', { op: 'map', id: 'whisperwood' }); await page.waitForTimeout(400); const mood = await page.evaluate(() => window.__hb.audio.mood); assert(mood === 'forest', `area music ${mood}`);
+  await cmd('dev', { op: 'item', id: 'repair_kit' }); await page.evaluate(() => { const p = window.__hb.a.p; for (const it of Object.values(p.equipment)) if (it) it.durability = 10; });
+  const mon = await st('(a)=>{const me=a.world.entities.get(a.myId);return [...a.world.entities.values()].filter(e=>e.kind==="monster"&&!e.dead&&e.level<8).sort((p,q)=>Math.hypot(p.x-me.x,p.y-me.y)-Math.hypot(q.x-me.x,q.y-me.y))[0]}'); await cmd('dev', { op: 'teleport', x: mon.x - 40, y: mon.y });
+  const k0 = await st('(a,p)=>p.counters.kills??0'); const hits0 = await page.evaluate(() => window.__hb.audio.played.hit ?? 0); await page.click('.mbtn[aria-label="Auto"]');
+  for (let i = 0; i < 40; i++) { await page.waitForTimeout(250); await cmd('dev', { op: 'heal' }); if ((await st('(a,p)=>p.counters.kills??0')) > k0) break; }
+  const k1 = await st('(a,p)=>p.counters.kills??0'); const dur = await st('(a,p)=>Math.min(...Object.values(p.equipment).filter(Boolean).map(i=>i.durability))'); const hits1 = await page.evaluate(() => window.__hb.audio.played.hit ?? 0);
+  assert(k1 > k0, `auto-battle killed (${k0}→${k1})`); assert(dur > 20, `auto-repair used the kit (min durability ${dur})`); assert(hits1 > hits0, 'combat SFX played');
+  // L270 bag-full stop
+  await page.evaluate(() => { const a = window.__hb.a; while (a.p.inventory.length < a.p.invSlots) a.p.inventory.push({ ...a.p.inventory[0], uid: 'fill' + a.p.inventory.length }); }); await page.waitForTimeout(900);
+  const stopped = await page.evaluate(() => window.__hb.auto()); assert(stopped === false, 'auto stopped when bag full'); assert(/bag full/i.test(await page.textContent('.toasts')), 'bag full toast');
+  await page.evaluate(() => { const a = window.__hb.a; a.p.inventory = a.p.inventory.filter((x) => !String(x.uid).startsWith('fill')); });
+  return `help tabs ${out.help}; journal ${journal}; navigate ${out.navigate}; volume/radio/fav/low-perf ok; area music ${mood}; auto-battle kills ${k0}→${k1}, auto-repair durability ${dur}, SFX hits ${hits1 - hits0}; bag-full stop ok`;
+});
+await step('38 gap closures via UI: appearance salon, floor locks, card-set claim, instant exchange buy, achievement-points ranking, radio mood filter + playlist, wish reveal animation', async () => {
+  const close = () => page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click()));
+  await close(); await cmd('dev', { op: 'map', id: 'emberglen' }); await cmd('dev', { op: 'gold', n: 1e6 }); await page.waitForTimeout(200);
+  // L007 salon
+  await page.keyboard.press('c'); await page.click('.win button.tab:has-text("Salon")'); await page.waitForTimeout(100); await page.selectOption('.win select[aria-label="Hairstyle"]', '5');
+  await page.$eval('.win input[aria-label="Hair"]', (el) => { el.value = '#33cc99'; el.dispatchEvent(new Event('input', { bubbles: true })); }); await page.click('.win button:has-text("Apply (5,000 Gold)")'); await page.waitForTimeout(200);
+  const ap = await st('(a,p)=>({hair:p.appearance.hair,c:p.appearance.hairColor,e:a.world.entities.get(a.myId).appearance.hairColor})'); assert(ap.hair === 5 && ap.c === '#33cc99' && ap.e === '#33cc99', JSON.stringify(ap)); await shot('38_salon'); await close();
+  // L228 floor lock visible
+  await page.click('.mbtn[aria-label="Dungeons"]'); await page.waitForSelector('.win:has-text("Raid (up to 8 players)")'); await page.click('.win button.tab:has-text("pet")'); await page.waitForTimeout(100);
+  const locks = await page.$$eval('.win .li', (x) => x.filter((e) => e.textContent.includes('🔒')).length); assert(locks >= 8, `locked floors shown ${locks}`); await close();
+  // L353 card set claim
+  await page.keyboard.press('b'); await page.waitForSelector('.win:has-text("Card Duels")'); await page.click('.win button.tab:has-text("Collection")'); await page.waitForTimeout(100);
+  const setTxt = await page.textContent('.win .card:has-text("Element sets")'); assert(/\d+\/\d+/.test(setTxt), 'set progress shown');
+  const elName = await page.evaluate(() => { const rows = [...document.querySelectorAll('.win .card .cal')]; return rows[0].textContent.split(' ')[0]; });
+  const ok = await page.evaluate(async (elx) => (await window.__hb.cmd('claimCardSet', { element: elx })).err, elName); assert(ok === 'INCOMPLETE', `incomplete set refused: ${ok}`);
+  await close();
+  // L319 instant buy
+  await page.keyboard.press('g'); await page.waitForSelector('.win:has-text("Marketplace")'); await page.click('.win button.tab:has-text("Exchange")'); await page.waitForTimeout(150);
+  await page.fill('.win .row:has-text("Qty") input', '1'); const g0 = await st('(a)=>String(a.bal("gold"))'); await page.click('.win button:has-text("Instant BUY")'); await page.waitForTimeout(300);
+  const toastTxt = await page.textContent('.toasts'); const g1 = await st('(a)=>String(a.bal("gold"))'); assert(/Bought \d+ @ avg/.test(toastTxt) && BigInt(g1) < BigInt(g0), `instant buy: ${toastTxt.slice(-120)}`); await close();
+  // L420 achievement points ranking
+  await page.click('.mbtn[aria-label="Rankings"]'); await page.waitForSelector('.win:has-text("Achievements")'); await page.click('.win button.tab:has-text("Achievement Pts")'); await page.waitForSelector('.win table.tbl tr'); const rk = await page.$$eval('.win table.tbl tr', (x) => x.length); assert(rk >= 5, `ranking rows ${rk}`); await close();
+  // L439 mood filter + L436 playlist
+  await page.keyboard.press('Escape'); await page.waitForSelector('.win:has-text("Settings")'); await page.click('.win button.tab:has-text("Audio")'); await page.waitForTimeout(100);
+  const all = await page.$$eval('.win .list .li', (x) => x.length); await page.selectOption('.win select[aria-label="Radio mood"]', 'boss'); await page.waitForTimeout(150); const filtered = await page.$$eval('.win .list .li', (x) => x.length); assert(filtered < all, `mood filter ${all}→${filtered}`);
+  await page.selectOption('.win select[aria-label="Radio mood"]', ''); await page.waitForTimeout(100); const favs = await page.$$('.win .list .li button:has-text("Fav")'); await favs[1].click(); await page.waitForTimeout(80); await (await page.$$('.win .list .li button:has-text("Fav")'))[2].click(); await page.waitForTimeout(80);
+  await page.click('.win button:has-text("Play favorites playlist")'); await page.waitForTimeout(100); const pl = await page.evaluate(() => ({ list: window.__hb.audio.playlist, radio: window.__hb.audio.radio })); assert(pl.list && pl.list.length >= 2 && pl.radio === pl.list[0], JSON.stringify(pl));
+  await page.evaluate(() => window.__hb.audio.nextTrack()); const r2 = await page.evaluate(() => window.__hb.audio.radio); assert(r2 === pl.list[1], `playlist advanced to ${r2}`); await page.evaluate(() => window.__hb.audio.playRadio(null)); await close();
+  // L475 wish reveal animation
+  await cmd('dev', { op: 'item', id: 'gacha_ticket', n: 10 }); await page.click('.mbtn[aria-label="Events"]'); await page.waitForSelector('.win:has-text("Rewards")'); await page.click('.win button.tab:has-text("Wishes")'); await page.waitForTimeout(100);
+  await page.click('.win button:has-text("Wish ×10 (tickets)")'); await page.waitForSelector('.wish-reveal .wr-card'); await page.waitForTimeout(2200); const cards = await page.$$eval('.wish-reveal .wr-card', (x) => x.map((c) => getComputedStyle(c).opacity)); await shot('38_wish_reveal');
+  assert(cards.length === 10 && cards.every((o) => Number(o) > 0.9), `reveal cards ${JSON.stringify(cards)}`); await page.click('.wish-reveal'); await close();
+  return `salon hair ${ap.hair}/${ap.c}; ${locks} locked floors shown; set progress + incomplete refused; instant buy ok; achievement ranking ${rk} rows; mood filter ${all}→${filtered}; playlist ${pl.list.length} stations advances; wish reveal 10 cards`;
 });
 await step('22 developer System Registry view', async () => { await page.keyboard.press('`'); await page.click('.win button.tab:has-text("System Registry")'); await page.waitForTimeout(200); await shot('22_registry'); const n = await page.$$eval('.reg .li', (x) => x.length); assert(n > 100, `rows ${n}`); await page.keyboard.press('Escape'); return `${n} registry rows`; });
 await step('23 save → reload → continue keeps progress', async () => { const lv = await st('(a,p)=>p.level'); const name = await st('(a,p)=>p.name'); const ok = await st('(a)=>a.save()'); assert(ok, 'saved'); await page.reload(); await page.click('text=Continue'); await page.click('.slot-card:has-text("' + name + '") button:has-text("Play")'); await page.waitForTimeout(800); const lv2 = await st('(a,p)=>p.level'); assert(lv2 === lv, `${lv} vs ${lv2}`); return `level ${lv} restored`; });

@@ -130,3 +130,14 @@ textarea { background: #1a1420; color: var(--text); border: 2px solid var(--edge
 .cos-swatch { height: 46px; border-radius: 6px; border: 1px solid #c9a46a; margin-bottom: 4px; }
 .cos-swatch.anim { background-size: 200% 200% !important; animation: hbmat 4s ease-in-out infinite; }
 .btn.gold { background: #8a6a20; border-color: #ffcf60; color: #fff6d0; }
+/* Gacha reveal (L475) */
+.wish-reveal { position: fixed; inset: 0; background: rgba(10, 6, 20, 0.78); z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #fff6d0; }
+.wish-reveal .wr-title { font-size: 20px; font-weight: 700; }
+.wish-reveal .wr-grid { display: grid; grid-template-columns: repeat(5, 96px); gap: 10px; }
+@media (max-width: 560px) { .wish-reveal .wr-grid { grid-template-columns: repeat(3, 92px); } }
+.wish-reveal .wr-card { background: #2a2038; border: 2px solid #8a7aa0; border-radius: 8px; padding: 8px 4px; text-align: center; font-size: 11px; opacity: 0; transform: rotateY(90deg); animation: wrflip 0.45s ease-out forwards; }
+.wish-reveal.still .wr-card { opacity: 1; transform: none; animation: none; }
+@keyframes wrflip { to { opacity: 1; transform: rotateY(0); } }
+.wish-reveal .r-rare { border-color: #4aa0ff; box-shadow: 0 0 10px #4aa0ff88; } .wish-reveal .r-epic { border-color: #c070ff; box-shadow: 0 0 14px #c070ffaa; }
+.wish-reveal .r-legendary { border-color: #ffb020; box-shadow: 0 0 18px #ffb020cc; } .wish-reveal .r-mythic { border-color: #ff5080; box-shadow: 0 0 22px #ff5080ee; }
+.wish-reveal .wr-rar { opacity: 0.8; text-transform: capitalize; }

@@ -39,3 +39,5 @@ export function uid(prefix = 'id'): string {
   uidCounter = (uidCounter + 1) % 1e9;
   return `${prefix}_${Date.now().toString(36)}${uidCounter.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
+/** Unpredictable RNG for random rewards on the server (gacha, card packs): every draw comes from `source` (e.g. crypto.randomInt). */
+export class SecureRng extends Rng { private source?: () => number; constructor(source: () => number) { super(1); this.source = source; } override next(): number { return this.source ? this.source() : super.next(); } } // super() warms up via next() before source is set

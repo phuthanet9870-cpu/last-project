@@ -138,7 +138,7 @@ export class World {
     this.stCache.delete(entityId);
     const e = this.entities.get(entityId); const svc = this.services.get(entityId); if (!e || !svc) return;
     e.cosm = Math.max(svc.p.equipment.costume?.cosmetic ?? 0, svc.p.equipment.wings?.cosmetic ?? 0);
-    const st = playerStats(svc.p, statusModifiers(e.effects)).derived; e.maxHp = st.maxHp; e.maxMp = st.maxMp; e.hp = Math.min(e.hp, e.maxHp); e.mp = Math.min(e.mp, e.maxMp); e.level = svc.p.level; e.title = svc.p.title; e.riding = svc.p.riding; e.mount = svc.p.activeMount; e.classId = svc.p.classId; e.guild = svc.p.guild?.name;
+    const st = playerStats(svc.p, statusModifiers(e.effects)).derived; e.maxHp = st.maxHp; e.maxMp = st.maxMp; e.hp = Math.min(e.hp, e.maxHp); e.mp = Math.min(e.mp, e.maxMp); e.level = svc.p.level; e.appearance = svc.p.appearance; e.title = svc.p.title; e.riding = svc.p.riding; e.mount = svc.p.activeMount; e.classId = svc.p.classId; e.guild = svc.p.guild?.name;
   }
   setInput(entityId: string, dx: number, dy: number) { const e = this.entities.get(entityId); if (!e || !e.input) return; const l = Math.hypot(dx, dy); e.input.dx = l > 0 ? dx / l : 0; e.input.dy = l > 0 ? dy / l : 0; if (l > 0) e.path = undefined; }
   moveTo(entityId: string, px: number, py: number): boolean { const e = this.entities.get(entityId); if (!e) return false; const p = findPath(this.map, Math.floor(e.x / TILE), Math.floor(e.y / TILE), Math.floor(px / TILE), Math.floor(py / TILE)); if (!p) return false; e.path = p; return true; }
@@ -641,7 +641,7 @@ export class World {
   drainFx(): Fx[] { const f = this.fx; this.fx = []; return f; }
 }
 /** Fields that change often; static fields (name, appearance, class…) are sent once per entity per client. */
-export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot', 'cosm'] as const;
+export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot', 'cosm', 'app'] as const; // app: appearance can change at the salon
 export function publicEntity(e: Entity) {
   return { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y), d: e.dir, m: e.moving, n: e.name, l: e.level, hp: Math.ceil(e.hp), mhp: e.maxHp, mp: Math.floor(e.mp), mmp: e.maxMp, dead: e.dead, def: e.defId, own: e.ownerId, cls: e.classId, app: e.appearance, fx: e.effects.map((x) => x.id), t: e.title, r: e.riding, mt: e.mount, tg: e.targetId, g: e.gauge, team: e.team, gu: e.guild, cosm: e.cosm, tele: e.ai?.telegraph ? { x: e.ai.telegraph.x, y: e.ai.telegraph.y, r: e.ai.telegraph.r, at: e.ai.telegraph.at } : undefined, loot: e.loot?.length };
 }
