@@ -1,124 +1,124 @@
 {
-  "when": "2026-11-27T16:24:17.759Z",
+  "when": "2026-11-27T16:26:30.374Z",
   "server": "http://localhost:2567",
-  "durationMs": 696806,
-  "passed": 5,
+  "durationMs": 101853,
+  "passed": 28,
   "total": 29,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
-      "ok": false,
-      "detail": "wrong password rejected"
+      "ok": true,
+      "detail": "tokens issued, refresh rotation + reuse detection ok"
     },
     {
       "name": "create characters (unique names, slot validation)",
-      "ok": false,
-      "detail": "{\"error\":\"Unauthorized\"}"
+      "ok": true,
+      "detail": "ch_mwz6zd8l1fici, ch_mwz6zd8yb6mpu"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
-      "ok": false,
-      "detail": "foreign char → 4401"
+      "ok": true,
+      "detail": "rejected 4401 / 4404"
     },
     {
       "name": "two clients join same world and see each other",
-      "ok": false,
-      "detail": "closed 4401 Unauthorized"
+      "ok": true,
+      "detail": "map emberglen"
     },
     {
       "name": "server-authoritative movement replicated (collision-checked)",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'x')"
+      "ok": true,
+      "detail": "912→1009"
     },
     {
       "name": "chat local + world + whisper delivered; malformed packet rejected",
-      "ok": false,
-      "detail": "chat delivered & escaped"
+      "ok": true,
+      "detail": "ok"
     },
     {
       "name": "party invite requires acceptance",
-      "ok": false,
-      "detail": "{\"ok\":false,\"err\":\"TIMEOUT\"}"
+      "ok": true,
+      "detail": "party formed"
     },
     {
       "name": "direct trade: item ↔ gold, both lock+confirm, persisted",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'inventory')"
+      "ok": true,
+      "detail": "potion ↔ 100G"
     },
     {
       "name": "marketplace: list (escrow) → buy → double-buy rejected → persisted ledger balanced",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'inventory')"
+      "ok": true,
+      "detail": "sold 1 net for 10G (fee burned)"
     },
     {
       "name": "market privacy + account sales collection box",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'send')"
+      "ok": true,
+      "detail": "collected 10G; other players' history & auction maxima hidden"
     },
     {
       "name": "friend presence: online for friends, location only when mutual",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'find')"
+      "ok": true,
+      "detail": "one-sided: online only; mutual: map visible"
     },
     {
       "name": "engagement requires the partner to accept",
-      "ok": false,
-      "detail": "{\"error\":\"Internal error\"}"
+      "ok": true,
+      "detail": "engaged; gold 20610→10610"
     },
     {
       "name": "wedding ceremony at the plaza: both partners present → phases → married (persisted)",
-      "ok": false,
-      "detail": "could not reach 912,1368"
+      "ok": true,
+      "detail": "phases → celebration; both married; 5000G paid"
     },
     {
       "name": "visit a real friend's farm and like it (persists to owner)",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'farm')"
+      "ok": true,
+      "detail": "owner likes 0→1"
     },
     {
       "name": "Hearthcards PvP duel between the two players to completion",
-      "ok": false,
-      "detail": "{\"ok\":false,\"err\":\"TIMEOUT\"}"
+      "ok": true,
+      "detail": "A sees winner 1, B sees 0 (perspective-correct); 2 results recorded"
     },
     {
       "name": "party dungeon: party enters the same instance together",
-      "ok": false,
-      "detail": "could not reach 1424,752"
+      "ok": true,
+      "detail": "both entered daily_exp_1 together"
     },
     {
       "name": "combat on server: travel to field, kill monster, EXP + gold persisted",
-      "ok": false,
-      "detail": "could not reach 976,560"
+      "ok": true,
+      "detail": "kills=1, exp=29, db kills=1"
     },
     {
       "name": "disconnect → reconnect restores persisted state",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'inventory')"
+      "ok": true,
+      "detail": "map whisperwood"
     },
     {
       "name": "arena mode queue: Lantern Siege 1v1 matches two real players",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'cmd')"
+      "ok": true,
+      "detail": "siege match created for both"
     },
     {
       "name": "ranked arena 1v1 between the two real players",
-      "ok": false,
-      "detail": "Cannot read properties of undefined (reading 'send')"
+      "ok": true,
+      "detail": "winner team 0, deltas {\"ch_mwz6zd8l1fici\":16,\"ch_mwz6zd8yb6mpu\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
-      "ok": false,
-      "detail": "player → 401"
+      "ok": true,
+      "detail": "online=2 p95 tick=0.64ms ledger ok=true"
     },
     {
       "name": "Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title",
-      "ok": false,
-      "detail": "dust grant"
+      "ok": true,
+      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:40; title_weekly → B"
     },
     {
       "name": "guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds",
-      "ok": false,
-      "detail": "gold"
+      "ok": true,
+      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lanmbcsw score [0,0]"
     },
     {
       "name": "worker: weekly champion = most PvP rating gained in the last 7 days (not all-time rating)",
@@ -148,7 +148,7 @@
     {
       "name": "HTTP hardening: CSP + security headers, /metrics, /readyz, spoofed X-Forwarded-For does not bypass the login limit",
       "ok": true,
-      "detail": "CSP ok; metrics ok; 16/24 spoofed-IP attempts throttled"
+      "detail": "CSP ok; metrics ok; 17/24 spoofed-IP attempts throttled"
     }
   ]
 }

@@ -105,7 +105,7 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [acc.id])).rowCount! > 0; if (acc.status === 'active' && !muted) throw new AuthError(400, 'There is no active sanction to appeal');
     try { const r = await pool.query('INSERT INTO appeals(account_id,text) VALUES ($1,$2) RETURNING id', [acc.id, text]); return { ok: true, id: Number(r.rows[0].id) }; } catch (e: any) { if (e.code === '23505') throw new AuthError(409, 'You already have an open appeal'); throw e; }
   });
-  app.get('/api/admin/appeals', async (req) => { admin(req); return { rows: (await pool.query(`SELECT ap.id, a.username, a.status AS account_status, a.ban_reason, ap.text, ap.status, ap.created_at FROM appeals ap JOIN accounts a ON a.id=ap.account_id ORDER BY (ap.status='open') DESC, ap.created_at DESC LIMIT 100`)).rows }; });
+  app.get('/api/admin/appeals', async (req) => { admin(req); return { rows: (await pool.query(`SELECT ap.id::int AS id, a.username, a.status AS account_status, a.ban_reason, ap.text, ap.status, ap.created_at FROM appeals ap JOIN accounts a ON a.id=ap.account_id ORDER BY (ap.status='open') DESC, ap.created_at DESC LIMIT 100`)).rows }; });
   app.post('/api/admin/appeals/:id', async (req) => {
     const a = admin(req); const b: any = req.body ?? {}; if (!['accept', 'reject'].includes(b.decision) || !b.note) throw new AuthError(400, 'decision and note required');
     return tx(async (cl) => {
