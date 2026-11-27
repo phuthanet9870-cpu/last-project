@@ -32,6 +32,8 @@ const tag = Math.random().toString(36).slice(2, 7);
 async function walkTo(c: Client, x: number, y: number) { for (let i = 0; i < 40; i++) { await c.cmd('moveTo', { x, y }); await sleep(500); const me = c.me(); if (me && Math.hypot(me.x - x, me.y - y) < 60) return; } throw new Error(`could not reach ${x},${y}`); }
 const A = new Client(), B = new Client(); let tokA = '', tokB = '', charA = '', charB = '', accA = '';
 const t0 = Date.now();
+// Rate-limit counters live in Redis and survive server restarts: clear this machine's login/appeal/register windows so back-to-back runs start clean (best effort; test only).
+try { for (const k of ['login', 'appeal', 'reg']) for (const ip of ['127.0.0.1', '::1', '::ffff:127.0.0.1']) execFileSync('redis-cli', ['DEL', `hb:rl:${k}:${ip}`], { stdio: 'ignore' }); } catch { /* redis-cli not installed: first run is unaffected */ }
 await step('register + login two accounts (Argon2id)', async () => {
   const ra = await api('/api/auth/register', { username: `alice_${tag}`, password: 'correct-horse-1' }); assert(ra.status === 200, JSON.stringify(ra.j)); accA = ra.j.accountId;
   const rb = await api('/api/auth/register', { username: `bob_${tag}`, password: 'correct-horse-2' }); assert(rb.status === 200, JSON.stringify(rb.j));
