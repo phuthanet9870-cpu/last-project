@@ -104,6 +104,16 @@ describe('V4 skill stones', () => {
   });
 });
 
+describe('V4 hotbar', () => {
+  it('8 slots, passives refused, unlearned refused, drag onto another slot swaps, 3 sets persist', () => {
+    const { svc, p } = mk('vanguard'); p.jobLevel = 10; p.skillPoints = 9; const cls = CLASSES.vanguard!; const pas = cls.skills.find((s) => s.type === 'passive' && !s.pre.length)!; const act2 = cls.skills.find((s) => s.type === 'active' && s.id !== cls.skills[0]!.id && !s.pre.length && s.jobReq <= 10)!;
+    svc.commitSkills({ [pas.id]: 1, [act2.id]: 1 });
+    expect(svc.setHotbar(2, pas.id).err).toBe('PASSIVE_NOT_ALLOWED'); expect(svc.setHotbar(2, cls.skills.find((s) => !(p.skillRanks[s.id] > 0) && s.type !== 'passive')!.id).err).toBe('SKILL_NOT_LEARNED'); expect(svc.setHotbar(8, act2.id).err).toBe('INVALID');
+    const bar0 = [...p.hotbar]; const at = p.hotbar.indexOf(act2.id); svc.setHotbar(7, act2.id); expect(p.hotbar[7]).toBe(act2.id); expect(p.hotbar[at]).toBe(bar0[7] ?? null);
+    const snap = [...p.hotbar]; svc.switchHotbarSet(1); expect(p.hotbar.every((x) => x === null)).toBe(true); svc.setHotbar(0, act2.id); svc.switchHotbarSet(0); expect(p.hotbar).toEqual(snap); svc.switchHotbarSet(1); expect(p.hotbar[0]).toBe(act2.id);
+  });
+});
+
 describe('V4 migration', () => {
   it('old generic skill ids are refunded, never remapped; hotbar items kept; idempotent', () => {
     const { p } = mk('fortune_dealer'); p.jobLevel = 25; delete (p as any).skillV; p.skillRanks = { fortune_dealer_s01: 5, fortune_dealer_s02: 3 }; p.skillPoints = 0; p.hotbar = ['fortune_dealer_s01', 'potion_hp_s', null, null, null, null, null, null];

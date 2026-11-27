@@ -25,6 +25,7 @@ export interface PlayerState {
   statPoints: number; skillPoints: number; allocated: Primary; skillRanks: Record<string, number>; hotbar: (string | null)[];
   /** Skill System V4: save schema of skills (4), server revision for atomic commits, recent idempotency keys */ skillV?: number; skillRev?: number; skillOps?: string[]; skillMigration?: { at: number; refunded: number; fromV: number };
   /** V4: one stone socket per active skill (skillId → stone uid). */ skillSockets?: Record<string, string>;
+  /** V4: up to 3 hotbar sets; `hotbar` is always the active one. */ hotbarSets?: (string | null)[][]; hotbarSet?: number;
   hp: number; mp: number; gauge: number; map: string; x: number; y: number; savedMap: string;
   inventory: ItemInstance[]; invSlots: number; storage: ItemInstance[]; equipment: Partial<Record<Slot, ItemInstance>>;
   quests: { active: QuestProgress[]; done: string[]; lastDaily: string; lastWeekly: string };
@@ -465,7 +466,18 @@ export class PlayerService {
     this.p.hotbar = this.p.hotbar.map((h) => (h && ALL_SKILLS[h] ? null : h)); this.p.hotbar[0] = cls.skills[0]!.id; this.p.skillRev = (this.p.skillRev ?? 0) + 1;
     return ok({ usedScroll: scroll });
   }
-  setHotbar(i: number, skillOrItem: string | null): Result { if (i < 0 || i >= 8) return fail('INVALID'); this.p.hotbar[i] = skillOrItem; return ok(); }
+  /** Hotbar (V4 §27): 8 slots, passives cannot be placed, only learned skills of your class (or items). */
+  setHotbar(i: number, skillOrItem: string | null): Result {
+    if (!Number.isInteger(i) || i < 0 || i >= 8) return fail('INVALID');
+    if (skillOrItem) { const sk = ALL_SKILLS[skillOrItem]; if (sk) { if (sk.type === 'passive') return fail('PASSIVE_NOT_ALLOWED', 'Passive skills work automatically'); if (sk.classId !== this.p.classId || !(this.p.skillRanks[sk.id] > 0)) return fail('SKILL_NOT_LEARNED'); } else if (!ITEMS[skillOrItem]) return fail('INVALID'); }
+    const prev = this.p.hotbar.indexOf(skillOrItem); if (skillOrItem && prev >= 0 && prev !== i) this.p.hotbar[prev] = this.p.hotbar[i] ?? null; // dragging onto another slot swaps
+    this.p.hotbar[i] = skillOrItem; return ok();
+  }
+  /** Multiple hotbar sets (3). Switching stores the current bar and loads the chosen one. */
+  switchHotbarSet(n: number): Result {
+    if (!Number.isInteger(n) || n < 0 || n > 2) return fail('INVALID'); const cur = this.p.hotbarSet ?? 0; this.p.hotbarSets ??= [[], [], []];
+    this.p.hotbarSets[cur] = [...this.p.hotbar]; const next = this.p.hotbarSets[n] ?? []; this.p.hotbar = Array.from({ length: 8 }, (_, i) => { const id = next[i] ?? null; return id && ALL_SKILLS[id] && !(this.p.skillRanks[id] > 0) ? null : id; }); this.p.hotbarSet = n; return ok({ set: n });
+  }
   /** Change class (Developer/Testing only; production gated by class-change quest). */
   changeClass(classId: string): Result { const c = CLASSES[classId]; if (!c) return fail('INVALID'); this.p.classId = classId; this.p.skillRanks = starterRanks(classId); this.p.skillPoints = skillPointBudget(this.p) - 1; this.p.hotbar = [c.skills[0]!.id, null, null, null, null, null, null, null]; this.p.skillRev = (this.p.skillRev ?? 0) + 1; this.p.gauge = 0; this.clampVitals(); return ok(); }
 

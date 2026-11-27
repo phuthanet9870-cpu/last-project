@@ -147,7 +147,7 @@ function startGame(a: Adapter) {
   const relabel = () => { if (!hud) return; setLang(settings.lang); const keys = ['character', 'inventory', 'skills', 'quests', 'pets', 'mounts', 'cards', 'crafting', 'market', 'social', 'mail', 'dungeon', '', 'pvp', 'tcg', 'rank', 'events', 'help', '', 'settings']; hud.menu.querySelectorAll('.mbtn').forEach((b, i) => { const k = keys[i]; if (k) { (b.querySelector('.ml') as HTMLElement).textContent = t(k); b.setAttribute('aria-label', t(k)); } }); };
   // eslint-disable-next-line prefer-const
   let hud!: HudRefs;
-  hud = buildHud(root, { onHotbar: useHotbar, onChat: (ch, m) => a.send('chat', { ch, msg: m }), onRespawn: () => a.send('respawn'), menu, onJoy: (dx, dy) => { joy = { x: dx, y: dy }; }, onMobileAttack: attack, onMobilePickup: interact, onMobileInteract: interact });
+  hud = buildHud(root, { onHotbar: useHotbar, onHotbarDrop: (i, sk, from) => { const id = sk ?? (from !== null ? a.p.hotbar[from] ?? null : null); if (!id) return; a.send('hotbar', { i, id }).then((r) => { if (!r.ok) toast((r.msg ?? r.err ?? '').replace(/_/g, ' '), 'err'); }); }, onHotbarSet: () => { a.send('hotbarSet', { set: ((a.p.hotbarSet ?? 0) + 1) % 3 }).then((r) => r.ok && toast(`Hotbar set ${(a.p.hotbarSet ?? 0) + 1}`, 'info')); }, onChat: (ch, m) => a.send('chat', { ch, msg: m }), onRespawn: () => a.send('respawn'), menu, onJoy: (dx, dy) => { joy = { x: dx, y: dy }; }, onMobileAttack: attack, onMobilePickup: interact, onMobileInteract: interact });
   chatLine(hud, 'system', 'System', `Welcome, ${a.p.name}! ${a.mode === 'local' ? 'Artifact mode — other players are simulated (·sim).' : 'Connected to server.'} Press H for help.`);
   const onMap = (mapId: string) => { r.setMap(mapId); target = null; r.selected = null; audio.setMood(MAPS[mapId]!.bgm); toast(L(MAPS[mapId]!.name), 'info'); hideTip(); };
   a.onMapChange = onMap; onMap(a.mapId); apply();
@@ -211,7 +211,13 @@ function startGame(a: Adapter) {
     if (Object.values(a.p.equipment).some((i) => i && i.durability < 20)) { const kit = a.p.inventory.find((x) => x.defId === 'repair_kit'); if (kit) a.send('useItem', { uid: kit.uid }).then((r) => r.ok && toast('Auto-repair: Tinker Kit used', 'info')); } // official auto-repair (§31)
     if (settings.autoLoot) { const bag = a.entities().filter((e) => e.k === 'loot').map((e) => ({ e, d: Math.hypot(e.x - me.x, e.y - me.y) })).filter((x) => x.d < 600).sort((x, y) => x.d - y.d)[0]; if (bag && bag.d > 30) { a.send('moveTo', { x: bag.e.x, y: bag.e.y }); return; } } // collect drops before the next fight (auto-loot)
     if (!target || target.dead || target.k !== 'monster') { target = null; attack(); return; }
-    for (let i = 0; i < 8; i++) { const sk = a.p.hotbar[i]; const s = sk ? ALL_SKILLS[sk] : null; if (s && s.dmgType !== 'heal' && s.dmgType !== 'none' && me.mp > s.mp + 10 && Math.random() < 0.3) { useHotbar(i); return; } }
+    { // V4 auto-combat: same rules as manual play — heal when low, then the strongest ready damage skill whose MP / gauge requirement is met; passives never on the bar
+      const now = a.serverTime(); const cds = (globalThis as any).__cds ?? {}; const ready = (id: string) => (cds[id] ?? 0) <= now; const gv = me.g ?? 0;
+      const usable = a.p.hotbar.map((id, i) => ({ id, i, s: id ? ALL_SKILLS[id] : null })).filter((x) => x.s && x.s.type !== 'passive' && ready(x.id!) && me.mp >= x.s.mp + 5 && (!x.s.gauge?.need || gv >= x.s.gauge.need));
+      const heal = usable.find((x) => x.s!.dmgType === 'heal'); if (heal && me.hp / me.mhp < 0.5) { useHotbar(heal.i); return; }
+      const dT = target ? Math.hypot(target.x - me.x, target.y - me.y) : 1e9; const inRange = (sk: NonNullable<(typeof usable)[number]['s']>) => (sk.target === 'aoe_self' ? dT <= sk.radius + 16 : dT <= Math.max(sk.range, 60) + 20);
+      const dmg = usable.filter((x) => (x.s!.dmgType === 'phys' || x.s!.dmgType === 'mag') && inRange(x.s!)).sort((x, y) => y.s!.power * y.s!.hits - x.s!.power * x.s!.hits)[0]; if (dmg) { useHotbar(dmg.i); return; }
+    }
     attack();
   }
   void NPCS;

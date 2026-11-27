@@ -96,6 +96,7 @@ export function openSkillTree() { openWindow({ id: 'skills', title: `${T('Skills
   for (const s of stage) {
     const stt = nodeState(p, s, d); const r = d[s.id] ?? 0; const { x, y } = pos(s);
     const node = h('div', { class: `sk-node ${stt} ${s.type} ${S.sel === s.id ? 'sel' : ''}`, style: { left: `${x - 60}px`, top: `${y - 28}px` }, tabindex: '0', 'data-skill': s.id,
+      draggable: s.type !== 'passive' && (committed(p)[s.id] ?? 0) > 0 ? 'true' : undefined, ondragstart: (e: DragEvent) => { e.dataTransfer?.setData('text/hb-skill', s.id); },
       onclick: () => { S.sel = s.id; renderWin('skills'); }, oncontextmenu: (e: Event) => { e.preventDefault(); removeRank(p, s); },
       onkeydown: (e: KeyboardEvent) => { if (e.key === '+' || e.key === '=') addRank(p, s); if (e.key === '-') removeRank(p, s); if (e.key === 'Enter') { S.sel = s.id; renderWin('skills'); } } },
       h('div', { class: 'sk-ic' }, icon(s, cls.palette.trim, 40), stt === 'locked' ? h('span', { class: 'sk-lk' }, '🔒') : null),

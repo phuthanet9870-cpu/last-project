@@ -252,9 +252,9 @@ await step('37 UI coverage: help/wiki + stat guide, quest journal + navigate, au
   await cmd('dev', { op: 'map', id: 'whisperwood' }); await page.waitForTimeout(400); const mood = await page.evaluate(() => window.__hb.audio.mood); assert(mood === 'forest', `area music ${mood}`);
   await cmd('dev', { op: 'item', id: 'repair_kit' }); await page.evaluate(() => { const p = window.__hb.a.p; for (const it of Object.values(p.equipment)) if (it) it.durability = 10; });
   const mon = await st('(a)=>{const me=a.world.entities.get(a.myId);return [...a.world.entities.values()].filter(e=>e.kind==="monster"&&!e.dead&&e.level<8).sort((p,q)=>Math.hypot(p.x-me.x,p.y-me.y)-Math.hypot(q.x-me.x,q.y-me.y))[0]}'); await cmd('dev', { op: 'teleport', x: mon.x - 40, y: mon.y });
-  const k0 = await st('(a,p)=>p.counters.kills??0'); const hits0 = await page.evaluate(() => window.__hb.audio.played.hit ?? 0); await page.click('.mbtn[aria-label="Auto"]');
+  const k0 = await st('(a,p)=>p.counters.kills??0'); const hits0 = await page.evaluate(() => (window.__hb.audio.played.hit ?? 0) + (window.__hb.audio.played.crit ?? 0)); await page.click('.mbtn[aria-label="Auto"]');
   for (let i = 0; i < 40; i++) { await page.waitForTimeout(250); await cmd('dev', { op: 'heal' }); if ((await st('(a,p)=>p.counters.kills??0')) > k0) break; }
-  const k1 = await st('(a,p)=>p.counters.kills??0'); const dur = await st('(a,p)=>Math.min(...Object.values(p.equipment).filter(Boolean).map(i=>i.durability))'); const hits1 = await page.evaluate(() => window.__hb.audio.played.hit ?? 0);
+  const k1 = await st('(a,p)=>p.counters.kills??0'); const dur = await st('(a,p)=>Math.min(...Object.values(p.equipment).filter(Boolean).map(i=>i.durability))'); const hits1 = await page.evaluate(() => (window.__hb.audio.played.hit ?? 0) + (window.__hb.audio.played.crit ?? 0));
   assert(k1 > k0, `auto-battle killed (${k0}→${k1})`); assert(dur > 20, `auto-repair used the kit (min durability ${dur})`); assert(hits1 > hits0, 'combat SFX played');
   // L270 bag-full stop
   await page.evaluate(() => { const a = window.__hb.a; while (a.p.inventory.length < a.p.invSlots) a.p.inventory.push({ ...a.p.inventory[0], uid: 'fill' + a.p.inventory.length }); }); await page.waitForTimeout(900);
