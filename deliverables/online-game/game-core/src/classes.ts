@@ -11,7 +11,7 @@ export interface SkillDef {
   reqLevel: number; maxRank: number; mp: number; cdMs: number; castMs: number; range: number; radius: number;
   target: 'enemy' | 'self' | 'aoe_self' | 'aoe_target' | 'line' | 'cone' | 'party';
   dmgType: 'phys' | 'mag' | 'pure' | 'heal' | 'none'; power: number; perRank: number; hits: number; element: Element | null;
-  effects: SkillEffect[]; dash?: number; shieldPct?: number; summon?: string; chain?: number; cleanse?: boolean; lifesteal?: number;
+  effects: SkillEffect[]; dash?: number; knockback?: number; knockdown?: boolean; shieldPct?: number; summon?: string; chain?: number; cleanse?: boolean; lifesteal?: number;
   passive?: Omit<Modifier, 'source'>[]; vfx: string; icon: number;
 }
 export interface ClassDef {
@@ -79,14 +79,14 @@ const KIT_MELEE: T[] = [
   { n: ['Guard', 'ป้องกัน'], tg: 'self', dt: 'none', pw: 0, cd: 20000, mp: 15, rg: 0, fx: [{ s: 'def_up', d: 8000, self: true }], v: 'buff' },
   { n: ['Sunder', 'ทลายเกราะ'], tg: 'enemy', dt: 'phys', pw: 1.5, cd: 9000, mp: 14, rg: 60, fx: [{ s: 'armor_break', d: 8000 }], v: 'slash' },
   { n: ['Mastery', 'ชำนาญ'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['crit', 'flat', 4], ['acc', 'pct', 6]) }, v: 'none' },
-  { n: ['Quake', 'กระแทกพื้น'], tg: 'aoe_self', dt: 'phys', pw: 2.0, cd: 12000, mp: 24, rg: 0, rad: 130, fx: [{ s: 'slow', d: 3000 }], v: 'shock' },
+  { n: ['Quake', 'กระแทกพื้น'], tg: 'aoe_self', dt: 'phys', pw: 2.0, cd: 12000, mp: 24, rg: 0, rad: 130, fx: [{ s: 'slow', d: 3000 }], x: { knockback: 70, knockdown: true }, v: 'shock' },
   { n: ['Bloodlust', 'กระหายเลือด'], tg: 'self', dt: 'none', pw: 0, cd: 30000, mp: 20, rg: 0, fx: [{ s: 'lifesteal_up', d: 10000, self: true }], v: 'buff' },
   { n: ['Piercer', 'แทงทะลุ'], tg: 'line', dt: 'phys', pw: 2.4, cd: 10000, mp: 22, rg: 220, rad: 30, v: 'beam' },
   { n: ['Fortitude', 'ทรหด'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['def', 'pct', 8], ['ccResist', 'flat', 10]) }, v: 'none' },
   { n: ['Flurry', 'พายุฟัน'], tg: 'enemy', dt: 'phys', pw: 0.9, cd: 11000, mp: 26, rg: 70, hits: 4, v: 'slash' },
   { n: ['Aegis', 'อีจิส'], tg: 'self', dt: 'none', pw: 0, cd: 40000, mp: 30, rg: 0, x: { shieldPct: 0.3 }, fx: [{ s: 'shield', d: 10000, self: true }], v: 'shield' },
-  { n: ['Executioner', 'เพชฌฆาต'], tg: 'enemy', dt: 'phys', pw: 4.0, cd: 20000, mp: 40, rg: 70, v: 'big' },
-  { n: ['Cataclysm', 'มหาวิบัติ'], type: 'ultimate', tg: 'aoe_self', dt: 'phys', pw: 5.0, cd: 60000, mp: 60, rg: 0, rad: 180, fx: [{ s: 'stun', d: 1500 }], v: 'nova' },
+  { n: ['Executioner', 'เพชฌฆาต'], tg: 'enemy', dt: 'phys', pw: 4.0, cd: 20000, mp: 40, rg: 70, x: { knockback: 60, knockdown: true }, v: 'big' },
+  { n: ['Cataclysm', 'มหาวิบัติ'], type: 'ultimate', tg: 'aoe_self', dt: 'phys', pw: 5.0, cd: 60000, mp: 60, rg: 0, rad: 180, fx: [{ s: 'stun', d: 1500 }], x: { knockback: 100 }, v: 'nova' },
 ];
 const KIT_RANGED: T[] = [
   { n: ['Shot', 'ยิง'], tg: 'enemy', dt: 'phys', pw: 1.5, cd: 2000, mp: 5, rg: 320, v: 'arrow' },
@@ -99,7 +99,7 @@ const KIT_RANGED: T[] = [
   { n: ['Snare Trap', 'กับดัก'], tg: 'aoe_target', dt: 'phys', pw: 0.8, cd: 12000, mp: 14, rg: 250, rad: 60, fx: [{ s: 'root', d: 2500 }], v: 'trap' },
   { n: ['Twin Shot', 'ยิงคู่'], tg: 'enemy', dt: 'phys', pw: 1.1, cd: 5000, mp: 12, rg: 320, hits: 2, v: 'arrow' },
   { n: ['Steady Aim', 'เล็งมั่น'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['atk', 'pct', 6], ['pen', 'flat', 5]) }, v: 'none' },
-  { n: ['Blast', 'ระเบิด'], tg: 'aoe_target', dt: 'phys', pw: 2.0, cd: 11000, mp: 22, rg: 300, rad: 110, fx: [{ s: 'burn', d: 4000, c: 0.5 }], v: 'explosion' },
+  { n: ['Blast', 'ระเบิด'], tg: 'aoe_target', dt: 'phys', pw: 2.0, cd: 11000, mp: 22, rg: 300, rad: 110, fx: [{ s: 'burn', d: 4000, c: 0.5 }], x: { knockback: 50 }, v: 'explosion' },
   { n: ['Blinding Flash', 'แสงวาบ'], tg: 'aoe_target', dt: 'phys', pw: 0.6, cd: 15000, mp: 16, rg: 280, rad: 100, fx: [{ s: 'blind', d: 4000 }], v: 'flash' },
   { n: ['Headshot', 'ยิงหัว'], tg: 'enemy', dt: 'phys', pw: 3.0, cd: 14000, mp: 26, rg: 380, v: 'arrow' },
   { n: ['Windwalk', 'เดินลม'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['moveSpeed', 'pct', 8], ['eva', 'pct', 8]) }, v: 'none' },
@@ -119,7 +119,7 @@ const KIT_CASTER: T[] = [
   { n: ['Chain', 'ลูกโซ่'], tg: 'enemy', dt: 'mag', pw: 1.4, cd: 9000, mp: 22, rg: 300, x: { chain: 3 }, v: 'chain' },
   { n: ['Lance', 'หอกเวท'], tg: 'line', dt: 'mag', pw: 2.3, cd: 9000, mp: 24, rg: 340, rad: 28, v: 'beam' },
   { n: ['Attunement', 'ประสานธาตุ'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['elemBonus', 'flat', 10], ['mpen', 'flat', 6]) }, v: 'none' },
-  { n: ['Nova', 'โนวา'], tg: 'aoe_self', dt: 'mag', pw: 2.2, cd: 12000, mp: 30, rg: 0, rad: 140, fx: [{ s: 'stun', d: 800, c: 0.4 }], v: 'nova' },
+  { n: ['Nova', 'โนวา'], tg: 'aoe_self', dt: 'mag', pw: 2.2, cd: 12000, mp: 30, rg: 0, rad: 140, fx: [{ s: 'stun', d: 800, c: 0.4 }], x: { knockback: 80, knockdown: true }, v: 'nova' },
   { n: ['Drain', 'ดูดพลัง'], tg: 'enemy', dt: 'mag', pw: 1.6, cd: 10000, mp: 18, rg: 280, x: { lifesteal: 0.4 }, v: 'drain' },
   { n: ['Meteor', 'อุกกาบาต'], tg: 'aoe_target', dt: 'mag', pw: 3.2, cd: 16000, mp: 40, rg: 320, rad: 120, castMsX: 0, v: 'explosion' } as T,
   { n: ['Clarity', 'ปัญญาใส'], type: 'passive', tg: 'self', dt: 'none', pw: 0, cd: 0, mp: 0, rg: 0, x: { passive: mods(['mpRegen', 'pct', 30], ['cdr', 'flat', 4]) }, v: 'none' },

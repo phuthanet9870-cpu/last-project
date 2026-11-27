@@ -140,6 +140,11 @@ export class Renderer {
     } else if (e.k === 'pet' || e.k === 'summon') {
       shadow(4); const sp = e.app?.sprite ?? 'slime'; const col = e.app?.color ?? '#ccc'; if (e.k === 'summon') ctx.globalAlpha = 0.75; if (e.dead) ctx.globalAlpha = 0.3;
       ctx.drawImage(monsterSprite(sp, col, Math.floor(performance.now() / 200)), Math.round(x - 6), Math.round(y - 8 + Math.sin(performance.now() / 180) * 1), 12, 12); ctx.globalAlpha = 1; if (this.settings.showNames) this.label(ctx, e.n, x, y - 10, e.k === 'pet' ? '#ffc0e0' : '#c0ffff', 4);
+    } else if (e.k === 'projectile') {
+      const col = e.app?.color ?? '#fff'; const ang = ((e.d - 2) * Math.PI) / 4; ctx.save(); ctx.translate(x, y);
+      if (e.app?.kind === 'arrow') { ctx.rotate(ang); ctx.fillStyle = '#e8dcc0'; ctx.fillRect(-5, -0.5, 9, 1); ctx.fillStyle = col; ctx.fillRect(3, -1, 2, 2); ctx.fillStyle = '#a07040'; ctx.fillRect(-6, -1, 2, 2); }
+      else { const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 5); g.addColorStop(0, '#ffffff'); g.addColorStop(0.4, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
     } else if (e.k === 'loot') {
       const b = Math.sin(performance.now() / 200) * 1; ctx.drawImage(itemIcon('pack', '#e0b040'), x - 6, y - 8 + b); ctx.fillStyle = `rgba(255,240,160,${0.5 + b * 0.3})`; ctx.fillRect(x + 4, y - 9 + b, 1, 1); ctx.fillRect(x - 5, y - 4, 1, 1);
     }
@@ -178,7 +183,7 @@ export class Renderer {
     const flick = 1 + Math.sin(performance.now() / 120) * 0.04;
     for (const o of this.map.objects) { if (o.kind === 'lamp') hole(o.x * 16 + 8, o.y * 16 - 10, 60 * flick); if (o.kind === 'torch') hole(o.x * 16 + 8, o.y * 16 + 4, 55 * flick); if (o.kind === 'crystal') hole(o.x * 16 + 8, o.y * 16 + 8, 28, 0.7); if (o.kind === 'house') { hole(o.x * 16 + 17, (o.y + o.h) * 16 - 4, 26, 0.8); hole((o.x + o.w) * 16 - 19, (o.y + o.h) * 16 - 4, 26, 0.8); } }
     for (const pt of MAPS[this.map.def.id]!.portals) hole(pt.x * 16 + 8, pt.y * 16 + 8, 40, 0.8);
-    for (const e of ents) { const s = this.smooth.get(e.id); if (!s) continue; if (e.id === a.myId) hole(s.x / 2, s.y / 2 - 6, 70, 0.9); else if (e.k === 'player' || e.k === 'bot') hole(s.x / 2, s.y / 2 - 6, 30, 0.5); else if (e.k === 'monster' && ['wisp', 'ghost'].includes(MONSTERS[e.def!]?.sprite ?? '')) hole(s.x / 2, s.y / 2 - 6, 34, 0.7); }
+    for (const e of ents) { const s = this.smooth.get(e.id); if (!s) continue; if (e.id === a.myId) hole(s.x / 2, s.y / 2 - 6, 70, 0.9); else if (e.k === 'player' || e.k === 'bot') hole(s.x / 2, s.y / 2 - 6, 30, 0.5); else if (e.k === 'monster' && ['wisp', 'ghost'].includes(MONSTERS[e.def!]?.sprite ?? '')) hole(s.x / 2, s.y / 2 - 6, 34, 0.7); else if (e.k === 'projectile') hole(s.x / 2, s.y / 2, 14, 0.6); }
     for (const p of this.particles) if (p.kind === 'glow' || p.kind === 'ring') hole(p.x / 2, p.y / 2, (p.r ?? 40) / 2 + 20, 0.6);
     ctx.drawImage(this.light, 0, 0);
     // warm tint near lights at night
@@ -187,7 +192,7 @@ export class Renderer {
   screenToWorld(sx: number, sy: number) { const z = S * this.zoom; return { x: (sx / z + this.camX) * 2, y: (sy / z + this.camY) * 2 }; }
   pick(sx: number, sy: number, ents: PubEntity[]): PubEntity | null {
     const w = this.screenToWorld(sx, sy); let best: PubEntity | null = null; let bd = 40;
-    for (const e of ents) { if (e.k === 'loot' && false) continue; const s = this.smooth.get(e.id) ?? e; const size = e.k === 'monster' ? 16 * (MONSTERS[e.def!]?.size ?? 1) : 18; const d = Math.hypot(s.x - w.x, s.y - size - w.y + size * 0.4); if (d < Math.max(bd, size)) { bd = d; best = e; } }
+    for (const e of ents) { if (e.k === 'projectile') continue; const s = this.smooth.get(e.id) ?? e; const size = e.k === 'monster' ? 16 * (MONSTERS[e.def!]?.size ?? 1) : 18; const d = Math.hypot(s.x - w.x, s.y - size - w.y + size * 0.4); if (d < Math.max(bd, size)) { bd = d; best = e; } }
     return best;
   }
   drawMinimap(mc: HTMLCanvasElement, a: Adapter) {
@@ -195,7 +200,7 @@ export class Renderer {
     const sc = Math.min(W / this.mini.width, H / this.mini.height); const ox = (W - this.mini.width * sc) / 2, oy = (H - this.mini.height * sc) / 2; x.drawImage(this.mini, ox, oy, this.mini.width * sc, this.mini.height * sc);
     const k = sc * 2 / TILE;
     for (const pt of MAPS[this.map.def.id]!.portals) { x.fillStyle = '#80e0ff'; x.fillRect(ox + pt.x * 2 * sc - 1, oy + pt.y * 2 * sc - 1, 3, 3); }
-    for (const e of a.entities()) { if (e.k === 'loot') continue; x.fillStyle = e.id === a.myId ? '#ffffff' : e.k === 'monster' ? (MONSTERS[e.def!]?.rank === 'normal' ? '#ff5050' : '#ff00ff') : e.k === 'npc' ? '#ffe040' : e.k === 'bot' || e.k === 'player' ? '#60c0ff' : '#ffa0d0'; const sz = e.id === a.myId ? 3 : 2; x.fillRect(ox + e.x * k - sz / 2, oy + e.y * k - sz / 2, sz, sz); }
+    for (const e of a.entities()) { if (e.k === 'loot' || e.k === 'projectile') continue; x.fillStyle = e.id === a.myId ? '#ffffff' : e.k === 'monster' ? (MONSTERS[e.def!]?.rank === 'normal' ? '#ff5050' : '#ff00ff') : e.k === 'npc' ? '#ffe040' : e.k === 'bot' || e.k === 'player' ? '#60c0ff' : '#ffa0d0'; const sz = e.id === a.myId ? 3 : 2; x.fillRect(ox + e.x * k - sz / 2, oy + e.y * k - sz / 2, sz, sz); }
     const z = S * this.zoom; x.strokeStyle = 'rgba(255,255,255,0.5)'; x.strokeRect(ox + this.camX * 2 * k, oy + this.camY * 2 * k, (this.cv.width / z) * 2 * k, (this.cv.height / z) * 2 * k);
   }
 }

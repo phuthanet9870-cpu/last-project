@@ -82,6 +82,7 @@ add({ id: 'food_pie', name: { en: 'Berry Pie', th: 'พายเบอร์ร�
 add({ id: 'food_soup', name: { en: 'Frost Soup', th: 'ซุปหิมะ' }, type: 'consumable', icon: 'food', color: '#c0e0ff', stack: 50, price: 45, rarity: 'uncommon', use: { status: 'def_up', durationMs: 60000 } });
 add({ id: 'scroll_haste', name: { en: 'Swiftwind Scroll', th: 'ม้วนคัมภีร์ลมเร็ว' }, type: 'consumable', icon: 'scroll', color: '#e0f0e0', stack: 30, price: 60, rarity: 'uncommon', use: { status: 'haste', durationMs: 30000 } });
 add({ id: 'scroll_return', name: { en: 'Hearth Scroll', th: 'ม้วนกลับบ้าน' }, type: 'consumable', icon: 'scroll', color: '#ffc080', stack: 30, price: 25, use: { grant: 'teleport_town' } });
+add({ id: 'repair_kit', name: { en: 'Tinker Kit', th: 'ชุดซ่อมพกพา' }, type: 'consumable', icon: 'pickaxe', color: '#c0a070', stack: 20, price: 150, use: { grant: 'repair' }, desc: { en: 'Fully repairs all equipped gear.', th: 'ซ่อมอุปกรณ์ที่สวมใส่ทั้งหมด' } });
 add({ id: 'exp_tome', name: { en: 'Tome of Insight', th: 'ตำราปัญญา' }, type: 'consumable', icon: 'book', color: '#ffe080', stack: 30, price: 500, rarity: 'rare', use: { exp: 2000 } });
 
 // ---- Materials (monster drops / gathering) ----

@@ -30,6 +30,7 @@ export function itemTooltip(it: ItemInstance): string {
   if (it.stone?.skillId) lines.push(`<span style="color:#a0ffa0">Stone: ${L(ALL_SKILLS[it.stone.skillId]?.name)} ${it.stone.mods.map((m) => `${m.key}-${m.value}%`).join(', ')} +${it.stone.refine}${it.locked ? ' (slotted)' : ''}</span>`);
   if (d.use) lines.push(`<span class="dim">Use: ${Object.entries(d.use).map(([k, v]) => `${k} ${v}`).join(', ')}</span>`);
   if (d.desc) lines.push(`<i>${L(d.desc)}</i>`);
+  if (['weapon', 'armor', 'accessory'].includes(d.type)) lines.push(it.durability <= 0 ? '<span style="color:#ff6060"><b>BROKEN</b> — no stats until repaired</span>' : `<span style="color:${it.durability < 20 ? '#ffb040' : '#a0a0a0'}">Durability ${Math.floor(it.durability)}%</span>`);
   lines.push(`<span class="dim">${it.bound ? 'Bound · ' : 'Tradeable · '}Sell ${Math.floor(d.price * 0.25)}G${it.locked ? ' · L' : ''}</span>`);
   return lines.join('<br>');
 }

@@ -155,3 +155,32 @@ describe('status effect engine', () => {
     applyStatus(c, 'regen', 's', 2000, 10); expect(cleanse(c, 'debuff')).toBe(1); expect(c.map((x) => x.id)).toEqual(['regen']);
   });
 });
+
+describe('combat additions (v0.3)', () => {
+  const setup = (cls = 'wild_archer') => { const t = mk(cls); let now = 1_700_000_000_000; const w = new World({ mapId: 'whisperwood', rng: new Rng(5), now: () => now }); const e = w.addPlayer(t.svc); for (const x of [...w.entities.values()]) if (x.kind === 'monster') w.entities.delete(x.id); return { ...t, w, e, tick: (ms: number) => { now += ms; w.tick(ms); }, at: () => now }; };
+  it('ranged attacks travel as projectiles and hit on arrival, not instantly', () => {
+    const { w, e, tick } = setup(); const m = w.spawnMonster('forest_slime', e.x + 200, e.y); m.ai!.state = 'idle';
+    const hp0 = m.hp; expect(w.basicAttack(e.id, m.id)).toBeNull(); expect(m.hp).toBe(hp0); expect([...w.entities.values()].some((x) => x.kind === 'projectile')).toBe(true);
+    for (let i = 0; i < 20; i++) tick(50); expect([...w.entities.values()].some((x) => x.kind === 'projectile')).toBe(false); expect(m.hp < hp0 || w.fx.some((f) => f.t === 'dmg' && f.miss)).toBe(true);
+  });
+  it('monster projectiles are dodgeable by moving away', () => {
+    const { w, e, tick } = setup('vanguard'); const m = w.spawnMonster('ember_sprite', e.x + 170, e.y);
+    const hp0 = e.hp; w.spawnProjectile(m, e, { homing: false, speed: 300, color: '#f00', kind: 'bolt', onHit: (v) => { v.hp -= 50; } });
+    w.setInput(e.id, 0, 1); for (let i = 0; i < 14; i++) tick(50); expect(e.hp).toBeGreaterThanOrEqual(hp0 - 1);
+  });
+  it('knockback moves targets but stops at walls; bosses are immune', () => {
+    const t = mk('vanguard'); const w = new World({ mapId: 'arena', rng: new Rng(2) }); const e = w.addPlayer(t.svc, { x: 13 * TILE, y: 10 * TILE }); const m = w.spawnMonster('forest_slime', e.x + 30, e.y); const x0 = m.x; w.knockback(m, e.x, e.y, 80); expect(m.x).toBeGreaterThan(x0 + 40);
+    const b = w.spawnMonster('hollow_king', e.x + 40, e.y); const bx = b.x; w.knockback(b, e.x, e.y, 80); expect(b.x).toBe(bx);
+    const wallX = 0.5 * TILE + 2; const n = w.spawnMonster('forest_slime', 1.5 * TILE, e.y); w.knockback(n, n.x + 10, n.y, 500); expect(n.x).toBeGreaterThan(wallX);
+  });
+  it('guard monsters hold their post and raise defense when hurt', () => {
+    const { w, tick } = setup('vanguard'); const g = w.spawnMonster('thorn_sentry'); const hx = g.x; for (let i = 0; i < 100; i++) tick(100); expect(Math.abs(g.x - hx)).toBeLessThan(8);
+    const attacker = [...w.entities.values()].find((x) => x.kind === 'player')!; w.dealDamage(attacker, g, Math.floor(g.maxHp * 0.6), false, false, 'neutral'); expect(g.effects.some((x) => x.id === 'def_up')).toBe(true);
+  });
+  it('durability: broken weapon gives no stats; repair restores and costs gold; kit repairs equipped', () => {
+    const { svc, p } = mk(); const atk0 = playerStats(p).derived.atk; p.equipment.main!.durability = 0; expect(playerStats(p).derived.atk).toBeLessThan(atk0);
+    const g0 = svc.gold(); const r = svc.repairAll(); expect(r.ok).toBe(true); expect(svc.gold()).toBeLessThan(g0); expect(p.equipment.main!.durability).toBe(100); expect(playerStats(p).derived.atk).toBe(atk0);
+    p.equipment.body!.durability = 3; const [kit] = svc.addItem('repair_kit'); expect(svc.useItem(kit!.uid).ok).toBe(true); expect(p.equipment.body!.durability).toBe(100); expect(svc.countItem('repair_kit')).toBe(0);
+  });
+  it('hits wear durability down', () => { const { w, e } = setup('blade_sentinel'); const m = w.spawnMonster('forest_slime', e.x + 30, e.y); const svc = w.services.get(e.id)!; for (let i = 0; i < 5; i++) w.dealDamage(e, m, 1, false, false, 'neutral'); expect(svc.p.equipment.main!.durability).toBeLessThan(100); });
+});

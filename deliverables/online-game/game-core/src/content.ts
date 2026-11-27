@@ -8,7 +8,7 @@ export interface Drop { itemId: string; chance: number; min: number; max: number
 export interface MonsterDef {
   id: string; name: L10n; level: number; element: Element; maxHp: number; atk: number; def: number; mdef: number; moveSpeed: number;
   attackRange: number; aggroRange: number; leashRange: number; attackIntervalMs: number; respawnMs: number;
-  ai: 'passive' | 'aggressive' | 'defensive' | 'ranged' | 'boss'; rank: 'normal' | 'elite' | 'rare' | 'boss' | 'world_boss';
+  ai: 'passive' | 'aggressive' | 'defensive' | 'ranged' | 'boss' | 'guard'; rank: 'normal' | 'elite' | 'rare' | 'boss' | 'world_boss';
   baseExp: number; goldMin: number; goldMax: number; drops: Drop[]; sprite: string; color: string; size: number;
   skills?: { id: string; name: L10n; power: number; radius: number; cdMs: number; telegraphMs: number; status?: string; element?: Element }[];
   capturable?: string; // pet species id
@@ -44,6 +44,8 @@ export const MONSTERS: Record<string, MonsterDef> = Object.fromEntries([
   mon({ id: 'river_crab', name: { en: 'Pebble Crab', th: 'ปูก้อนกรวด' }, level: 6, element: 'water', sprite: 'crab', color: '#e07050', ai: 'defensive', drops: [d('beetle_shell', 0.3), d('fish_carp', 0.2)], capturable: 'pet_crab' }),
   mon({ id: 'mire_toad', name: { en: 'Mire Toad', th: 'คางคกบึง' }, level: 11, element: 'water', sprite: 'slime', color: '#5a9a70', ai: 'passive', drops: [d('herb_blue', 0.35), d('slime_gel', 0.3)] }),
   mon({ id: 'crystal_moth', name: { en: 'Crystal Moth', th: 'ผีเสื้อคริสตัล' }, level: 24, element: 'light', sprite: 'bird', color: '#ffc0ff', ai: 'passive', drops: [d('star_dust', 0.2), d('gem_amethyst_1', 0.05)] }),
+  mon({ id: 'thorn_sentry', name: { en: 'Thornwood Sentry', th: 'ยามป่าหนาม' }, level: 9, element: 'earth', sprite: 'golem', color: '#6a8a40', size: 1.3, rank: 'elite', ai: 'guard', aggroRange: 130, leashRange: 200, def: 45, mdef: 30, attackIntervalMs: 1900, drops: [d('golem_core', 0.25), d('oak_log', 0.6, 2, 4), d('refine_ore', 0.3)] }),
+  mon({ id: 'amber_sentinel', name: { en: 'Amber Sentinel', th: 'ทหารยามอำพัน' }, level: 22, element: 'earth', sprite: 'golem', color: '#e0b050', size: 1.5, rank: 'elite', ai: 'guard', aggroRange: 140, leashRange: 220, def: 90, mdef: 60, attackIntervalMs: 2000, drops: [d('golem_core', 0.35), d('refine_ore_hi', 0.15), d('amber_off', 0.04)] }),
   mon({ id: 'hollow_king', name: { en: 'Hollow King Mossbeard', th: 'ราชาโพรงหนวดมอส' }, level: 15, element: 'earth', sprite: 'golem', color: '#3a7030', size: 2.2, rank: 'boss', ai: 'boss', maxHp: 9000, atk: 85, def: 30, respawnMs: 0, baseExp: 2500, goldMin: 600, goldMax: 1200,
     drops: [d('boss_heart', 1), d('amber_greatsword', 0.25), d('amber_staff', 0.25), d('refine_ore', 1, 3, 6), d('pet_egg', 0.3), d('skill_stone', 0.5)],
     skills: [{ id: 'slam', name: { en: 'Root Slam', th: 'กระแทกราก' }, power: 1.8, radius: 120, cdMs: 7000, telegraphMs: 1200, status: 'root' }, { id: 'spores', name: { en: 'Spore Cloud', th: 'หมอกสปอร์' }, power: 0.8, radius: 180, cdMs: 11000, telegraphMs: 1500, status: 'poison' }],
@@ -64,7 +66,7 @@ export type Biome = 'town' | 'forest' | 'hills' | 'snow' | 'cave' | 'arena' | 'f
 export interface MapDef {
   id: string; name: L10n; biome: Biome; w: number; h: number; seed: number; safe: boolean; pvp: boolean; instanced: boolean; levelReq: number;
   spawn: [number, number]; portals: { x: number; y: number; to: string; tx: number; ty: number; label: L10n }[];
-  monsters: { id: string; count: number }[]; npcs: string[]; resources: { type: 'ore' | 'tree' | 'herb' | 'fish'; count: number }[]; bgm: string; weather: ('clear' | 'rain' | 'snow' | 'fog' | 'leaves')[];
+  monsters: { id: string; count: number; at?: [number, number] }[]; npcs: string[]; resources: { type: 'ore' | 'tree' | 'herb' | 'fish'; count: number }[]; bgm: string; weather: ('clear' | 'rain' | 'snow' | 'fog' | 'leaves')[];
 }
 export const MAPS: Record<string, MapDef> = Object.fromEntries(([
   { id: 'emberglen', name: { en: 'Emberglen Village', th: 'หมู่บ้านเอมเบอร์เกลน' }, biome: 'town', w: 56, h: 44, seed: 11, safe: true, pvp: false, instanced: false, levelReq: 1, spawn: [28, 24],
@@ -72,11 +74,11 @@ export const MAPS: Record<string, MapDef> = Object.fromEntries(([
     monsters: [], npcs: ['elder_rowan', 'merchant_pip', 'smith_brunhild', 'enchanter_isolde', 'healer_mae', 'teleporter_quill', 'banker_oswin', 'petkeeper_luma', 'stablemaster_hale', 'guild_clerk', 'dungeon_warden', 'arena_master', 'duelist_kit', 'crafter_juno', 'broker_vance', 'event_host', 'officiant_sol', 'board_quest'], resources: [{ type: 'fish', count: 4 }], bgm: 'town', weather: ['clear', 'clear', 'rain', 'leaves'] },
   { id: 'whisperwood', name: { en: 'Whisperwood', th: 'ป่ากระซิบ' }, biome: 'forest', w: 70, h: 46, seed: 23, safe: false, pvp: false, instanced: false, levelReq: 1, spawn: [3, 22],
     portals: [{ x: 0, y: 22, to: 'emberglen', tx: 52, ty: 22, label: { en: 'Emberglen', th: 'เอมเบอร์เกลน' } }, { x: 68, y: 8, to: 'mossy_hollow', tx: 15, ty: 28, label: { en: 'Mossy Hollow (Dungeon)', th: 'โพรงมอส (ดันเจี้ยน)' } }],
-    monsters: [{ id: 'forest_slime', count: 10 }, { id: 'puff_bunny', count: 7 }, { id: 'cap_shroom', count: 7 }, { id: 'dusk_bat', count: 5 }, { id: 'river_crab', count: 4 }, { id: 'thorn_wolf', count: 4 }, { id: 'mire_toad', count: 3 }, { id: 'golden_slime', count: 1 }],
+    monsters: [{ id: 'forest_slime', count: 10 }, { id: 'puff_bunny', count: 7 }, { id: 'cap_shroom', count: 7 }, { id: 'dusk_bat', count: 5 }, { id: 'river_crab', count: 4 }, { id: 'thorn_wolf', count: 4 }, { id: 'mire_toad', count: 3 }, { id: 'golden_slime', count: 1 }, { id: 'thorn_sentry', count: 1, at: [63, 10] }, { id: 'thorn_sentry', count: 1, at: [65, 13] }],
     npcs: ['ranger_fen'], resources: [{ type: 'tree', count: 12 }, { type: 'herb', count: 10 }, { type: 'ore', count: 5 }, { type: 'fish', count: 4 }], bgm: 'forest', weather: ['clear', 'rain', 'fog', 'leaves'] },
   { id: 'amber_hills', name: { en: 'Amber Hills', th: 'เนินอำพัน' }, biome: 'hills', w: 64, h: 50, seed: 37, safe: false, pvp: true, instanced: false, levelReq: 10, spawn: [30, 46],
     portals: [{ x: 30, y: 49, to: 'emberglen', tx: 28, ty: 3, label: { en: 'Emberglen', th: 'เอมเบอร์เกลน' } }, { x: 62, y: 10, to: 'frostmere', tx: 3, ty: 30, label: { en: 'Frostmere', th: 'ฟรอสต์เมียร์' } }, { x: 2, y: 6, to: 'sunken_crater', tx: 20, ty: 30, label: { en: 'Sunken Crater (World Boss)', th: 'หลุมยุบ (บอสโลก)' } }],
-    monsters: [{ id: 'ember_sprite', count: 6 }, { id: 'shell_beetle', count: 6 }, { id: 'hill_boar', count: 7 }, { id: 'amber_golem', count: 3 }, { id: 'gale_hawk', count: 5 }, { id: 'lantern_ghost', count: 3 }],
+    monsters: [{ id: 'ember_sprite', count: 6 }, { id: 'shell_beetle', count: 6 }, { id: 'hill_boar', count: 7 }, { id: 'amber_golem', count: 3 }, { id: 'gale_hawk', count: 5 }, { id: 'lantern_ghost', count: 3 }, { id: 'amber_sentinel', count: 1, at: [6, 8] }],
     npcs: ['miner_dorn'], resources: [{ type: 'ore', count: 12 }, { type: 'tree', count: 6 }, { type: 'herb', count: 6 }], bgm: 'hills', weather: ['clear', 'clear', 'rain', 'fog'] },
   { id: 'frostmere', name: { en: 'Frostmere Steppe', th: 'ทุ่งฟรอสต์เมียร์' }, biome: 'snow', w: 60, h: 56, seed: 41, safe: false, pvp: true, instanced: false, levelReq: 25, spawn: [3, 30],
     portals: [{ x: 0, y: 30, to: 'amber_hills', tx: 60, ty: 10, label: { en: 'Amber Hills', th: 'เนินอำพัน' } }],
@@ -122,7 +124,7 @@ export const NPCS: Record<string, NpcDef> = Object.fromEntries(([
 
 // ---------------- Shops (§34) ----------------
 export const SHOPS: Record<string, { currency: 'gold' | 'arena_token' | 'boss_coin' | 'card_dust'; items: { itemId: string; price: number; dailyLimit?: number }[] }> = {
-  general: { currency: 'gold', items: ['potion_hp_s', 'potion_hp_m', 'potion_mp_s', 'potion_mp_m', 'food_stew', 'scroll_return', 'scroll_haste', 'tool_pickaxe', 'tool_axe', 'tool_rod', 'tool_sickle', 'capture_net', 'dungeon_ticket', 'cloth'].map((itemId) => ({ itemId, price: 0 })) },
+  general: { currency: 'gold', items: ['repair_kit', 'potion_hp_s', 'potion_hp_m', 'potion_mp_s', 'potion_mp_m', 'food_stew', 'scroll_return', 'scroll_haste', 'tool_pickaxe', 'tool_axe', 'tool_rod', 'tool_sickle', 'capture_net', 'dungeon_ticket', 'cloth'].map((itemId) => ({ itemId, price: 0 })) },
   weapons: { currency: 'gold', items: ['wood_sword', 'wood_greatsword', 'wood_spear', 'wood_dagger', 'wood_bow', 'wood_staff', 'wood_tome', 'wood_knuckle', 'wood_gun', 'wood_lute', 'wood_cards', 'wood_whip', 'wood_body', 'wood_head', 'wood_boots', 'wood_off', 'iron_sword', 'iron_bow', 'iron_staff', 'iron_body', 'refine_ore'].map((itemId) => ({ itemId, price: 0 })) },
   pets: { currency: 'gold', items: [{ itemId: 'pet_food', price: 0 }, { itemId: 'pet_food_fine', price: 0 }, { itemId: 'capture_net', price: 0 }, { itemId: 'pet_egg', price: 0, dailyLimit: 3 }] },
   mounts: { currency: 'gold', items: [{ itemId: 'mount_key_pony', price: 2000 }, { itemId: 'mount_key_lizard', price: 8000 }] },

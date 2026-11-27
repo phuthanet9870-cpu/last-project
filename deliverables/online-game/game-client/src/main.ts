@@ -202,6 +202,7 @@ function startGame(a: Adapter) {
     const me = a.entities().find((e) => e.id === a.myId); if (!me) return; if (me.dead) { auto = false; toast('Auto-battle stopped: defeated', 'err'); return; }
     if (a.p.inventory.length >= a.p.invSlots) { auto = false; toast('Auto-battle stopped: bag full', 'err'); return; }
     if (me.hp / me.mhp < 0.35) useHotbar(8); if (me.mp / me.mmp < 0.2) useHotbar(9);
+    if (Object.values(a.p.equipment).some((i) => i && i.durability < 20)) { const kit = a.p.inventory.find((x) => x.defId === 'repair_kit'); if (kit) a.send('useItem', { uid: kit.uid }).then((r) => r.ok && toast('Auto-repair: Tinker Kit used', 'info')); } // official auto-repair (§31)
     if (!target || target.dead || target.k !== 'monster') { target = null; attack(); return; }
     for (let i = 0; i < 8; i++) { const sk = a.p.hotbar[i]; const s = sk ? ALL_SKILLS[sk] : null; if (s && s.dmgType !== 'heal' && s.dmgType !== 'none' && me.mp > s.mp + 10 && Math.random() < 0.3) { useHotbar(i); return; } }
     attack();

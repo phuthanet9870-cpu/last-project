@@ -6,7 +6,8 @@
 import { CONFIG, type Element } from './config.js';
 import { ALL_SKILLS, CLASSES, type SkillDef } from './classes.js';
 import { computeHit, computeHeal } from './combat.js';
-import { DUNGEONS, MAPS, MONSTERS, NPCS, PETS, WORLD_BOSS_ROTATION, type MonsterDef } from './content.js';
+import { DUNGEONS, MAPS, MONSTERS, NPCS, PETS, WORLD_BOSS_ROTATION } from './content.js';
+import { ITEMS } from './items.js';
 import { absorbShield, applyStatus, cleanse, hasCC, slowPct, statusModifiers, tickStatuses, STATUSES, type ActiveEffect } from './effects.js';
 import { findPath, getMap, isSolidPx, TILE, type GenMap } from './mapgen.js';
 import { playerStats, weaponElement, type PlayerService } from './player.js';
@@ -14,7 +15,7 @@ import { Rng } from './rng.js';
 import type { CombatStats } from './stats.js';
 import { zeroDerived } from './stats.js';
 
-export type EntityKind = 'player' | 'monster' | 'npc' | 'pet' | 'loot' | 'bot' | 'summon';
+export type EntityKind = 'player' | 'monster' | 'npc' | 'pet' | 'loot' | 'bot' | 'summon' | 'projectile';
 export interface Entity {
   id: string; kind: EntityKind; x: number; y: number; dir: number; moving: boolean; name: string; level: number;
   hp: number; maxHp: number; mp: number; maxMp: number; effects: ActiveEffect[]; dead: boolean; deadAt: number;
@@ -26,7 +27,8 @@ export interface Entity {
   cds: Record<string, number>; gcdUntil: number; castUntil: number; attackAt: number; gauge: number;
   loot?: { itemId: string; qty: number; owner: string; until: number }[]; expiresAt?: number; riding?: boolean; mount?: string | null;
   pvp?: boolean; team?: number; botProfile?: { classId: string; chatAt: number; wanderAt: number; aggressive: boolean }; summonAtk?: number; partyId?: string | null; contrib?: Record<string, number>;
-  hidden?: boolean;
+  hidden?: boolean; fixed?: boolean;
+  proj?: { src: string; targetId: string | null; tx: number; ty: number; speed: number; homing: boolean; hitR: number; onHit: (v: Entity) => void };
 }
 export type Fx =
   | { t: 'dmg'; x: number; y: number; v: number; crit: boolean; miss?: boolean; heal?: boolean; tgt: string; src?: string; el?: Element | null }
@@ -60,7 +62,7 @@ export class World {
     this.opts = opts; this.mapId = opts.mapId; this.instanceId = opts.instanceId ?? opts.mapId; this.map = getMap(opts.mapId);
     this.rng = opts.rng ?? new Rng(); this.now = opts.now ?? Date.now; this.eventMult = opts.eventMult ?? { exp: 1, drop: 1 };
     const def = MAPS[opts.mapId]!;
-    for (const m of def.monsters) for (let i = 0; i < m.count; i++) this.spawnMonster(m.id);
+    for (const m of def.monsters) for (let i = 0; i < m.count; i++) { if (m.at) { const [fx, fy] = this.freeNear(m.at[0], m.at[1]); this.spawnMonster(m.id, fx * TILE + 16, fy * TILE + 16, { fixed: true }); } else this.spawnMonster(m.id); }
     for (const n of Object.values(NPCS)) if (n.map === opts.mapId) this.entities.set(`npc_${n.id}`, this.baseEntity(`npc_${n.id}`, 'npc', n.x * TILE + 16, n.y * TILE + 16, n.name.en, 1, { defId: n.id }));
     for (let i = 0; i < (opts.bots ?? 0); i++) this.spawnBot();
     if (def.biome === 'crater') this.nextBossAt = this.now() + 15_000;
@@ -68,6 +70,7 @@ export class World {
   private baseEntity(id: string, kind: EntityKind, x: number, y: number, name: string, level: number, extra: Partial<Entity> = {}): Entity {
     return { id, kind, x, y, dir: 2, moving: false, name, level, hp: 1, maxHp: 1, mp: 0, maxMp: 0, effects: [], dead: false, deadAt: 0, cds: {}, gcdUntil: 0, castUntil: 0, attackAt: 0, gauge: 0, ...extra };
   }
+  freeNear(tx: number, ty: number): [number, number] { for (let r = 0; r < 6; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) { const x = tx + dx, y = ty + dy; if (x > 0 && y > 0 && x < this.map.w - 1 && y < this.map.h - 1 && !this.map.solid[y * this.map.w + x]) return [x, y]; } return this.map.def.spawn; }
   randomFreePoint(): [number, number] { const p = this.rng.pick(this.map.spawnAreas.length ? this.map.spawnAreas : [this.map.def.spawn]); return [p[0] * TILE + 16 + this.rng.int(-8, 8), p[1] * TILE + 16 + this.rng.int(-8, 8)]; }
   spawnMonster(defId: string, x?: number, y?: number, extra: Partial<Entity> = {}): Entity {
     const d = MONSTERS[defId]!; const [px, py] = x !== undefined && y !== undefined ? [x, y] : this.randomFreePoint();
@@ -125,7 +128,7 @@ export class World {
     return { ...d, level: L, element: el, armorElement: 'neutral' };
   }
   hostile(a: Entity, b: Entity): boolean {
-    if (a.id === b.id || b.dead || b.kind === 'npc' || b.kind === 'loot') return false;
+    if (a.id === b.id || b.dead || b.kind === 'npc' || b.kind === 'loot' || b.kind === 'projectile') return false;
     const aSide = a.kind === 'monster' ? 'm' : 'p', bSide = b.kind === 'monster' ? 'm' : 'p';
     if (aSide !== bSide) return !b.effects.some((x) => STATUSES[x.id]?.stealth) || a.kind !== 'monster';
     // player-vs-player: arena teams, or both flagged in a PvP map
@@ -149,10 +152,14 @@ export class World {
     if (now < a.attackAt) return 'COOLDOWN';
     a.attackAt = now + Math.floor(1100 / st.aspd); a.targetId = t.id; this.face(a, t);
     const mag = ['staff', 'tome', 'lute'].includes(this.weaponOf(a));
-    const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(t), power: 1, dmgType: mag ? 'mag' : 'phys', element: null, pvp: this.isPvp(a, t) });
-    this.fx.push({ t: 'skill', vfx: ranged ? (mag ? 'bolt' : 'arrow') : 'slash', src: a.id, x: a.x, y: a.y, tx: t.x, ty: t.y, r: 0, el: st.element, color: ELEMENT_COLOR[st.element] });
-    this.dealDamage(a, t, h.damage, h.crit, h.miss, st.element);
-    if (!h.miss) { a.gauge = Math.min(100, a.gauge + (a.classId ? CLASSES[a.classId]!.gauge.perHit : 0)); if (st.lifesteal > 0) this.heal(a, a, Math.floor(h.damage * st.lifesteal / 100)); }
+    const resolve = (v: Entity) => {
+      const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(v), power: 1, dmgType: mag ? 'mag' : 'phys', element: null, pvp: this.isPvp(a, v) });
+      this.dealDamage(a, v, h.damage, h.crit, h.miss, st.element);
+      if (!h.miss) { a.gauge = Math.min(100, a.gauge + (a.classId ? CLASSES[a.classId]!.gauge.perHit : 0)); if (st.lifesteal > 0) this.heal(a, a, Math.floor(h.damage * st.lifesteal / 100)); }
+    };
+    if (ranged && dist(a, t) > 70) { this.spawnProjectile(a, t, { homing: true, speed: mag ? 460 : 560, color: ELEMENT_COLOR[st.element], kind: mag ? 'bolt' : 'arrow', onHit: resolve }); return null; }
+    this.fx.push({ t: 'skill', vfx: 'slash', src: a.id, x: a.x, y: a.y, tx: t.x, ty: t.y, r: 0, el: st.element, color: ELEMENT_COLOR[st.element] });
+    resolve(t);
     return null;
   }
   weaponOf(e: Entity): string { if (e.kind === 'player') { const svc = this.services.get(e.id)!; const it = svc.p.equipment.main; return it ? (/_([a-z]+)$/.exec(it.defId)?.[1] ?? 'sword') : 'knuckle'; } return e.classId ? CLASSES[e.classId]!.weapons[0]! : 'sword'; }
@@ -196,14 +203,19 @@ export class World {
     if (s.dmgType === 'phys' || s.dmgType === 'mag' || s.dmgType === 'pure') {
       const defenders = victims.slice(0, 12);
       if (s.chain && target) { let last = target; const hit = new Set([target.id]); for (let i = 0; i < s.chain; i++) { const n = this.hostilesIn(a, last, 160).find((v) => !hit.has(v.id)); if (!n) break; hit.add(n.id); defenders.push(n); this.fx.push({ t: 'skill', vfx: 'chain', src: last.id, x: last.x, y: last.y, tx: n.x, ty: n.y, r: 0, el: s.element, color }); last = n; } }
-      defenders.forEach((v, idx) => {
+      const applyTo = (v: Entity, idx: number) => {
+        if (v.dead) return;
         for (let k = 0; k < s.hits; k++) {
           const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(v), power: s.power * mult * (idx > 0 && s.chain ? 0.7 : 1), dmgType: s.dmgType as any, element: s.element, pvp: this.isPvp(a, v), canMiss: s.dmgType === 'phys' });
           this.dealDamage(a, v, h.damage, h.crit, h.miss, s.element ?? st.element);
           if (!h.miss && s.lifesteal) this.heal(a, a, Math.floor(h.damage * s.lifesteal));
         }
         for (const fx of s.effects) if (!fx.self && !fx.party && !v.dead && this.rng.chance(fx.c ?? 1)) { applyStatus(v.effects, fx.s, a.id, fx.d, Math.floor((st.atk + st.matk) * s.power * 0.5), this.combatStats(v).ccResist); this.fx.push({ t: 'status', id: v.id, s: fx.s }); if (fx.s === 'taunt' && v.ai) { v.ai.threat[a.id] = (v.ai.threat[a.id] ?? 0) + 5000; v.targetId = a.id; } }
-      });
+        if (s.knockback && !v.dead) { this.knockback(v, a.x, a.y, s.knockback); if (s.knockdown && !this.ccImmune(v)) applyStatus(v.effects, 'knockdown', a.id, 1200, 0, this.combatStats(v).ccResist); }
+      };
+      const projectile = s.target === 'enemy' && ['arrow', 'bolt', 'drain'].includes(s.vfx) && target && dist(a, target) > 70 && !s.chain;
+      if (projectile) this.spawnProjectile(a, target!, { homing: true, speed: 520, color, kind: s.vfx, onHit: (v) => applyTo(v, 0) });
+      else defenders.forEach((v, idx) => applyTo(v, idx));
     }
     if (s.dmgType === 'heal') for (const t of allies) { const h = computeHeal(this.rng, st, s.power * mult, t.maxHp - t.hp); this.heal(a, t, h.amount, h.crit); if (s.cleanse) cleanse(t.effects, 'debuff'); }
     for (const fx of s.effects) {
@@ -214,6 +226,33 @@ export class World {
     if (s.summon) { const id = eid('s'); this.entities.set(id, this.baseEntity(id, 'summon', a.x + 24, a.y, `${s.element ?? 'spirit'} spirit`, a.level, { ownerId: a.id, hp: Math.floor(a.maxHp * 0.4), maxHp: Math.floor(a.maxHp * 0.4), summonAtk: Math.floor((st.atk + st.matk) * 0.35), expiresAt: now + 20000, appearance: { color: color, sprite: 'wisp' } })); }
     if (a.kind === 'player') this.refreshPlayer(a.id);
     return null;
+  }
+  /** Projectiles (§12): travel at `speed` px/s. Homing ones resolve on the target when they arrive; non-homing ones fly to the aimed point and only hit if the target is still within hitR (dodgeable). */
+  spawnProjectile(src: Entity, t: Entity, o: { homing: boolean; speed: number; color: string; kind: string; onHit: (v: Entity) => void }) {
+    const id = eid('p'); const e = this.baseEntity(id, 'projectile', src.x, src.y - 6, o.kind, 0, { ownerId: src.id, appearance: { color: o.color, kind: o.kind }, expiresAt: this.now() + 4000, proj: { src: src.id, targetId: t.id, tx: t.x, ty: t.y, speed: o.speed, homing: o.homing, hitR: 26, onHit: o.onHit } });
+    this.face(e, t); this.entities.set(id, e); return e;
+  }
+  private moveProjectile(p: Entity, dt: number) {
+    const pr = p.proj!; const tgt = pr.targetId ? this.entities.get(pr.targetId) : undefined;
+    if (pr.homing && tgt && !tgt.dead) { pr.tx = tgt.x; pr.ty = tgt.y - 6; }
+    const dx = pr.tx - p.x, dy = pr.ty - p.y, d = Math.hypot(dx, dy), stepLen = pr.speed * dt;
+    if (d <= stepLen) {
+      this.entities.delete(p.id); const src = this.entities.get(pr.src);
+      if (!src || src.dead || !tgt || tgt.dead) return;
+      if (pr.homing || Math.hypot(tgt.x - pr.tx, tgt.y - 6 - pr.ty) <= pr.hitR) pr.onHit(tgt); else this.fx.push({ t: 'dmg', x: tgt.x, y: tgt.y - 20, v: 0, crit: false, miss: true, tgt: tgt.id, src: src.id });
+      return;
+    }
+    p.x += (dx / d) * stepLen; p.y += (dy / d) * stepLen; p.moving = true; this.face(p, { x: pr.tx, y: pr.ty });
+  }
+  ccImmune(v: Entity) { const r = v.kind === 'monster' ? MONSTERS[v.defId!]!.rank : ''; return r === 'boss' || r === 'world_boss'; }
+  /** Knockback (§12): pushes away from (fx,fy) in small collision-checked steps; bosses are immune, CC resist shortens it. */
+  knockback(v: Entity, fx: number, fy: number, distPx: number) {
+    if (this.ccImmune(v) || v.dead || distPx <= 0) return;
+    const resist = v.kind === 'player' || v.kind === 'bot' ? Math.min(70, this.combatStats(v).ccResist) / 100 : 0;
+    let len = distPx * (1 - resist); let ax = v.x - fx, ay = v.y - fy; const l = Math.hypot(ax, ay) || 1; ax /= l; ay /= l; if (l < 1) { ax = 1; ay = 0; }
+    const r = 9; const blocked = (x: number, y: number) => isSolidPx(this.map, x - r, y - 4) || isSolidPx(this.map, x + r, y - 4) || isSolidPx(this.map, x - r, y + 8) || isSolidPx(this.map, x + r, y + 8);
+    while (len > 0) { const st = Math.min(4, len); const nx = v.x + ax * st, ny = v.y + ay * st; if (blocked(nx, ny)) break; v.x = nx; v.y = ny; len -= st; }
+    v.path = undefined; this.fx.push({ t: 'status', id: v.id, s: 'knockback' });
   }
   nearestHostile(a: Entity, range: number): Entity | undefined { let best: Entity | undefined; let bd = range; for (const e of this.entities.values()) { if (!this.hostile(a, e)) continue; const d = dist(a, e); if (d < bd) { bd = d; best = e; } } return best; }
   hostilesIn(a: Entity, c: { x: number; y: number }, r: number): Entity[] { const out: Entity[] = []; for (const e of this.entities.values()) if (this.hostile(a, e) && dist(c, e) <= r + 12) out.push(e); return out; }
@@ -232,13 +271,24 @@ export class World {
     if (this.boss && t.id === this.boss.entityId) (this.boss.contributions[owner] ??= { dmg: 0, heal: 0, tank: 0 }).dmg += dmg;
     if (this.boss && src.id === this.boss.entityId) (this.boss.contributions[t.ownerId ?? t.id] ??= { dmg: 0, heal: 0, tank: 0 }).tank += dmg;
     if (t.kind === 'player') { const svc = this.services.get(t.id); if (svc) t.gauge = Math.min(100, t.gauge + (t.classId === 'vanguard' ? 6 : 1)); }
+    if (t.kind === 'monster' && MONSTERS[t.defId!]!.ai === 'guard' && t.hp < t.maxHp * 0.5 && !t.effects.some((x) => x.id === 'def_up')) { applyStatus(t.effects, 'def_up', t.id, 8000, 0); this.fx.push({ t: 'status', id: t.id, s: 'def_up' }); }
+    if (dmg > 0) { this.wear(src, 'weapon', 0.08); this.wear(t, 'armor', 0.1); }
     if (t.hp <= 0) this.kill(t, src);
+  }
+  /** Durability (§21): weapons wear when they land hits, a random armor piece when hit; broken (0%) gear gives no stats until repaired. */
+  wear(e: Entity, part: 'weapon' | 'armor', amt: number) {
+    if (e.kind !== 'player') return; const svc = this.services.get(e.id); if (!svc) return;
+    const slots = part === 'weapon' ? (['main'] as const) : (['head', 'body', 'gloves', 'boots', 'belt', 'off'] as const);
+    const eq = slots.map((sl) => svc.p.equipment[sl]).filter((x): x is NonNullable<typeof x> => !!x && x.durability > 0); if (!eq.length) return;
+    const it = part === 'weapon' ? eq[0]! : eq[Math.floor(this.rng.next() * eq.length)]!; const before = it.durability; it.durability = Math.max(0, Math.round((it.durability - amt) * 100) / 100);
+    if (before > 0 && it.durability === 0) { this.refreshPlayer(e.id); this.fx.push({ t: 'notice', msg: `${ITEMS[it.defId]?.name.en ?? 'Gear'} broke! Repair it at Brunhild or use a Tinker Kit.`, to: e.id }); }
+    else if (before >= 20 && it.durability < 20) this.fx.push({ t: 'notice', msg: `${ITEMS[it.defId]?.name.en ?? 'Gear'} durability low (${Math.floor(it.durability)}%)`, to: e.id });
   }
   kill(t: Entity, killer: Entity) {
     if (t.dead) return; // process death exactly once
     t.dead = true; t.hp = 0; t.deadAt = this.now(); t.effects = []; this.fx.push({ t: 'death', id: t.id, x: t.x, y: t.y });
     if (t.kind === 'monster') this.onMonsterDeath(t, killer);
-    else if (t.kind === 'player') { const svc = this.services.get(t.id)!; svc.p.exp = Math.max(0, svc.p.exp - Math.floor(svc.p.exp * 0.01)); this.fx.push({ t: 'notice', msg: 'You were defeated. Press Respawn.', to: t.id }); this.checkArena(); const kOwner = this.entities.get(killer.ownerId ?? killer.id); if (kOwner?.kind === 'player' && kOwner !== t && !this.arena) this.services.get(kOwner.id)?.bump('pvp_kills'); }
+    else if (t.kind === 'player') { const svc = this.services.get(t.id)!; svc.p.exp = Math.max(0, svc.p.exp - Math.floor(svc.p.exp * 0.01)); for (const it of Object.values(svc.p.equipment)) if (it) it.durability = Math.max(0, it.durability - 5); this.refreshPlayer(t.id); this.fx.push({ t: 'notice', msg: 'You were defeated. Press Respawn.', to: t.id }); this.checkArena(); const kOwner = this.entities.get(killer.ownerId ?? killer.id); if (kOwner?.kind === 'player' && kOwner !== t && !this.arena) this.services.get(kOwner.id)?.bump('pvp_kills'); }
     else if (t.kind === 'bot') { this.checkArena(); }
     else if (t.kind === 'pet' || t.kind === 'summon') { /* returns later */ }
   }
@@ -357,6 +407,7 @@ export class World {
     const now = this.now(); dtMs = Math.min(dtMs, 250); const dt = dtMs / 1000; this.lastTick = now;
     for (const e of [...this.entities.values()]) {
       if (e.expiresAt && now > e.expiresAt) { this.entities.delete(e.id); continue; }
+      if (e.kind === 'projectile') { this.moveProjectile(e, dt); continue; }
       if (e.kind === 'npc' || e.kind === 'loot') continue;
       if (e.dead) { if (e.kind === 'monster' && e.ai?.state === 'dead' && now - e.deadAt > MONSTERS[e.defId!]!.respawnMs) this.respawnMonster(e); if ((e.kind === 'bot' && !this.arena) && now - e.deadAt > 8000) { e.dead = false; e.hp = e.maxHp; const [x, y] = this.randomFreePoint(); e.x = x; e.y = y; } if (e.kind === 'pet' && now - e.deadAt > 10000) { e.dead = false; e.hp = e.maxHp; } continue; }
       // status effects
@@ -379,7 +430,7 @@ export class World {
     if (this.arena && !this.arena.done) this.checkArena();
     if (this.fx.length > 400) this.fx.splice(0, this.fx.length - 400);
   }
-  private respawnMonster(e: Entity) { const d = MONSTERS[e.defId!]!; const [x, y] = this.randomFreePoint(); Object.assign(e, { dead: false, hp: d.maxHp, maxHp: d.maxHp, x, y, effects: [], targetId: null, contrib: {} }); e.ai = { state: 'idle', homeX: x, homeY: y, nextAct: this.now() + 1000, threat: {}, skillCd: {}, phase: 0 }; }
+  private respawnMonster(e: Entity) { const d = MONSTERS[e.defId!]!; const [x, y] = e.fixed ? [e.ai!.homeX, e.ai!.homeY] : this.randomFreePoint(); Object.assign(e, { dead: false, hp: d.maxHp, maxHp: d.maxHp, x, y, effects: [], targetId: null, contrib: {} }); e.ai = { state: 'idle', homeX: x, homeY: y, nextAct: this.now() + 1000, threat: {}, skillCd: {}, phase: 0 }; }
   speedOf(e: Entity): number {
     let base = 120; if (e.kind === 'player') base = this.cachedDerived(e).moveSpeed; else if (e.kind === 'monster') base = MONSTERS[e.defId!]!.moveSpeed; else if (e.kind === 'pet' || e.kind === 'summon') base = 150;
     if (hasCC(e.effects, 'stun', 'freeze', 'sleep', 'root')) return 0;
@@ -418,13 +469,13 @@ export class World {
     if (d.phases) { const pct = (e.hp / e.maxHp) * 100; while (ai.phase < d.phases.length && pct <= d.phases[ai.phase]!.hpPct) { const ph = d.phases[ai.phase]!; ai.phase++; this.fx.push({ t: 'notice', msg: `${e.name} enrages! (phase ${ai.phase + 1})` }); if (ph.summon) for (let i = 0; i < 3; i++) { const m = this.spawnMonster(ph.summon, e.x + this.rng.int(-60, 60), e.y + this.rng.int(-60, 60)); m.ai!.state = 'chase'; } } }
     if (ai.telegraph && now >= ai.telegraph.at) {
       const tg = ai.telegraph; ai.telegraph = undefined; const st = this.combatStats(e);
-      for (const x of this.entities.values()) if ((x.kind === 'player' || x.kind === 'bot' || x.kind === 'pet') && !x.dead && dist(x, tg) <= tg.r) { const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(x), power: tg.power, dmgType: 'mag', element: tg.element ?? d.element }); this.dealDamage(e, x, h.damage, h.crit, false, d.element); if (tg.status && !x.dead) applyStatus(x.effects, tg.status, e.id, 2500, st.atk); }
+      for (const x of this.entities.values()) if ((x.kind === 'player' || x.kind === 'bot' || x.kind === 'pet') && !x.dead && dist(x, tg) <= tg.r) { const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(x), power: tg.power, dmgType: 'mag', element: tg.element ?? d.element }); this.dealDamage(e, x, h.damage, h.crit, false, d.element); if (tg.status && !x.dead) applyStatus(x.effects, tg.status, e.id, 2500, st.atk); if (!x.dead && tg.r <= 130) this.knockback(x, tg.x, tg.y, 60); }
       this.fx.push({ t: 'skill', vfx: 'nova', src: e.id, x: tg.x, y: tg.y, tx: tg.x, ty: tg.y, r: tg.r, el: d.element, color: ELEMENT_COLOR[d.element] });
     }
     if (ai.telegraph) { e.moving = false; return; }
     const target = this.chooseTarget(e);
-    if (!target && (d.ai === 'aggressive' || d.ai === 'boss' || ai.state === 'chase') && ai.state !== 'return') {
-      for (const x of this.entities.values()) if ((x.kind === 'player' || x.kind === 'bot') && !x.dead && dist(x, e) < d.aggroRange && !x.effects.some((s) => STATUSES[s.id]?.stealth) && (d.ai !== 'passive')) { if (d.ai === 'aggressive' || d.ai === 'boss') { e.targetId = x.id; ai.threat[x.id] = 1; ai.state = 'chase'; break; } }
+    if (!target && (d.ai === 'aggressive' || d.ai === 'boss' || d.ai === 'guard' || ai.state === 'chase') && ai.state !== 'return') {
+      for (const x of this.entities.values()) if ((x.kind === 'player' || x.kind === 'bot') && !x.dead && dist(x, e) < d.aggroRange && !x.effects.some((s) => STATUSES[s.id]?.stealth) && (d.ai !== 'passive')) { if (d.ai === 'aggressive' || d.ai === 'boss' || d.ai === 'guard') { e.targetId = x.id; ai.threat[x.id] = 1; ai.state = 'chase'; break; } }
     }
     const t = this.chooseTarget(e);
     if (t && dist(e, { x: ai.homeX, y: ai.homeY }) > d.leashRange && !this.dungeon && d.rank !== 'world_boss') { ai.state = 'return'; ai.threat = {}; e.targetId = null; }
@@ -435,10 +486,11 @@ export class World {
       for (const sk of d.skills ?? []) if ((ai.skillCd[sk.id] ?? 0) < now && dd < sk.radius + 60) { ai.skillCd[sk.id] = now + sk.cdMs; ai.telegraph = { id: sk.id, x: sk.radius > 150 ? e.x : t.x, y: sk.radius > 150 ? e.y : t.y, r: sk.radius, at: now + sk.telegraphMs, power: sk.power, status: sk.status, element: sk.element }; this.fx.push({ t: 'telegraph', id: e.id, x: ai.telegraph.x, y: ai.telegraph.y, r: sk.radius, ms: sk.telegraphMs }); return; }
       const range = d.attackRange * (d.size > 1 ? d.size * 0.8 : 1);
       if (dd > range) { this.step(e, (t.x - e.x) / dd, (t.y - e.y) / dd, dt); }
-      else { e.moving = false; this.face(e, t); if (now >= e.attackAt) { e.attackAt = now + d.attackIntervalMs; const st = this.combatStats(e); const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(t), power: 1, dmgType: d.ai === 'ranged' ? 'mag' : 'phys', element: d.element }); if (d.ai === 'ranged') this.fx.push({ t: 'skill', vfx: 'bolt', src: e.id, x: e.x, y: e.y, tx: t.x, ty: t.y, r: 0, el: d.element, color: ELEMENT_COLOR[d.element] }); this.dealDamage(e, t, h.damage, h.crit, h.miss, d.element); } }
+      else { e.moving = false; this.face(e, t); if (now >= e.attackAt) { e.attackAt = now + d.attackIntervalMs; const st = this.combatStats(e); const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(t), power: 1, dmgType: d.ai === 'ranged' ? 'mag' : 'phys', element: d.element }); if (d.ai === 'ranged') this.spawnProjectile(e, t, { homing: false, speed: 300, color: ELEMENT_COLOR[d.element], kind: 'bolt', onHit: (v) => { const h2 = computeHit(this.rng, { attacker: this.combatStats(e), defender: this.combatStats(v), power: 1, dmgType: 'mag', element: d.element }); this.dealDamage(e, v, h2.damage, h2.crit, h2.miss, d.element); } }); else this.dealDamage(e, t, h.damage, h.crit, h.miss, d.element); } }
       return;
     }
     // idle / patrol
+    if (d.ai === 'guard') { const dh = Math.hypot(ai.homeX - e.x, ai.homeY - e.y); if (dh > 6) this.step(e, (ai.homeX - e.x) / dh, (ai.homeY - e.y) / dh, dt); else e.moving = false; return; } // guards hold their post
     if (now > ai.nextAct) { ai.nextAct = now + this.rng.int(2000, 6000); if (this.rng.chance(0.6)) { ai.state = 'patrol'; ai.patrolX = ai.homeX + this.rng.int(-90, 90); ai.patrolY = ai.homeY + this.rng.int(-90, 90); } else ai.state = 'idle'; }
     if (ai.state === 'patrol' && ai.patrolX !== undefined) { const dd = Math.hypot(ai.patrolX - e.x, ai.patrolY! - e.y); if (dd < 6) ai.state = 'idle'; else this.step(e, (ai.patrolX - e.x) / dd, (ai.patrolY! - e.y) / dd, dt * 0.5); } else e.moving = false;
   }
