@@ -1,0 +1,7 @@
+# Assumptions (invented values — not from any reference game, not balanced)
+
+Source of truth: `packages/game-core/src/config.ts` (CONFIG, version `0.1.0-seed`).
+
+- **From master prompt (used as given):** stat formulas §10, damage formula §12, crit ×1.5, crit cap 50%, `requiredExp(L)=floor(100·L^2.2)`, refine success table §22, gem unlocks +5/10/15/20, market fee 5% example, party max 6, level cap 120, 3 ascensions.
+- **Invented:** hit chance `clamp(0.8+(acc−eva)/400, 5%, 98%)`; damage variance ±8%; PvP damage ×0.6; element matrix (fire>ice>wind>earth>water>fire at 2×, reverse 0.5×, same-element 0.5/0.25×, light↔dark 2×, spirit vs spirit 2×, neutral→spirit 0.5×); ascension gates 60/90/120 with 3/6/9 Guardian Hearts; job EXP `60·L^1.9`; mastery EXP `2,000,000+150,000·m`; refine cost `200+L²·150` gold and `1+⌊L/4⌋` ore, downgrade 30% at +11–15, floor +10, pity +2%/fail cap 20%; monster stats `HP=60+9L²+25L`, `ATK=8+4.2L`, base EXP `10+1.6L²+6L`; level-gap EXP penalty −10%/level beyond 10; party EXP +10%/extra member; farm 4 EXP/min, 0.2 food/pet/min, 12 h cap; exchange fee 1%, auction increment 5%, anti-snipe 30 s; gacha rates mythic 0.6 / legendary 2.4 / epic 12 / rare 35 / uncommon 50 %, pity 50; TCG deck 20, max 2 copies (legendary 1), hero 25 HP, mana to 10, 4-card hand; Elo K=32; day length 8 min; reset timezone Asia/Bangkok (UTC+7).
+- Balance has **not** been simulated or play-tested. Treat every number as a placeholder.
