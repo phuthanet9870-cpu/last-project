@@ -30,8 +30,8 @@ export interface PlayerState {
   mounts: string[]; activeMount: string | null; riding: boolean; mountLevels: Record<string, number>;
   monsterCards: Record<string, number>; discovered: string[];
   professions: Partial<Record<Profession, { lvl: number; exp: number }>>; gathering: Record<'ore' | 'tree' | 'herb' | 'fish', { lvl: number; exp: number }>;
-  tcg: { collection: Record<string, number>; decks: { id: string; name: string; cards: string[] }[]; activeDeck: string; rating: number; stars: number; rank: number; wins: number; losses: number; pity: number; tower: number };
-  pvp: { rating: number; wins: number; losses: number; season: number; history: { ts: number; opp: string; win: boolean; delta: number }[] };
+  tcg: { season?: number; seasons?: { season: number; rank: number; stars: number }[]; collection: Record<string, number>; decks: { id: string; name: string; cards: string[] }[]; activeDeck: string; rating: number; stars: number; rank: number; wins: number; losses: number; pity: number; tower: number };
+  pvp: { seasons?: { season: number; rating: number; tier: string }[]; rating: number; wins: number; losses: number; season: number; history: { ts: number; opp: string; win: boolean; delta: number }[] };
   dungeon: { runs: Record<string, number>; firstClears: string[]; day: string };
   gacha: { pity: number; history: { ts: number; item: string; rarity: string }[] };
   pass: { level: number; exp: number; premium: boolean; claimedFree: number[]; claimedPremium: number[] };
@@ -47,6 +47,11 @@ export interface PlayerState {
 }
 
 export type GameEvent = { type: string; [k: string]: any };
+/** Seasons (§30, §43): fixed-length seasons from an epoch; rollover is lazy and idempotent per character (season number recorded). */
+export function currentSeason(now: number): number { return Math.floor((now - CONFIG.seasonEpoch) / (CONFIG.seasonDays * 86400_000)) + 1; }
+export function seasonEndsAt(season: number): number { return CONFIG.seasonEpoch + season * CONFIG.seasonDays * 86400_000; }
+export const PVP_TIERS = [{ name: 'Bronze', min: 0, tokens: 10 }, { name: 'Silver', min: 1100, tokens: 25 }, { name: 'Gold', min: 1250, tokens: 50 }, { name: 'Platinum', min: 1400, tokens: 90 }, { name: 'Diamond', min: 1550, tokens: 150 }];
+export function pvpTier(rating: number) { return [...PVP_TIERS].reverse().find((t) => rating >= t.min)!; }
 /** Regional pet foods (§25): double effect for pets of these elements. */
 export const REGIONAL_FOOD: Record<string, string[]> = { food_forest: ['earth', 'wind'], food_hills: ['fire', 'neutral'], food_snow: ['ice', 'water'] };
 export const PET_RUNES = ['rune_fang', 'rune_shell', 'rune_wind'];
@@ -89,8 +94,8 @@ export function createCharacter(opts: { id?: string; accountId: string; name: st
     pets: [], activePet: null, eggs: [], farm: { capacity: CONFIG.farmBaseCapacity, feederSlots: CONFIG.feederBaseSlots, feederLevel: 0, food: 0, lastSettle: now, decorations: [], likes: 0 },
     mounts: [], activeMount: null, riding: false, mountLevels: {}, monsterCards: {}, discovered: [],
     professions: {}, gathering: { ore: { lvl: 1, exp: 0 }, tree: { lvl: 1, exp: 0 }, herb: { lvl: 1, exp: 0 }, fish: { lvl: 1, exp: 0 } },
-    tcg: { collection: {}, decks: [], activeDeck: '', rating: 1000, stars: 0, rank: 0, wins: 0, losses: 0, pity: 0, tower: 0 },
-    pvp: { rating: 1000, wins: 0, losses: 0, season: 1, history: [] }, dungeon: { runs: {}, firstClears: [], day: dayKey(now) },
+    tcg: { season: currentSeason(now), collection: {}, decks: [], activeDeck: '', rating: 1000, stars: 0, rank: 0, wins: 0, losses: 0, pity: 0, tower: 0 },
+    pvp: { rating: 1000, wins: 0, losses: 0, season: currentSeason(now), history: [] }, dungeon: { runs: {}, firstClears: [], day: dayKey(now) },
     gacha: { pity: 0, history: [] }, pass: { level: 0, exp: 0, premium: false, claimedFree: [], claimedPremium: [] },
     login: { lastDay: '', streak: 0, claimed: 0 }, missions: { day: dayKey(now), progress: {}, claimed: [], points: 0, chests: [] }, events: { progress: {}, claimed: [] },
     mail: [], friends: [], blocked: [], guild: null, marriage: null, house: { furniture: [], theme: 0 }, refinePity: {}, settings: {}, wallet: new Ledger(), log: [],
@@ -441,12 +446,32 @@ export class PlayerService {
   }
   setTitle(t: string | null): Result { if (t && !this.p.titles.includes(t)) return fail('LOCKED'); this.p.title = t; this.clampVitals(); return ok(); }
   resetDailyIfNeeded() {
+    this.checkSeasons();
     const day = dayKey(this.now());
     if (this.p.missions.day !== day) this.p.missions = { day, progress: {}, claimed: [], points: 0, chests: [] };
     if (this.p.dungeon.day !== day) this.p.dungeon = { ...this.p.dungeon, runs: {}, day };
     if (this.p.quests.lastDaily !== day) { this.p.quests.done = this.p.quests.done.filter((q) => QUESTS[q]?.type !== 'daily'); this.p.quests.active = this.p.quests.active.filter((q) => QUESTS[q.id]?.type !== 'daily'); this.p.quests.lastDaily = day; }
     const wk = weekKey(this.now()); if (this.p.quests.lastWeekly !== wk) { this.p.quests.done = this.p.quests.done.filter((q) => QUESTS[q]?.type !== 'weekly'); this.p.quests.active = this.p.quests.active.filter((q) => QUESTS[q.id]?.type !== 'weekly'); this.p.quests.lastWeekly = wk; }
   }
+  /** Season rollover: rewards by final tier mailed exactly once, then soft reset (rating halfway to 1000; TCG rank −1, stars 0). */
+  checkSeasons(): { pvp?: string; tcg?: string } {
+    const cur = currentSeason(this.now()); const out: { pvp?: string; tcg?: string } = {};
+    if (this.p.pvp.season < cur && this.p.createdAt >= seasonEndsAt(this.p.pvp.season)) { this.p.pvp.season = cur; this.p.tcg.season = cur; } // legacy saves: never played that season
+    if (this.p.pvp.season < cur) {
+      const tier = pvpTier(this.p.pvp.rating); (this.p.pvp.seasons ??= []).unshift({ season: this.p.pvp.season, rating: this.p.pvp.rating, tier: tier.name });
+      this.earn('arena_token', tier.tokens, 'pvp_season_reward', `pvpseason:${this.p.id}:${this.p.pvp.season}`); if (tier.name === 'Diamond' && !this.p.titles.includes('title_gladiator')) this.p.titles.push('title_gladiator');
+      this.sendMail('Arena Master Kaz', `Arena Season ${this.p.pvp.season} results`, `Final rating ${this.p.pvp.rating} (${tier.name}). You received ${tier.tokens} Arena Tokens.`);
+      this.p.pvp.rating = 1000 + Math.floor((this.p.pvp.rating - 1000) / 2); this.p.pvp.season = cur; out.pvp = tier.name;
+    }
+    const ts = this.p.tcg.season ?? cur; if (ts < cur) {
+      (this.p.tcg.seasons ??= []).unshift({ season: ts, rank: this.p.tcg.rank, stars: this.p.tcg.stars }); const dust = 50 + this.p.tcg.rank * 100;
+      this.earn('card_dust', dust, 'tcg_season_reward', `tcgseason:${this.p.id}:${ts}`); this.sendMail('Duelist Kit', `Hearthcards Season ${ts} results`, `Final rank ${['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Legend'][this.p.tcg.rank]}. You received ${dust} Card Dust.`);
+      this.p.tcg.rank = Math.max(0, this.p.tcg.rank - 1); this.p.tcg.stars = 0; out.tcg = String(ts);
+    }
+    this.p.tcg.season = cur; return out;
+  }
+  /** MVP reward for an arena match (called once per match by the settlement code). */
+  awardMvp(): void { this.earn('arena_token', 10, 'arena_mvp'); if (!this.p.titles.includes('title_mvp')) this.p.titles.push('title_mvp'); this.bump('arena_mvp'); this.note('You were the match MVP!'); }
   claimMission(id: string): Result { this.resetDailyIfNeeded(); const m = MISSIONS_DAILY.find((x) => x.id === id); if (!m) return fail('INVALID'); if (this.p.missions.claimed.includes(id)) return fail('ALREADY_CLAIMED'); if ((this.p.missions.progress[m.counter] ?? 0) < m.target) return fail('INCOMPLETE'); this.p.missions.claimed.push(id); this.p.missions.points += m.points; this.gainPassExp(20); return ok(); }
   claimChest(i: number): Result { const c = ACTIVITY_CHESTS[i]; if (!c) return fail('INVALID'); if (this.p.missions.chests.includes(i)) return fail('ALREADY_CLAIMED'); if (this.p.missions.points < c.points) return fail('INCOMPLETE'); this.p.missions.chests.push(i); this.addItem(c.itemId, c.qty); return ok(); }
   claimLogin(): Result {

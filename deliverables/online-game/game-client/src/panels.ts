@@ -1,7 +1,7 @@
 /** All game windows (§51). Each control dispatches a real command through the adapter. */
 import {
   ACHIEVEMENTS, ACTIVITY_CHESTS, ALL_SKILLS, CLASSES, CONFIG, DUNGEONS, ELEMENTS, EQUIP_SLOTS, EVENTS, GACHA_BANNERS, ITEMS, LOGIN_CALENDAR, MAPS, MISSIONS_DAILY, MONSTERS, MONSTER_CARDS, CARD_SET_BONUS, MOUNTS, NPCS, PASS, PETS, PRIMARY,
-  QUESTS, OPTION_POOL, RARITY_COLOR, RECIPES, SHOPS, STARTER_DECKS, TCG_CARDS, TCG_COLLECTIBLE, TCG_RANKS, TITLES, WORLD_BOSS_ROTATION, combatPower, elementMultiplier, playerStats, requiredExp, validateDeck, legalActions,
+  QUESTS, OPTION_POOL, RARITY_COLOR, PVP_TIERS, currentSeason, pvpTier, seasonEndsAt, RECIPES, SHOPS, STARTER_DECKS, TCG_CARDS, TCG_COLLECTIBLE, TCG_RANKS, TITLES, WORLD_BOSS_ROTATION, combatPower, elementMultiplier, playerStats, requiredExp, validateDeck, legalActions,
   type ItemInstance, type Result, type Slot, type TcgAction,
 } from '@hb/game-core';
 import { itemIcon, monsterSprite, skillIcon, tcgArt } from './art.js';
@@ -259,15 +259,25 @@ export function openBoss() { openWindow({ id: 'boss', title: 'World Boss — Sun
   if (s) { const rows = Object.entries(s.contributions as Record<string, any>).map(([id, c]) => ({ id, ...c, score: c.dmg + c.heal * 1.5 + c.tank * 1.2 })).sort((x, y) => y.score - x.score); b.append(h('table', { class: 'tbl' }, h('tr', {}, h('th', {}, '#'), h('th', {}, 'Who'), h('th', {}, 'Dmg'), h('th', {}, 'Heal'), h('th', {}, 'Tank'), h('th', {}, 'Score')), rows.slice(0, 10).map((r, i) => h('tr', { class: r.id === C.a.myId ? 'me' : '' }, h('td', {}, String(i + 1)), h('td', {}, r.id === C.a.myId ? 'You' : C.a.entities().find((e) => e.id === r.id)?.n ?? r.id), h('td', {}, fmt(r.dmg)), h('td', {}, fmt(r.heal)), h('td', {}, fmt(r.tank)), h('td', {}, fmt(Math.floor(r.score))))))); }
   b.append(h('div', { class: 'row' }, btn('Travel to Sunken Crater', () => act('teleport', { map: 'sunken_crater' }), 'btn'), C.a.dev ? btn('DEV: spawn boss now', () => act('dev', { op: 'boss' }), 'btn sm') : null, btn('Boss coin shop', () => openShop('boss'), 'btn sm')));
 } }); }
-export function openArena() { openWindow({ id: 'arena', title: `${t('pvp')} — PvP`, width: 520, render: (b) => {
-  const p = C.a.p; const ar = C.a.arenaInfo();
-  b.append(h('div', { class: 'card' }, `Rating ${p.pvp.rating} (Elo K=${CONFIG.eloK}) · ${p.pvp.wins}W/${p.pvp.losses}L · Arena tokens ${fmt(C.a.bal('arena_token'))} · Season ${p.pvp.season}`));
-  if (C.a.mode === 'local') b.append(h('div', { class: 'note' }, 'Artifact mode: arena opponents are AI-controlled simulated players using the same combat engine. Real player-vs-player matches require Online Mode.'));
-  if (ar) b.append(h('div', { class: 'card on' }, ar.done ? h('div', {}, `Match over — Team ${ar.winner === 0 ? 'Blue (you)' : 'Red'} wins.`, btn('Claim result', () => act('arenaSettle').then((r) => { if (r.ok) toast(`${(r.data as any).win ? 'Victory' : 'Defeat'}: rating ${(r.data as any).delta >= 0 ? '+' : ''}${(r.data as any).delta}`, (r.data as any).win ? 'ok' : 'err'); }), 'btn primary sm', ar.settled), btn('Leave arena', () => act('leaveInstance'), 'btn sm')) : h('div', {}, `Match in progress — ${Math.max(0, Math.ceil((ar.endsAt - Date.now()) / 1000))}s`)));
-  else b.append(h('div', { class: 'row' }, ['1v1', '2v2', '3v3'].map((m) => btn(`Queue ${m}`, () => { closeWindow('arena'); act('arenaJoin', { mode: m }); }, 'btn'))));
+export function openArena() { openWindow({ id: 'arena', title: `${t('pvp')} — PvP`, width: 600, render: (b) => {
+  const p = C.a.p; const ar = C.a.arenaInfo(); const season = currentSeason(Date.now()); const tier = pvpTier(p.pvp.rating); const days = Math.ceil((seasonEndsAt(season) - Date.now()) / 86400_000);
+  b.append(h('div', { class: 'card' }, h('b', {}, `Season ${season} · ${tier.name} · rating ${p.pvp.rating}`), h('div', { class: 'dim' }, `${p.pvp.wins}W/${p.pvp.losses}L · Arena tokens ${fmt(C.a.bal('arena_token'))} · season ends in ${days} day(s). End-of-season reward: ${PVP_TIERS.map((x) => `${x.name} ${x.tokens}`).join(' · ')} tokens (Diamond also earns «Diamond Gladiator»). Rating then resets halfway toward 1000.`), (p.pvp.seasons ?? []).length ? h('div', { class: 'small' }, `Past: ${(p.pvp.seasons ?? []).slice(0, 4).map((x) => `S${x.season} ${x.tier} (${x.rating})`).join(' · ')}`) : null));
+  if (C.a.mode === 'local') b.append(h('div', { class: 'note' }, 'Artifact mode: teammates and opponents are AI-controlled simulated players (·sim) using the same combat rules. Real team matches require Online Mode.'));
+  if (ar) {
+    const modeName = ar.mode === 'siege' ? 'Lantern Siege' : ar.mode === 'rush' ? 'Ember Rush' : 'Last Light'; const sc = ar.score ?? [0, 0];
+    const rows = [...ar.teams[0], ...ar.teams[1]].map((id: string) => ({ id, team: ar.teams[0].includes(id) ? 0 : 1, n: C.a.entities().find((e) => e.id === id)?.n ?? id, ...(ar.stats?.[id] ?? { k: 0, d: 0, h: 0, o: 0 }) }));
+    b.append(h('div', { class: 'card on' }, h('b', {}, `${modeName} — Blue ${Math.floor(sc[0])} : ${Math.floor(sc[1])} Red${ar.target ? ` (first to ${ar.target})` : ''}`), ar.done ? h('div', {}, `Finished — Team ${ar.winner === 0 ? 'Blue' : 'Red'} wins. MVP: ${C.a.entities().find((e) => e.id === ar.mvp)?.n ?? '—'}`) : h('div', {}, `${Math.max(0, Math.ceil((ar.endsAt - Date.now()) / 1000))}s left`),
+      h('table', { class: 'tbl' }, h('tr', {}, ['Team', 'Player', 'Kills', 'Damage', 'Healing', 'Objectives'].map((x) => h('th', {}, x))), rows.map((r) => h('tr', { class: r.id === C.a.myId ? 'me' : '' }, h('td', { style: { color: r.team ? '#ff6060' : '#60a0ff' } }, r.team ? 'Red' : 'Blue'), h('td', {}, `${r.n}${r.id === ar.mvp ? ' (MVP)' : ''}`), h('td', {}, String(r.k)), h('td', {}, fmt(Math.floor(r.d))), h('td', {}, fmt(Math.floor(r.h))), h('td', {}, String(r.o))))),
+      ar.done ? h('div', { class: 'row' }, C.a.mode === 'local' ? btn('Claim result', () => act('arenaSettle').then((r) => { if (r.ok) { const d = r.data as any; toast(`${d.win ? 'Victory' : 'Defeat'}: rating ${d.delta >= 0 ? '+' : ''}${d.delta}${d.mvp ? ' · You are MVP! +10 tokens' : ''}`, d.win ? 'ok' : 'err'); } }), 'btn primary sm', ar.settled) : h('span', { class: 'dim' }, 'Results are settled by the server automatically.'), btn('Leave arena', () => act('leaveInstance'), 'btn sm')) : null));
+  } else {
+    const sizes = C.a.mode === 'local' ? ['1v1', '2v2', '3v3', '5v5'] : ['1v1', '2v2', '3v3']; const sz = tabState('arsz', '1v1');
+    b.append(h('div', { class: 'row' }, 'Team size: ', sizes.map((x) => btn(x, () => { sz.v = x; renderWin('arena'); }, sz.v === x ? 'btn primary sm' : 'btn sm'))));
+    for (const [type, name, desc] of [['deathmatch', 'Last Light', 'Elimination — the last team standing wins.'], ['siege', 'Lantern Siege', 'Capture and hold 3 lanterns; each held lantern scores 1 point per second. First to 100.'], ['rush', 'Ember Rush', 'Grab Ember Crystals in the centre and carry them to your base. Carriers drop crystals when defeated. First to 5.']] as const)
+      b.append(h('div', { class: 'li' }, h('b', {}, `${name} `), h('span', { class: 'dim small' }, desc), btn(`Queue ${sz.v}`, () => { act('arenaJoin', { mode: sz.v, type }).then((r) => { if (r.ok && C.a.mode === 'local') closeWindow('arena'); }); }, 'btn sm')));
+    if (C.a.mode === 'online') b.append(btn('Leave queue', () => act('arenaLeaveQueue', {}, 'Left queue'), 'btn sm'));
+  }
   b.append(h('div', { class: 'row' }, btn('Toggle open-world PvP flag', () => act('pvpToggle').then((r) => r.ok && toast(`PvP ${(r.data as any).pvp ? 'ON' : 'OFF'}`, 'info')), 'btn sm'), btn('Arena shop', () => openShop('arena'), 'btn sm')), h('h4', {}, 'History'), h('div', { class: 'list small' }, p.pvp.history.map((x) => h('div', {}, `${new Date(x.ts).toLocaleTimeString()} ${x.win ? 'WIN' : 'LOSS'} vs ${x.opp} (${x.delta >= 0 ? '+' : ''}${x.delta})`))));
 } }); }
-
 // ---------------- TCG ----------------
 export function openTcg() { openWindow({ id: 'tcg', title: `${t('tcg')} — Card Duels`, width: 760, render: (b) => {
   const p = C.a.p; const m = C.a.tcg(); if (m && m.view.winner === null) { renderDuel(b, m); return; }

@@ -173,10 +173,10 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   portal: (c, a) => { const me = c.world.entities.get(c.entityId)!; const p = MAPS[c.world.mapId]!.portals[Number(a.i)]; if (!p) return fail('INVALID'); if (Math.hypot(p.x * TILE + 16 - me.x, p.y * TILE + 16 - me.y) > 96 && !c.dev) return fail('TOO_FAR'); const dest = MAPS[p.to]!; if (c.svc.p.level < dest.levelReq && !c.dev) return fail('LEVEL_TOO_LOW', `Requires level ${dest.levelReq}`); if (p.to === 'mossy_hollow') return COMMANDS.enterDungeon!(c, { id: 'mossy_hollow' }); if (p.to === 'pet_farm') c.session.visit = null; return c.changeMap(p.to, p.tx * TILE + 16, p.ty * TILE + 16); },
   enterDungeon: (c, a) => { const d = DUNGEONS[String(a.id)]; if (!d) return fail('INVALID'); if (d.type === 'daily' && !near(c, 'dungeon') && !c.dev) return fail('NEED_WARDEN'); const r = c.svc.startDungeon(d.id); if (!r.ok) return r; return c.changeMap(d.map, undefined, undefined, { dungeon: d.id }); },
   leaveInstance: (c) => { const back = c.session.prevMap ?? { map: 'emberglen', x: 28 * TILE + 16, y: 24 * TILE + 16 }; c.session.prevMap = null; return c.changeMap(back.map, back.x, back.y); },
-  arenaJoin: (c, a) => { if (!near(c, 'arena') && !c.dev) return fail('NEED_ARENA_MASTER'); return c.changeMap('arena', undefined, undefined, { arena: String(a.mode ?? '1v1') }); },
+  arenaJoin: (c, a) => { if (!near(c, 'arena') && !c.dev) return fail('NEED_ARENA_MASTER'); const size = ['1v1', '2v2', '3v3', '5v5'].includes(a.mode) ? a.mode : '1v1'; const type = ['deathmatch', 'siege', 'rush'].includes(a.type) ? a.type : 'deathmatch'; return c.changeMap('arena', undefined, undefined, { arena: `${size}:${type}` }); },
   arenaSettle: (c) => {
     const ar = c.world.arena; const s = c.session.arena; if (!ar || !ar.done || !s || s.settled) return fail('NOT_FINISHED'); s.settled = true;
-    const myTeam = c.world.teamOf(c.world.entities.get(c.entityId)!); const win = ar.winner === myTeam; const delta = c.svc.recordPvp(win, 'Arena', 1000 + c.svc.rng.int(-100, 150)); return ok({ win, delta });
+    const myTeam = c.world.teamOf(c.world.entities.get(c.entityId)!); const win = ar.winner === myTeam; const delta = c.svc.recordPvp(win, 'Arena', 1000 + c.svc.rng.int(-100, 150)); const mvp = ar.mvp === c.entityId; if (mvp) c.svc.awardMvp(); return ok({ win, delta, mvp, mvpName: ar.mvp ? c.world.entities.get(ar.mvp)?.name : null, stats: ar.stats[c.entityId], score: ar.score, mode: ar.mode });
   },
   // --- economy (§35–38) ---
   marketList: (c, a) => wrapEco(() => c.market.list(c.svc, String(a.uid), big(a.price), a.qty ? Number(a.qty) : undefined)),
@@ -250,6 +250,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
       case 'mount': for (const m of Object.values(MOUNTS)) if (!s.p.mounts.includes(m.id)) { s.p.mounts.push(m.id); s.p.mountLevels[m.id] = 0; } s.p.activeMount ??= 'pony'; return ok();
       case 'farmTime': s.p.farm.lastSettle -= (Number(a.h) || 2) * 3600_000; for (const e of s.p.eggs) e.hatchAt = 0; return ok(s.settleFarm());
       case 'wear': for (const it of Object.values(s.p.equipment)) if (it) it.durability = Math.max(0, Number(a.n ?? 15)); c.world.refreshPlayer(c.entityId); return ok();
+      case 'season': s.p.createdAt = Math.min(s.p.createdAt, c.world.now() - 60 * 86400_000); s.p.pvp.season = Math.min(s.p.pvp.season, (Math.floor((c.world.now() - CONFIG.seasonEpoch) / (CONFIG.seasonDays * 86400_000)) + 1) - 1); s.p.tcg.season = s.p.pvp.season; return ok(s.checkSeasons());
       case 'heal': me.hp = me.maxHp; me.mp = me.maxMp; me.dead = false; for (const k of Object.keys(me.cds)) me.cds[k] = 0; return ok();
       case 'cards': for (const mc of Object.keys(PETS)) void mc; for (const m of Object.values(MONSTERS).slice(0, 12)) s.p.monsterCards[`mc_${m.id}`] = (s.p.monsterCards[`mc_${m.id}`] ?? 0) + 2; s.checkAchievements(); return ok();
       case 'pass': s.gainPassExp(1000); return ok();

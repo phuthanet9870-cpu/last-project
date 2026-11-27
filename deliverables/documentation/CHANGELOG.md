@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-11-27 — Task 5: PvP modes
+- Three arena modes: Last Light (elimination), Lantern Siege (3 capture lanterns, points per second, first to 100), Ember Rush (carry crystals to base, carriers drop on death, first to 5); objective-mode respawns at base; bots play objectives.
+- Per-match stats (kills/damage/healing/objectives) and MVP (+10 tokens, «Arena MVP» title); in-match score banner and scoreboard.
+- Online queues per size × mode (1v1/2v2/3v3) with rating-balanced snake-draft teams; artifact up to 5v5 vs AI.
+- Seasons (28 days): PvP tier rewards (Bronze→Diamond, Diamond title) + soft reset; Hearthcards season card-dust reward + rank −1. Rewards mailed once per season.
+- Fix (found by test): new characters started in season 1 and would have received a free reward for a season they never played; legacy saves are guarded.
+- Tests: unit 52, E2E 31/31, multiplayer 19/19.
+
 ## 0.5.0 — 2026-11-27 — Task 4: items & pets
 - Gem refining +0–10 (+10% gem stat per level, failure keeps level), cosmetic enhancement +0–5 (visual aura only, no stats), focused crafting (guaranteed chosen option for 1 Enchant Stone), Emberlight Blessing (+10% refine), second monster-card slot at +10, skill stone re-inscription, warehouse expansion (120→300).
 - Pets: regional foods (double effect for matching elements), pet runes (Fang/Shell/Wind, 2 slots), friend farm visits with daily likes (online: real friend's farm, likes persist even if owner offline; artifact: simulated friends' farms).

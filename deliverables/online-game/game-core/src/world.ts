@@ -40,6 +40,12 @@ export type Fx =
   | { t: 'notice'; msg: string; to?: string }
   | { t: 'status'; id: string; s: string };
 
+export type ArenaMode = 'deathmatch' | 'siege' | 'rush';
+export interface ArenaState {
+  mode: ArenaMode; teams: [string[], string[]]; endsAt: number; done: boolean; winner?: number; score: [number, number]; target: number;
+  points: { x: number; y: number; owner: -1 | 0 | 1; progress: number }[]; crystals: { id: number; x: number; y: number }[]; carriers: string[];
+  stats: Record<string, { k: number; d: number; h: number; o: number }>; mvp?: string; nextCrystal: number;
+}
 export interface DungeonRun { runId: string; bossEntity?: string; dungeonId: string; state: 'created' | 'waiting' | 'active' | 'encounter' | 'completed' | 'failed' | 'settled' | 'closed'; wave: number; startedAt: number; endsAt: number; participants: string[] }
 export interface BossSession { id: string; bossId: string; entityId: string; startedAt: number; contributions: Record<string, { dmg: number; heal: number; tank: number }>; settled: boolean }
 
@@ -55,7 +61,7 @@ const BOT_LINES = ['Anyone up for Mossy Hollow?', 'LF party for slimes~', 'Selli
 export class World {
   map: GenMap; mapId: string; instanceId: string; entities = new Map<string, Entity>(); services = new Map<string, PlayerService>();
   fx: Fx[] = []; rng: Rng; now: () => number; nodesDepleted = new Map<string, number>(); dungeon: DungeonRun | null = null; boss: BossSession | null = null;
-  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number }; arena: { teams: [string[], string[]]; endsAt: number; done: boolean; winner?: number } | null = null;
+  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number }; arena: ArenaState | null = null;
   private lastTick = 0; private opts: WorldOptions;
 
   constructor(opts: WorldOptions) {
@@ -258,7 +264,7 @@ export class World {
   nearestHostile(a: Entity, range: number): Entity | undefined { let best: Entity | undefined; let bd = range; for (const e of this.entities.values()) { if (!this.hostile(a, e)) continue; const d = dist(a, e); if (d < bd) { bd = d; best = e; } } return best; }
   hostilesIn(a: Entity, c: { x: number; y: number }, r: number): Entity[] { const out: Entity[] = []; for (const e of this.entities.values()) if (this.hostile(a, e) && dist(c, e) <= r + 12) out.push(e); return out; }
 
-  heal(src: Entity, t: Entity, amount: number, crit = false) { if (amount <= 0 || t.dead) return; const real = Math.min(amount, t.maxHp - t.hp); t.hp += real; this.fx.push({ t: 'dmg', x: t.x, y: t.y - 20, v: real, crit, heal: true, tgt: t.id, src: src.id }); if (this.boss) { const c = (this.boss.contributions[src.ownerId ?? src.id] ??= { dmg: 0, heal: 0, tank: 0 }); c.heal += real; } }
+  heal(src: Entity, t: Entity, amount: number, crit = false) { if (amount <= 0 || t.dead) return; const real = Math.min(amount, t.maxHp - t.hp); t.hp += real; this.fx.push({ t: 'dmg', x: t.x, y: t.y - 20, v: real, crit, heal: true, tgt: t.id, src: src.id }); if (this.arena?.stats[src.ownerId ?? src.id]) this.arena.stats[src.ownerId ?? src.id]!.h += real; if (this.boss) { const c = (this.boss.contributions[src.ownerId ?? src.id] ??= { dmg: 0, heal: 0, tank: 0 }); c.heal += real; } }
   dealDamage(src: Entity, t: Entity, dmg: number, crit: boolean, miss: boolean, el: Element | null) {
     if (t.dead) return;
     this.fx.push({ t: 'dmg', x: t.x, y: t.y - 20, v: dmg, crit, miss, tgt: t.id, src: src.id, el });
@@ -270,6 +276,7 @@ export class World {
     if (t.ai) { t.ai.threat[owner] = (t.ai.threat[owner] ?? 0) + dmg; if (!t.targetId || t.ai.state === 'idle' || t.ai.state === 'patrol') { t.targetId = src.id; t.ai.state = 'chase'; } }
     if (t.contrib) t.contrib[owner] = (t.contrib[owner] ?? 0) + Math.min(dmg, t.hp + after);
     if (this.boss && t.id === this.boss.entityId) (this.boss.contributions[owner] ??= { dmg: 0, heal: 0, tank: 0 }).dmg += dmg;
+    if (this.arena?.stats[owner]) this.arena.stats[owner]!.d += after;
     if (this.boss && src.id === this.boss.entityId) (this.boss.contributions[t.ownerId ?? t.id] ??= { dmg: 0, heal: 0, tank: 0 }).tank += dmg;
     if (t.kind === 'player') { const svc = this.services.get(t.id); if (svc) t.gauge = Math.min(100, t.gauge + (t.classId === 'vanguard' ? 6 : 1)); }
     if (t.kind === 'monster' && MONSTERS[t.defId!]!.ai === 'guard' && t.hp < t.maxHp * 0.5 && !t.effects.some((x) => x.id === 'def_up')) { applyStatus(t.effects, 'def_up', t.id, 8000, 0); this.fx.push({ t: 'status', id: t.id, s: 'def_up' }); }
@@ -288,6 +295,7 @@ export class World {
   kill(t: Entity, killer: Entity) {
     if (t.dead) return; // process death exactly once
     t.dead = true; t.hp = 0; t.deadAt = this.now(); t.effects = []; this.fx.push({ t: 'death', id: t.id, x: t.x, y: t.y });
+    if (this.arena) this.arenaOnDeath(t, killer);
     if (t.kind === 'monster') this.onMonsterDeath(t, killer);
     else if (t.kind === 'player') { const svc = this.services.get(t.id)!; svc.p.exp = Math.max(0, svc.p.exp - Math.floor(svc.p.exp * 0.01)); for (const it of Object.values(svc.p.equipment)) if (it) it.durability = Math.max(0, it.durability - 5); this.refreshPlayer(t.id); this.fx.push({ t: 'notice', msg: 'You were defeated. Press Respawn.', to: t.id }); this.checkArena(); const kOwner = this.entities.get(killer.ownerId ?? killer.id); if (kOwner?.kind === 'player' && kOwner !== t && !this.arena) this.services.get(kOwner.id)?.bump('pvp_kills'); }
     else if (t.kind === 'bot') { this.checkArena(); }
@@ -384,22 +392,60 @@ export class World {
     this.nextBossAt = this.now() + (this.opts.worldBossIntervalMs ?? 5 * 60_000);
   }
   // ---------------- arena (§30) ----------------
-  startArena(teamA: string[], teamB: string[], durationMs = 120_000) {
-    this.arena = { teams: [teamA, teamB], endsAt: this.now() + durationMs, done: false };
+  /** Arena modes (§30): deathmatch = Last Light (elimination); siege = Lantern Siege (3 capture points); rush = Ember Rush (carry crystals to base). */
+  startArena(teamA: string[], teamB: string[], durationMs = 120_000, mode: ArenaMode = 'deathmatch') {
     const w = this.map.def.w * TILE, h = this.map.def.h * TILE;
-    teamA.forEach((id, i) => { const e = this.entities.get(id); if (e) { e.x = w * 0.25; e.y = h * 0.35 + i * 60; e.team = 0; } });
-    teamB.forEach((id, i) => { const e = this.entities.get(id); if (e) { e.x = w * 0.75; e.y = h * 0.35 + i * 60; e.team = 1; e.targetId = teamA[0]; } });
-    this.fx.push({ t: 'notice', msg: 'Arena match started! Defeat the enemy team.' });
+    this.arena = { mode, teams: [teamA, teamB], endsAt: this.now() + (mode === 'deathmatch' ? durationMs : Math.max(durationMs, 180_000)), done: false, score: [0, 0], target: mode === 'siege' ? 100 : mode === 'rush' ? 5 : 0,
+      points: mode === 'siege' ? [{ x: w * 0.22, y: h * 0.3, owner: -1, progress: 0 }, { x: w * 0.5, y: h * 0.5, owner: -1, progress: 0 }, { x: w * 0.78, y: h * 0.7, owner: -1, progress: 0 }] : [],
+      crystals: [], carriers: [], stats: {}, nextCrystal: this.now() + 3000 };
+    teamA.forEach((id, i) => { const e = this.entities.get(id); if (e) { const [x, y] = this.arenaBase(0, i); e.x = x; e.y = y; e.team = 0; } });
+    teamB.forEach((id, i) => { const e = this.entities.get(id); if (e) { const [x, y] = this.arenaBase(1, i); e.x = x; e.y = y; e.team = 1; e.targetId = teamA[0]; } });
+    for (const id of [...teamA, ...teamB]) this.arena.stats[id] = { k: 0, d: 0, h: 0, o: 0 };
+    const goal = mode === 'siege' ? 'Hold the lanterns! First team to 100 points wins.' : mode === 'rush' ? 'Carry Ember Crystals from the centre to your base! First to 5 wins.' : 'Last Light: defeat the whole enemy team.';
+    this.fx.push({ t: 'notice', msg: `Arena match started (${mode === 'siege' ? 'Lantern Siege' : mode === 'rush' ? 'Ember Rush' : 'Last Light'}). ${goal}` });
+  }
+  arenaBase(team: number, i = 0): [number, number] { const w = this.map.def.w * TILE, h = this.map.def.h * TILE; return [team === 0 ? w * 0.1 : w * 0.9, h * 0.3 + (i % 5) * 50]; }
+  private arenaTick(dt: number, now: number) {
+    const a = this.arena!; if (a.done) return; const sec = dt / 1000; const w = this.map.def.w * TILE;
+    const alive = (id: string) => { const e = this.entities.get(id); return e && !e.dead ? e : undefined; };
+    // respawn in objective modes
+    if (a.mode !== 'deathmatch') a.teams.forEach((team, ti) => team.forEach((id, i) => { const e = this.entities.get(id); if (e?.dead && now - e.deadAt > 5000) { const [x, y] = this.arenaBase(ti, i); e.dead = false; e.hp = e.maxHp; e.mp = e.maxMp; e.x = x; e.y = y; e.effects = []; applyStatus(e.effects, 'invuln', e.id, 2000, 0); } }));
+    if (a.mode === 'siege') for (const pt of a.points) {
+      const n = [0, 0]; a.teams.forEach((t, ti) => t.forEach((id) => { const e = alive(id); if (e && Math.hypot(e.x - pt.x, e.y - pt.y) < 70) n[ti]!++; }));
+      if (n[0]! > 0 && n[1]! === 0) pt.progress = Math.min(100, pt.progress + 35 * n[0]! * sec); else if (n[1]! > 0 && n[0]! === 0) pt.progress = Math.max(-100, pt.progress - 35 * n[1]! * sec);
+      const prev = pt.owner; if (pt.progress >= 100) pt.owner = 0; else if (pt.progress <= -100) pt.owner = 1; else if (Math.abs(pt.progress) < 1) pt.owner = -1;
+      if (prev !== pt.owner && pt.owner !== -1) { for (const id of a.teams[pt.owner]!) if (alive(id) && Math.hypot(alive(id)!.x - pt.x, alive(id)!.y - pt.y) < 70) a.stats[id]!.o++; this.fx.push({ t: 'notice', msg: `Team ${pt.owner === 0 ? 'Blue' : 'Red'} captured a lantern!` }); }
+      if (pt.owner !== -1) a.score[pt.owner] += sec;
+    }
+    if (a.mode === 'rush') {
+      if (now > a.nextCrystal && a.crystals.length < 3) { a.nextCrystal = now + 4000; const h = this.map.def.h * TILE; a.crystals.push({ id: Math.floor(now), x: w * 0.5 + this.rng.int(-60, 60), y: h * 0.5 + this.rng.int(-100, 100) }); }
+      a.teams.forEach((t, ti) => t.forEach((id) => {
+        const e = alive(id); if (!e) return; const carrying = a.carriers.includes(id);
+        if (!carrying) { const c = a.crystals.findIndex((cr) => Math.hypot(cr.x - e.x, cr.y - e.y) < 26); if (c >= 0) { a.crystals.splice(c, 1); a.carriers.push(id); this.fx.push({ t: 'notice', msg: `${e.name} picked up an Ember Crystal!` }); } }
+        else if ((ti === 0 && e.x < w * 0.16) || (ti === 1 && e.x > w * 0.84)) { a.carriers.splice(a.carriers.indexOf(id), 1); a.score[ti]! += 1; a.stats[id]!.o++; this.fx.push({ t: 'notice', msg: `${e.name} scored for Team ${ti === 0 ? 'Blue' : 'Red'}! (${a.score[0]}–${a.score[1]})` }); }
+      }));
+    }
+    this.checkArena();
+  }
+  /** Carrier death drops the crystal where they fell. */
+  private arenaOnDeath(t: Entity, killer: Entity) {
+    const a = this.arena; if (!a) return; const kid = killer.ownerId ?? killer.id; if (a.stats[kid] && kid !== t.id) a.stats[kid]!.k++;
+    const ci = a.carriers.indexOf(t.id); if (ci >= 0) { a.carriers.splice(ci, 1); a.crystals.push({ id: Math.floor(this.now()), x: t.x, y: t.y }); }
   }
   checkArena() {
     const a = this.arena; if (!a || a.done) return;
     const alive = (t: string[]) => t.filter((id) => { const e = this.entities.get(id); return e && !e.dead; }).length;
     const timeUp = this.now() >= a.endsAt; const aa = alive(a.teams[0]), bb = alive(a.teams[1]);
-    if (aa === 0 || bb === 0 || timeUp) {
-      a.done = true; const hpOf = (t: string[]) => t.reduce((s, id) => s + (this.entities.get(id)?.hp ?? 0), 0);
-      a.winner = aa === 0 ? 1 : bb === 0 ? 0 : hpOf(a.teams[0]) >= hpOf(a.teams[1]) ? 0 : 1;
-      this.fx.push({ t: 'notice', msg: `Arena finished — Team ${a.winner === 0 ? 'Blue' : 'Red'} wins!` });
-    }
+    let winner: number | undefined;
+    if (a.mode === 'deathmatch') { if (aa === 0 || bb === 0 || timeUp) { const hpOf = (t: string[]) => t.reduce((s2, id) => s2 + (this.entities.get(id)?.hp ?? 0), 0); winner = aa === 0 ? 1 : bb === 0 ? 0 : hpOf(a.teams[0]) >= hpOf(a.teams[1]) ? 0 : 1; } }
+    else if (a.score[0] >= a.target || a.score[1] >= a.target || timeUp) winner = a.score[0] >= a.score[1] ? 0 : 1;
+    if (winner === undefined) return;
+    a.done = true; a.winner = winner;
+    // MVP: kills, damage, healing and objectives all count (supports are eligible)
+    const score = (id: string) => { const s2 = a.stats[id] ?? { k: 0, d: 0, h: 0, o: 0 }; return s2.k * 100 + s2.d * 0.1 + s2.h * 0.15 + s2.o * 150; };
+    a.mvp = [...a.teams[0], ...a.teams[1]].sort((x, y) => score(y) - score(x))[0];
+    const mvpName = a.mvp ? this.entities.get(a.mvp)?.name ?? '' : '';
+    this.fx.push({ t: 'notice', msg: `Arena finished — Team ${winner === 0 ? 'Blue' : 'Red'} wins!${mvpName ? ` MVP: ${mvpName}` : ''}` });
   }
 
   // ---------------- tick ----------------
@@ -428,7 +474,7 @@ export class World {
     if (this.dungeon && this.dungeon.state === 'encounter' && this.dungeon.bossEntity && !this.entities.get(this.dungeon.bossEntity)) this.advanceDungeon(true);
     if (this.dungeon && this.dungeon.state === 'active' && now > this.dungeon.endsAt) { this.dungeon.state = 'failed'; this.fx.push({ t: 'notice', msg: 'Dungeon failed: time expired.' }); }
     if (this.map.def.biome === 'crater' && (!this.boss || this.boss.settled) && this.nextBossAt && now >= this.nextBossAt) this.spawnWorldBoss();
-    if (this.arena && !this.arena.done) this.checkArena();
+    if (this.arena && !this.arena.done) this.arenaTick(dtMs, now);
     if (this.fx.length > 400) this.fx.splice(0, this.fx.length - 400);
   }
   private respawnMonster(e: Entity) { const d = MONSTERS[e.defId!]!; const [x, y] = e.fixed ? [e.ai!.homeX, e.ai!.homeY] : this.randomFreePoint(); Object.assign(e, { dead: false, hp: d.maxHp, maxHp: d.maxHp, x, y, effects: [], targetId: null, contrib: {} }); e.ai = { state: 'idle', homeX: x, homeY: y, nextAct: this.now() + 1000, threat: {}, skillCd: {}, phase: 0 }; }
@@ -519,6 +565,14 @@ export class World {
     const leader = e.partyId ? (this.parties.get(e.partyId) ?? []).map((id) => this.entities.get(id)).find((x) => x?.kind === 'player') : undefined;
     if (leader && !t && leader.targetId) { const lt = this.entities.get(leader.targetId); if (lt && this.hostile(e, lt)) t = lt; }
     if (leader && !t) { const d = dist(e, leader); if (d > 90) this.step(e, (leader.x - e.x) / d, (leader.y - e.y) / d, dt); else e.moving = false; if (d > 700) { e.x = leader.x + 30; e.y = leader.y; } return; }
+    if (this.arena && this.arena.mode !== 'deathmatch' && !this.arena.done) { // objective play for simulated players
+      const ar = this.arena; const team = this.teamOf(e); const near = this.nearestHostile(e, 170);
+      if (!near) { let goal: { x: number; y: number } | undefined;
+        if (ar.mode === 'siege') goal = ar.points.filter((pt) => pt.owner !== team).sort((p1, p2) => Math.hypot(p1.x - e.x, p1.y - e.y) - Math.hypot(p2.x - e.x, p2.y - e.y))[0] ?? ar.points[1];
+        else if (ar.carriers.includes(e.id)) { const [bx, by] = this.arenaBase(team); goal = { x: bx, y: by }; } else goal = ar.crystals.sort((c1, c2) => Math.hypot(c1.x - e.x, c1.y - e.y) - Math.hypot(c2.x - e.x, c2.y - e.y))[0];
+        if (goal) { const d = Math.hypot(goal.x - e.x, goal.y - e.y); if (d > 20) { this.step(e, (goal.x - e.x) / d, (goal.y - e.y) / d, dt); return; } }
+      } else t = near;
+    }
     if (!t && (prof.aggressive || this.arena)) t = this.nearestHostile(e, this.arena ? 2000 : 220); if (t) e.targetId = t.id;
     if (t) {
       const ranged = ['bow', 'staff', 'tome', 'gun', 'lute', 'cards'].includes(this.weaponOf(e)); const range = ranged ? 240 : 55; const dd = dist(e, t);

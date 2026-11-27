@@ -222,3 +222,29 @@ describe('items & pets additions (v0.5)', () => {
     svc.addItem('stone_dust', 20); const [st0] = svc.addItem('skill_stone'); svc.inscribeStone(st0!.uid, p.hotbar[0]!); const before = JSON.stringify(st0!.stone!.mods); let changed = false; for (let i = 0; i < 3; i++) { svc.reinscribeStone(st0!.uid); if (JSON.stringify(st0!.stone!.mods) !== before) changed = true; } expect(changed).toBe(true); expect(st0!.stone!.skillId).toBe(p.hotbar[0]);
   });
 });
+
+import { currentSeason, pvpTier, seasonEndsAt } from '../src/index.js';
+void seasonEndsAt;
+describe('PvP modes & seasons (v0.6)', () => {
+  const arena = (mode: 'siege' | 'rush' | 'deathmatch') => { let now = 1_800_000_000_000; const a = mk('blade_sentinel'); const w = new World({ mapId: 'arena', rng: new Rng(3), now: () => now }); const me = w.addPlayer(a.svc); const foe = w.spawnBot('vanguard'); w.startArena([me.id], [foe.id], 120_000, mode); return { w, me, foe, svc: a.svc, tick: (ms: number) => { now += ms; w.tick(ms); } }; };
+  it('siege: standing alone on a lantern captures it and scores over time', () => {
+    const { w, me, foe, tick } = arena('siege'); foe.dead = true; foe.deadAt = 1e15; const pt = w.arena!.points[1]!; me.x = pt.x; me.y = pt.y;
+    for (let i = 0; i < 80; i++) { me.x = pt.x; me.y = pt.y; tick(100); } expect(pt.owner).toBe(0); expect(w.arena!.score[0]).toBeGreaterThan(3); expect(w.arena!.stats[me.id]!.o).toBeGreaterThanOrEqual(1);
+  });
+  it('rush: pick up a crystal, score at base; carrier death drops it', () => {
+    const { w, me, foe, tick } = arena('rush'); foe.dead = true; foe.deadAt = 1e15; tick(3500); const cr = w.arena!.crystals[0]!; expect(cr).toBeTruthy();
+    me.x = cr.x; me.y = cr.y; tick(50); expect(w.arena!.carriers).toContain(me.id); const [bx, by] = w.arenaBase(0); me.x = bx; me.y = by; tick(50); expect(w.arena!.score[0]).toBe(1);
+    tick(4500); const c2 = w.arena!.crystals[0]!; me.x = c2.x; me.y = c2.y; tick(50); expect(w.arena!.carriers).toContain(me.id); const n = w.arena!.crystals.length; w.kill(me, foe); expect(w.arena!.carriers).not.toContain(me.id); expect(w.arena!.crystals.length).toBe(n + 1);
+  });
+  it('deathmatch ends with a winner and an MVP; MVP reward grants tokens + title', () => {
+    const { w, me, foe, svc } = arena('deathmatch'); w.dealDamage(me, foe, 50, false, false, 'neutral'); w.kill(foe, me); w.checkArena(); expect(w.arena!.done).toBe(true); expect(w.arena!.winner).toBe(0); expect(w.arena!.mvp).toBe(me.id);
+    const t0 = svc.bal('arena_token'); svc.awardMvp(); expect(svc.bal('arena_token')).toBe(t0 + 10n); expect(svc.p.titles).toContain('title_mvp');
+  });
+  it('season rollover rewards once and soft-resets rating; TCG rank drops one tier', () => {
+    const { svc, p } = mk(); p.pvp.rating = 1600; expect(svc.checkSeasons()).toEqual({}); // a fresh character has nothing to roll over
+    p.pvp.season = currentSeason(svc.now()) - 1; p.createdAt = svc.now() - 60 * 86400_000; /* played through last season */ p.tcg.rank = 3; p.tcg.season = p.pvp.season; const t0 = svc.bal('arena_token');
+    const r = svc.checkSeasons(); expect(r.pvp).toBe('Diamond'); expect(svc.bal('arena_token')).toBe(t0 + 150n); expect(p.pvp.rating).toBe(1300); expect(p.titles).toContain('title_gladiator'); expect(p.tcg.rank).toBe(2);
+    expect(svc.checkSeasons()).toEqual({}); expect(svc.bal('arena_token')).toBe(t0 + 150n); expect(pvpTier(1000).name).toBe('Bronze');
+    const n = mk(); n.p.pvp.season = currentSeason(n.svc.now()) - 1; const n0 = n.svc.bal('arena_token'); n.svc.checkSeasons(); expect(n.svc.bal('arena_token')).toBe(n0); // created after that season ended: no reward
+  });
+});

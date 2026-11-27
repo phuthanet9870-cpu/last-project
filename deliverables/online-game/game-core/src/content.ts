@@ -279,6 +279,8 @@ export const TITLES: Record<string, { name: L10n; mods: Omit<Modifier, 'source'>
   title_duelist: { name: { en: 'Duelist', th: 'นักดวล' }, mods: [{ stat: 'pvpBonus', kind: 'flat', value: 3 }] },
   title_cards: { name: { en: 'Card Sharp', th: 'เซียนไพ่' }, mods: [{ stat: 'luk', kind: 'flat', value: 3 }] },
   title_helper: { name: { en: 'Helpful Soul', th: 'ผู้มีน้ำใจ' }, mods: [{ stat: 'expBonus', kind: 'flat', value: 3 }] },
+  title_mvp: { name: { en: 'Arena MVP', th: 'ผู้เล่นยอดเยี่ยม' }, mods: [{ stat: 'pvpBonus', kind: 'flat', value: 2 }] },
+  title_gladiator: { name: { en: 'Diamond Gladiator', th: 'นักสู้เพชร' }, mods: [{ stat: 'pvpReduce', kind: 'flat', value: 3 }] },
   title_hearthbound: { name: { en: 'Hearthbound', th: 'ผูกพันเตาผิง' }, mods: [{ stat: 'maxHp', kind: 'pct', value: 2 }] },
 };
 

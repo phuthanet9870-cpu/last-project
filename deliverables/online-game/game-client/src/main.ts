@@ -191,7 +191,7 @@ function startGame(a: Adapter) {
     if (target) { target = byId.get(target.id) ?? null; if (!target) r.selected = null; }
     (globalThis as any).__timeLabel = r.timeLabel(); (globalThis as any).__weather = r.weather(); (globalThis as any).__cds = a instanceof LocalAdapter ? a.world.entities.get(a.myId)?.cds : undefined;
     r.draw(a, dt);
-    hudAcc += dt; if (hudAcc > 100) { hudAcc = 0; updateHud(hud, a, target, fps); r.drawMinimap(hud.mini, a); }
+    hudAcc += dt; if (hudAcc > 100) { hudAcc = 0; updateHud(hud, a, target, fps); { const ar: any = a.arenaInfo(); hud.banner.textContent = ar && !ar.done ? `${ar.mode === 'siege' ? 'Lantern Siege' : ar.mode === 'rush' ? 'Ember Rush' : 'Last Light'} · Blue ${Math.floor(ar.score?.[0] ?? 0)} : ${Math.floor(ar.score?.[1] ?? 0)} Red · ${Math.max(0, Math.ceil((ar.endsAt - Date.now()) / 1000))}s` : ''; hud.banner.style.display = hud.banner.textContent ? 'block' : 'none'; } r.drawMinimap(hud.mini, a); }
     uiAcc += dt; if (uiAcc > 1000) { uiAcc = 0; for (const id of ['boss', 'arena', 'dungeon', 'market', 'pets']) if (isOpen(id)) refreshAll(); }
     fpsAcc += dt; fpsN++; if (fpsAcc > 1000) { fps = Math.round((fpsN * 1000) / fpsAcc); fpsAcc = 0; fpsN = 0; }
     requestAnimationFrame(loop);

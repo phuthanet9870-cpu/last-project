@@ -23,7 +23,7 @@ export function elementMultiplier(att: Element, def: Element): number {
 }
 
 export const CONFIG = {
-  version: '0.5.0-seed',
+  version: '0.6.0-seed',
   levelCap: 120,
   ascensionTiers: 3,
   ascensionLevelReq: [60, 90, 120],
@@ -61,6 +61,7 @@ export const CONFIG = {
   dayLengthMs: 8 * 60_000,
   respawnMs: 5000,
   eloK: 32,
+  seasonDays: 28, seasonEpoch: Date.UTC(2026, 0, 1),
   tcgDeckSize: 20, tcgMaxCopies: 2, tcgStartHand: 4, tcgMaxMana: 10, tcgHeroHp: 25,
   worldBossTimes: ['12:30', '18:30', '21:00', '23:30'],
   pvpTimes: ['13:00', '20:00', '22:00'],

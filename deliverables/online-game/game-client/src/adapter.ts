@@ -61,9 +61,9 @@ export class LocalAdapter implements Adapter {
     if (pid && carried.length) { me.partyId = pid; carried.forEach((b, i) => { b.x = pos.x + 30 * (i + 1); b.y = pos.y + 10; b.path = undefined; b.targetId = null; b.dead = false; b.hp = b.maxHp; b.partyId = pid; this.world.entities.set(b.id, b); }); this.world.parties.set(pid, [me.id, ...carried.map((b) => b.id)]); }
     if (opts.dungeon) this.world.startDungeon(opts.dungeon, `run_${Date.now()}`, [me.id]);
     if (opts.arena) {
-      const n = opts.arena === '3v3' ? 3 : opts.arena === '2v2' ? 2 : 1; const lvl = this.svc.p.level; const mk = () => { const b = this.world.spawnBot(); b.level = lvl; b.maxHp = b.hp = Math.floor(me.maxHp * (0.8 + Math.random() * 0.3)); b.botProfile!.aggressive = true; return b.id; };
+      const [size, type] = opts.arena.split(':'); const n = Number(size?.[0]) || 1; const lvl = this.svc.p.level; const mk = () => { const b = this.world.spawnBot(); b.level = lvl; b.maxHp = b.hp = Math.floor(me.maxHp * (0.8 + Math.random() * 0.3)); b.botProfile!.aggressive = true; return b.id; };
       const allies = Array.from({ length: n - 1 }, mk); const foes = Array.from({ length: n }, mk);
-      this.world.startArena([me.id, ...allies], foes); this.session.arena = { mode: opts.arena, settled: false, prevMap: '', prevX: 0, prevY: 0 };
+      this.world.startArena([me.id, ...allies], foes, 120_000, (type as any) ?? 'deathmatch'); this.session.arena = { mode: opts.arena, settled: false, prevMap: '', prevX: 0, prevY: 0 };
     }
     this.onMapChange?.(mapId);
   }

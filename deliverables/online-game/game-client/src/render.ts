@@ -82,6 +82,13 @@ export class Renderer {
     for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const t = this.map.tiles[j * this.map.w + i]!; if (isWater(t)) ctx.drawImage(tileCanvas(t, i, j, fr), i * 16, j * 16); }
     // portals
     MAPS[this.map.def.id]!.portals.forEach((pt) => { const px = pt.x * 16 + 8, py = pt.y * 16 + 8; const r = 7 + Math.sin(performance.now() / 300) * 1.5; ctx.fillStyle = 'rgba(120,200,255,0.25)'; ctx.beginPath(); ctx.ellipse(px, py, r + 4, (r + 4) * 0.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#a0e0ff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(px, py, r, r * 0.6, performance.now() / 500, 0, Math.PI * 1.6); ctx.stroke(); this.label(ctx, pt.label.en, px, py - 12, '#c0f0ff', 5); });
+    // arena objectives: team bases, lanterns (siege) and ember crystals (rush)
+    const ar = this.map.def.biome === 'arena' ? a.arenaInfo() : null;
+    if (ar && ar.mode && ar.mode !== 'deathmatch') {
+      const W2 = this.map.w * 16, H2 = this.map.h * 16; ctx.fillStyle = 'rgba(80,140,255,0.12)'; ctx.fillRect(0, 0, W2 * 0.16, H2); ctx.fillStyle = 'rgba(255,80,80,0.12)'; ctx.fillRect(W2 * 0.84, 0, W2 * 0.16, H2);
+      for (const pt of ar.points ?? []) { const x = pt.x / 2, y = pt.y / 2; const col = pt.owner === 0 ? '#60a0ff' : pt.owner === 1 ? '#ff6060' : '#d0c080'; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y, 35, 24, 0, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = col + '30'; ctx.fill(); ctx.drawImage(objectSprite('lamp', 0, 1, 1, true), x - 8, y - 28); const pr = Math.abs(pt.progress) / 100; ctx.strokeStyle = pt.progress >= 0 ? '#60a0ff' : '#ff6060'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 34, 6, -Math.PI / 2, -Math.PI / 2 + pr * Math.PI * 2); ctx.stroke(); }
+      for (const cr of ar.crystals ?? []) { const b2 = Math.sin(performance.now() / 200 + cr.id) * 1.5; ctx.drawImage(itemIcon('crystal', '#ff9040'), cr.x / 2 - 6, cr.y / 2 - 10 + b2); }
+    }
     // telegraphs
     const nowP = performance.now(); this.telegraphs = this.telegraphs.filter((t) => t.until > nowP);
     for (const t of this.telegraphs) { const k = (nowP - t.start) / (t.until - t.start); ctx.fillStyle = 'rgba(255,40,40,0.18)'; ctx.beginPath(); ctx.ellipse(t.x / 2, t.y / 2, t.r / 2, t.r / 2 * 0.7, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(255,60,60,0.35)'; ctx.beginPath(); ctx.ellipse(t.x / 2, t.y / 2, (t.r / 2) * k, (t.r / 2) * 0.7 * k, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#ff5050'; ctx.beginPath(); ctx.ellipse(t.x / 2, t.y / 2, t.r / 2, t.r / 2 * 0.7, 0, 0, Math.PI * 2); ctx.stroke(); }
@@ -126,6 +133,7 @@ export class Renderer {
       const fr = Math.floor(performance.now() / 140) % 4;
       let oy = 0;
       if (e.r && e.mt && !e.dead) { const md = MOUNTS[e.mt]; if (md) { const ms = mountSprite(md.sprite, md.color, fr); ctx.save(); if (d4 === 1) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); } ctx.drawImage(ms, x - 12, y - 8 + (e.m && fr % 2 ? -1 : 0)); ctx.restore(); oy = -8; } }
+      if (!e.dead && (a.arenaInfo() as any)?.carriers?.includes(e.id)) ctx.drawImage(itemIcon('crystal', '#ff9040'), Math.round(x - 6), Math.round(y - 40 + oy)); // carrying an Ember Crystal
       if (e.cosm && !e.dead) { const t0 = performance.now() / 400; const n = 3 + e.cosm * 2; for (let i = 0; i < n; i++) { const ang = t0 + (i / n) * Math.PI * 2; ctx.fillStyle = `hsla(${(i * 47 + t0 * 40) % 360},90%,75%,0.85)`; ctx.fillRect(Math.round(x + Math.cos(ang) * 11), Math.round(y - 8 + oy + Math.sin(ang) * 6), 1.5, 1.5); } } // cosmetic enhancement aura (visual only)
       const spr = characterSprite(look, d4, fr, action as any); ctx.drawImage(spr, Math.round(x - 10), Math.round(y - 20 + oy));
       if (hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(spr, Math.round(x - 10), Math.round(y - 20 + oy)); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
