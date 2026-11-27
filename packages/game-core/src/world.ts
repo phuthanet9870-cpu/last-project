@@ -26,7 +26,7 @@ export interface Entity {
   input?: { dx: number; dy: number }; path?: [number, number][]; speedMult?: number;
   cds: Record<string, number>; gcdUntil: number; castUntil: number; attackAt: number; gauge: number;
   loot?: { itemId: string; qty: number; owner: string; until: number }[]; expiresAt?: number; riding?: boolean; mount?: string | null;
-  pvp?: boolean; team?: number; botProfile?: { classId: string; chatAt: number; wanderAt: number; aggressive: boolean }; summonAtk?: number; partyId?: string | null; contrib?: Record<string, number>;
+  pvp?: boolean; team?: number; botProfile?: { classId: string; chatAt: number; wanderAt: number; aggressive: boolean }; summonAtk?: number; atkMult?: number; partyId?: string | null; contrib?: Record<string, number>;
   hidden?: boolean; fixed?: boolean; cosm?: number;
   proj?: { src: string; targetId: string | null; tx: number; ty: number; speed: number; homing: boolean; hitR: number; onHit: (v: Entity) => void };
 }
@@ -51,7 +51,7 @@ export interface ArenaState {
   points: { x: number; y: number; owner: -1 | 0 | 1; progress: number }[]; crystals: { id: number; x: number; y: number }[]; carriers: string[];
   stats: Record<string, { k: number; d: number; h: number; o: number }>; mvp?: string; nextCrystal: number;
 }
-export interface DungeonRun { runId: string; bossEntity?: string; dungeonId: string; state: 'created' | 'waiting' | 'active' | 'encounter' | 'completed' | 'failed' | 'settled' | 'closed'; wave: number; startedAt: number; endsAt: number; participants: string[] }
+export interface DungeonRun { encounterAt?: number; enraged?: boolean; raidSize?: number; runId: string; bossEntity?: string; dungeonId: string; state: 'created' | 'waiting' | 'active' | 'encounter' | 'completed' | 'failed' | 'settled' | 'closed'; wave: number; startedAt: number; endsAt: number; participants: string[] }
 export interface BossSession { id: string; bossId: string; entityId: string; startedAt: number; contributions: Record<string, { dmg: number; heal: number; tank: number }>; settled: boolean }
 
 const ELEMENT_COLOR: Record<Element, string> = { neutral: '#ffffff', fire: '#ff7a30', water: '#4aa8ff', earth: '#c0a060', wind: '#a0ffb0', ice: '#a0f0ff', light: '#fff0a0', dark: '#b070ff', spirit: '#70ffe0' };
@@ -66,7 +66,7 @@ const BOT_LINES = ['Anyone up for Mossy Hollow?', 'LF party for slimes~', 'Selli
 export class World {
   map: GenMap; mapId: string; instanceId: string; entities = new Map<string, Entity>(); services = new Map<string, PlayerService>();
   fx: Fx[] = []; rng: Rng; now: () => number; nodesDepleted = new Map<string, number>(); dungeon: DungeonRun | null = null; boss: BossSession | null = null;
-  nextBossAt = 0; parties = new Map<string, string[]>(); eventMult: { exp: number; drop: number; gold?: number }; wedding: WeddingState | null = null; arena: ArenaState | null = null;
+  nextBossAt = 0; parties = new Map<string, string[]>(); raidParties = new Set<string>(); eventMult: { exp: number; drop: number; gold?: number }; wedding: WeddingState | null = null; arena: ArenaState | null = null;
   private lastTick = 0; private opts: WorldOptions;
 
   constructor(opts: WorldOptions) {
@@ -148,7 +148,7 @@ export class World {
     const d = zeroDerived(); const mods = statusModifiers(e.effects);
     const apply = (k: keyof typeof d, base: number) => { let v = base; for (const m of mods) if (m.stat === k) v = m.kind === 'flat' ? v + m.value : m.kind === 'pct' ? v * (1 + m.value / 100) : v * m.value; d[k] = v; };
     if (e.kind === 'monster') {
-      const m = MONSTERS[e.defId!]!; const enr = m.phases?.slice(0, e.ai!.phase).reduce((s, p) => s * p.enrage, 1) ?? 1;
+      const m = MONSTERS[e.defId!]!; const enr = (m.phases?.slice(0, e.ai!.phase).reduce((s, p) => s * p.enrage, 1) ?? 1) * (e.atkMult ?? 1);
       apply('atk', m.atk * enr); apply('matk', m.atk * enr); apply('def', m.def); apply('mdef', m.mdef); apply('acc', 100 + m.level * 3); apply('eva', m.level * 1.5); apply('crit', 3); apply('maxHp', m.maxHp); apply('moveSpeed', m.moveSpeed);
       return { ...d, level: m.level, element: m.element, armorElement: m.element };
     }
@@ -378,7 +378,7 @@ export class World {
   // ---------------- dungeon (§28) ----------------
   startDungeon(dungeonId: string, runId: string, participants: string[]) {
     const d = DUNGEONS[dungeonId]!;
-    this.dungeon = { runId, dungeonId, state: 'active', wave: 0, startedAt: this.now(), endsAt: this.now() + 10 * 60_000, participants };
+    this.dungeon = { runId, dungeonId, state: 'active', wave: 0, startedAt: this.now(), endsAt: this.now() + (d.type === 'raid' ? 20 : 10) * 60_000, participants };
     for (const e of [...this.entities.values()]) if (e.kind === 'monster') this.entities.delete(e.id);
     this.spawnWave(d.waves[0]!); this.fx.push({ t: 'notice', msg: `${d.name.en}: Wave 1/${d.waves.length}` });
   }
@@ -388,7 +388,9 @@ export class World {
     if (bossDead || run.state === 'encounter') { if (bossDead) { run.state = 'completed'; this.fx.push({ t: 'notice', msg: 'Dungeon cleared! Rewards granted.' }); for (const pid of run.participants) { const svc = this.services.get(pid); svc?.completeDungeon(run.dungeonId, run.runId); } run.state = 'settled'; } return; }
     run.wave++;
     if (run.wave < d.waves.length) { this.spawnWave(d.waves[run.wave]!); this.fx.push({ t: 'notice', msg: `Wave ${run.wave + 1}/${d.waves.length}` }); }
-    else { run.state = 'encounter'; const [x, y] = [this.map.def.w * TILE / 2, this.map.def.h * TILE / 3]; const b = this.spawnMonster(d.boss, x, y); run.bossEntity = b.id; const bd = MONSTERS[d.boss]!; if (d.levelReq > bd.level) { b.maxHp = b.hp = Math.floor(bd.maxHp * (1 + (d.levelReq - bd.level) * 0.15) * (bd.rank === 'boss' ? 1 : 3)); } if (bd.rank !== 'boss') { b.name = `${bd.name.en} (Champion)`; } b.ai!.state = 'chase'; this.fx.push({ t: 'notice', msg: `Boss: ${b.name}!` }); }
+    else { run.state = 'encounter'; const [x, y] = [this.map.def.w * TILE / 2, this.map.def.h * TILE / 3]; const b = this.spawnMonster(d.boss, x, y); run.bossEntity = b.id; const bd = MONSTERS[d.boss]!; run.encounterAt = this.now();
+      if (d.raid) { const size = Math.min(d.raid.maxPlayers, [...this.entities.values()].filter((e) => (e.kind === 'player' || (e.kind === 'bot' && e.partyId)) && !e.dead).length); run.raidSize = size; b.maxHp = b.hp = Math.floor(bd.maxHp * (1 + d.raid.hpPerExtra * Math.max(0, size - 1))); this.fx.push({ t: 'notice', msg: `Raid boss scaled for ${size} combatant(s). Hard enrage in ${Math.round(d.raid.enrageMs / 60000)} min!` }); }
+      if (d.levelReq > bd.level) { b.maxHp = b.hp = Math.floor(bd.maxHp * (1 + (d.levelReq - bd.level) * 0.15) * (bd.rank === 'boss' ? 1 : 3)); } if (bd.rank !== 'boss') { b.name = `${bd.name.en} (Champion)`; } b.ai!.state = 'chase'; this.fx.push({ t: 'notice', msg: `Boss: ${b.name}!` }); }
   }
   // ---------------- world boss (§29) ----------------
   spawnWorldBoss(bossId?: string) {
@@ -497,6 +499,12 @@ export class World {
     if (this.dungeon && (this.dungeon.state === 'active') && ![...this.entities.values()].some((e) => e.kind === 'monster' && !e.dead)) this.advanceDungeon();
     if (this.dungeon && this.dungeon.state === 'encounter' && this.dungeon.bossEntity && !this.entities.get(this.dungeon.bossEntity)) this.advanceDungeon(true);
     if (this.dungeon && this.dungeon.state === 'active' && now > this.dungeon.endsAt) { this.dungeon.state = 'failed'; this.fx.push({ t: 'notice', msg: 'Dungeon failed: time expired.' }); }
+    const run = this.dungeon; const rd = run ? DUNGEONS[run.dungeonId]?.raid : undefined;
+    if (run && rd && (run.state === 'active' || run.state === 'encounter')) { // raid rules: wipe when every player is down; hard enrage after the timer
+      const players = run.participants.map((id) => this.entities.get(id)).filter((e): e is Entity => !!e && e.kind === 'player');
+      if (players.length && players.every((e) => e.dead)) { run.state = 'failed'; this.fx.push({ t: 'notice', msg: 'Raid wiped — the First Flame endures. Regroup and try again.' }); }
+      else if (run.state === 'encounter' && run.encounterAt && !run.enraged && now - run.encounterAt > rd.enrageMs) { run.enraged = true; const b = run.bossEntity ? this.entities.get(run.bossEntity) : undefined; if (b) b.atkMult = 3; this.fx.push({ t: 'notice', msg: 'HARD ENRAGE! The boss now deals triple damage.' }); }
+    }
     if (this.map.def.biome === 'crater' && (!this.boss || this.boss.settled) && this.nextBossAt && now >= this.nextBossAt) this.spawnWorldBoss();
     if (this.arena && !this.arena.done) this.arenaTick(dtMs, now);
     if (this.fx.length > 400) this.fx.splice(0, this.fx.length - 400);

@@ -189,6 +189,18 @@ await step('worker: weekly champion = most PvP rating gained in the last 7 days 
   assert(Number(row.value) === max && max > 0, `champion gain ${row.value} vs max ${max}`); const top = (await db.query('SELECT max(pvp_rating) AS r FROM characters')).rows[0].r;
   return `champion gained +${row.value} this week (highest all-time rating on the server: ${top})`;
 });
+await step('raid: raid group of real players enters the Sanctum together (8-cap group, Lv110 gate, shared instance)', async () => {
+  // two fresh Lv115 raiders (levelled with admin dev commands on a non-production server: DEV_COMMANDS=1)
+  const mk2 = async (n: string) => { const r = await api('/api/auth/register', { username: `${n}_${tag}`, password: 'correct-horse-9' }); await db.query(`UPDATE accounts SET role='admin' WHERE id=$1`, [r.j.accountId]); const tok = (await api('/api/auth/login', { username: `${n}_${tag}`, password: 'correct-horse-9' })).j.accessToken; const ch = await api('/api/characters', { name: `${n.slice(0, 2)}${tag}`, classId: n === 'cara' ? 'blade_sentinel' : 'dawn_priest' }, tok); const c = new Client(); await c.connect(tok, ch.j.character.id); return c; };
+  const C1 = await mk2('cara'), D1 = await mk2('dane'); await sleep(400);
+  const low = await C1.cmd('enterDungeon', { id: 'flame_sanctum' }); assert(!low.ok && low.err === 'LEVEL_TOO_LOW', JSON.stringify(low));
+  for (const c of [C1, D1]) { const r = await c.cmd('dev', { op: 'level', n: 115 }); assert(r.ok, `dev level ${JSON.stringify(r)} (server needs DEV_COMMANDS=1)`); } await sleep(300);
+  assert((await C1.cmd('partyInvite', { target: D1.myId })).ok, 'invite'); assert((await D1.cmd('partyAccept')).ok, 'accept'); const rg = await C1.cmd('partyRaid'); assert(rg.ok && rg.data.max === 8, JSON.stringify(rg)); assert(!(await D1.cmd('partyRaid')).ok, 'only leader converts');
+  const e = await C1.cmd('enterDungeon', { id: 'flame_sanctum' }); assert(e.ok, JSON.stringify(e)); await sleep(700);
+  assert(C1.mapId === 'flame_sanctum' && D1.mapId === 'flame_sanctum', `maps ${C1.mapId}/${D1.mapId}`); const sameInst = C1.ents.some((x) => x.id === D1.myId); assert(sameInst, 'same raid instance');
+  const mons = C1.ents.filter((x) => x.k === 'monster').length; assert(mons >= 5, `raid wave spawned (${mons})`);
+  await C1.cmd('leaveInstance'); await D1.cmd('leaveInstance'); C1.ws.close(); D1.ws.close(); return `2 real raiders in one Sanctum instance; wave of ${mons} monsters; Lv gate + leader-only conversion enforced`;
+});
 const passed = results.filter((r) => r.ok).length; mkdirSync('tests/multiplayer', { recursive: true });
 writeFileSync('tests/multiplayer/last-run.json', JSON.stringify({ when: new Date().toISOString(), server: BASE, durationMs: Date.now() - t0, passed, total: results.length, results }, null, 2));
 console.log(`\n${passed}/${results.length} multiplayer steps passed`); B.ws.close(); ((A as any).__c?.ws ?? A.ws).close(); await db.end(); process.exit(passed === results.length ? 0 : 1);

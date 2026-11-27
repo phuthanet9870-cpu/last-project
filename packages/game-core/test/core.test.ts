@@ -135,7 +135,7 @@ describe('world simulation', () => {
     w.kill(m, e); expect(p.counters.kills).toBe(1); void err;
   });
   it('server-side movement respects collision (cannot walk through border cliffs)', () => { const { svc } = mk(); const w = new World({ mapId: 'emberglen', rng: new Rng(1) }); const e = w.addPlayer(svc); w.setInput(e.id, -1, 0); for (let i = 0; i < 400; i++) w.tick(50); expect(e.x).toBeGreaterThan(TILE); });
-  it('dungeon run grants completion reward exactly once', () => { const { svc, p } = mk(); svc.gainExp(1e5, 't'); expect(svc.startDungeon('mossy_hollow').ok).toBe(true); const r1 = svc.completeDungeon('mossy_hollow', 'run1'); const r2 = svc.completeDungeon('mossy_hollow', 'run1'); expect(r1.ok).toBe(true); expect(r2.ok).toBe(false); expect(p.dungeon.firstClears).toContain('mossy_hollow'); expect(Object.keys(DUNGEONS).length).toBe(53); /* 2 story dungeons added in 0.10 */ });
+  it('dungeon run grants completion reward exactly once', () => { const { svc, p } = mk(); svc.gainExp(1e5, 't'); expect(svc.startDungeon('mossy_hollow').ok).toBe(true); const r1 = svc.completeDungeon('mossy_hollow', 'run1'); const r2 = svc.completeDungeon('mossy_hollow', 'run1'); expect(r1.ok).toBe(true); expect(r2.ok).toBe(false); expect(p.dungeon.firstClears).toContain('mossy_hollow'); expect(Object.keys(DUNGEONS).length).toBe(54); /* +2 story dungeons (0.10), +1 raid (0.11) */ });
 });
 
 describe('save/load', () => {
@@ -355,5 +355,30 @@ describe('content expansion (v0.10)', () => {
     for (const id of ['mq11', 'mq12', 'mq13', 'mq14', 'mq15', 'mq16', 'mq17', 'mq18']) expect(QUESTS[id]).toBeDefined(); expect(QUESTS.mq18!.prereq).toBe('mq17');
     for (const id of ['tidal_grotto', 'starfall_vault']) { expect(DUNGEONS[id]!.boss).toBeTruthy(); expect(MAPS[DUNGEONS[id]!.map]!.instanced).toBe(true); }
     const lava = getMap('emberpeak').tiles.some((t) => t === 15); expect(lava).toBe(true);
+  });
+});
+
+describe('endgame & raid (v0.11)', () => {
+  const lvl = (svc: PlayerService, n: number) => { for (let i = 0; i < 300 && svc.p.level < n; i++) { const b = svc.p.level; svc.gainExp(1e10, 't'); if (svc.p.level === b) { svc.addItem('boss_heart', 9); svc.ascend(); } } };
+  it('zones chain Emberpeak → Skyreach → Shattered Rift up to Lv120; Primordial tier exists; main story reaches mq24 (raid)', () => {
+    expect(MAPS.emberpeak!.portals.some((x) => x.to === 'skyreach')).toBe(true); expect(MAPS.skyreach!.portals.some((x) => x.to === 'shattered_rift')).toBe(true);
+    const lv = ['skyreach', 'shattered_rift'].flatMap((m) => MAPS[m]!.monsters.map((x) => MONSTERS[x.id]!.level)); expect(Math.max(...lv)).toBe(120); expect(ITEMS.origin_sword!.reqLevel).toBe(100);
+    expect(QUESTS.mq24!.objectives[0]).toEqual({ kind: 'dungeon', count: 1, id: 'flame_sanctum' }); expect(getMap('skyreach').tiles.some((t) => t === 20)).toBe(true);
+  });
+  it('raid: party converts to an 8-member raid group; boss HP scales with combatants; clear locks the raid for the week and grants the title', () => {
+    let now = 1_800_000_000_000; const p = createCharacter({ accountId: 'a', name: 'Raider', classId: 'blade_sentinel', appearance: { body: 0, hair: 0, hairColor: '#000', skin: '#fc9', eyes: '#000' }, now }); const svc = new PlayerService(p, new Rng(3), () => now); lvl(svc, 115);
+    const w = new World({ mapId: 'flame_sanctum', rng: new Rng(4), bots: 0, now: () => now }); const me = w.addPlayer(svc); const ctx = { world: w, svc, session: {}, market: new MarketService(p.wallet), mode: 'local' as const, dev: true, entityId: me.id } as any;
+    const bots = Array.from({ length: 7 }, () => w.spawnBot()); for (const b of bots.slice(0, 5)) expect(executeCommand(ctx, 'partyInvite', { target: b.id }).ok).toBe(true); expect(executeCommand(ctx, 'partyInvite', { target: bots[5]!.id }).err).toBe('PARTY_FULL');
+    expect(executeCommand(ctx, 'partyRaid').ok).toBe(true); expect(executeCommand(ctx, 'partyInvite', { target: bots[5]!.id }).ok).toBe(true); expect(executeCommand(ctx, 'partyInvite', { target: bots[6]!.id }).ok).toBe(true); expect(w.parties.get(me.partyId!)!.length).toBe(8);
+    expect(svc.startDungeon('flame_sanctum').ok).toBe(true); w.startDungeon('flame_sanctum', 'raid1', [me.id]); for (const e of [...w.entities.values()]) if (e.kind === 'monster') { e.hp = 0; e.dead = true; } w.advanceDungeon();
+    const boss = w.entities.get(w.dungeon!.bossEntity!)!; expect(w.dungeon!.raidSize).toBe(8); expect(boss.maxHp).toBe(Math.floor(MONSTERS.first_flame_tyrant!.maxHp * (1 + 0.6 * 7)));
+    now += 8 * 60_000 + 1; w.tick(50); expect(w.dungeon!.enraged).toBe(true); expect(boss.atkMult).toBe(3);
+    svc.completeDungeon('flame_sanctum', 'raid1'); expect(p.titles).toContain('title_flamebreaker'); expect(svc.canEnterDungeon('flame_sanctum').err).toBe('WEEKLY_LOCKOUT');
+    now += 7 * 86400_000; p.dungeon.runs = {}; expect(svc.canEnterDungeon('flame_sanctum').ok).toBe(true); // next week
+  });
+  it('raid wipes (fails) when every player is down; dungeon objective with an id only counts that dungeon', () => {
+    let now = 1_800_000_000_000; const { svc, p } = mk('blade_sentinel', now); const w = new World({ mapId: 'flame_sanctum', rng: new Rng(4), bots: 0, now: () => now }); const me = w.addPlayer(svc); w.startDungeon('flame_sanctum', 'r2', [me.id]);
+    me.dead = true; me.hp = 0; now += 50; w.tick(50); expect(w.dungeon!.state).toBe('failed');
+    p.quests.active.push({ id: 'mq24', progress: [0], acceptedAt: 0 } as any); svc.progressObjective('dungeon', 'tidal_grotto', 1); expect(p.quests.active.find((q) => q.id === 'mq24')!.progress[0]).toBe(0); svc.progressObjective('dungeon', 'flame_sanctum', 1); expect(p.quests.active.find((q) => q.id === 'mq24')!.progress[0]).toBe(1);
   });
 });

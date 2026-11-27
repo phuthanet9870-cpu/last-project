@@ -220,9 +220,10 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   partyInvite: (c, a) => {
     const me = c.world.entities.get(c.entityId)!; const t = c.world.entities.get(String(a.target)); if (!t || (t.kind !== 'bot' && t.kind !== 'player') || t.id === me.id) return fail('INVALID_TARGET');
     if (c.svc.p.blocked.includes(t.name)) return fail('BLOCKED');
-    const pid = me.partyId ?? uid('party'); const members = c.world.parties.get(pid) ?? [me.id]; if (members.length >= CONFIG.partyMax) return fail('PARTY_FULL'); if (t.partyId) return fail('ALREADY_IN_PARTY');
+    const pid = me.partyId ?? uid('party'); const members = c.world.parties.get(pid) ?? [me.id]; if (members.length >= (c.world.raidParties.has(pid) ? CONFIG.raidMax : CONFIG.partyMax)) return fail('PARTY_FULL'); if (t.partyId) return fail('ALREADY_IN_PARTY');
     me.partyId = pid; t.partyId = pid; members.push(t.id); c.world.parties.set(pid, members); return ok({ party: pid, members });
   },
+  partyRaid: (c) => { const me = c.world.entities.get(c.entityId)!; if (!me.partyId) return fail('NO_PARTY'); const m = c.world.parties.get(me.partyId) ?? []; if (m[0] !== me.id) return fail('LEADER_ONLY'); c.world.raidParties.add(me.partyId); return ok({ max: CONFIG.raidMax }); },
   partyLeave: (c) => { const me = c.world.entities.get(c.entityId)!; if (!me.partyId) return fail('NO_PARTY'); const m = c.world.parties.get(me.partyId) ?? []; for (const id of m) { const e = c.world.entities.get(id); if (e) e.partyId = null; } c.world.parties.delete(me.partyId); return ok(); },
   partyKick: (c, a) => { const me = c.world.entities.get(c.entityId)!; if (!me.partyId) return fail('NO_PARTY'); const m = c.world.parties.get(me.partyId)!; if (m[0] !== me.id) return fail('NOT_LEADER'); const i = m.indexOf(String(a.id)); if (i <= 0) return fail('INVALID'); m.splice(i, 1); const e = c.world.entities.get(String(a.id)); if (e) e.partyId = null; return ok(); },
   guildCreate: (c, a) => {

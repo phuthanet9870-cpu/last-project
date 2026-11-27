@@ -1,9 +1,9 @@
 {
- "generated": "2026-11-27T14:57:53.644Z",
+ "generated": "2026-11-27T15:10:40.281Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 366,
-  "PARTIAL": 70,
+  "COMPLETE": 367,
+  "PARTIAL": 69,
   "NOT_STARTED": 33,
   "BLOCKED": 8,
   "TESTING": 101,
@@ -4231,7 +4231,7 @@
    "name": "Map and world engine",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "15 data-driven maps (incl. Coral Coast Lv30+, Starfall Ruins Lv45+, Emberpeak Caldera Lv65+ with lava/ruin/coral tiles, Wedding Plaza), day/night, weather, portals; no fog of war/world map screen; no zones beyond Lv~90 (cap 120)",
+   "evidence": "18 data-driven maps with field zones covering Lv1–120 (Coral Coast, Starfall Ruins, Emberpeak, Skyreach Isles, Shattered Rift added in 0.10–0.11), day/night, weather, portals; no fog of war/world map screen",
    "mode": "artifact+online"
   },
   {
@@ -4247,7 +4247,7 @@
    "name": "NPC, dialogue, story and quests",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "25 NPCs, 37 quests (main chain mq01–mq18 to Lv75, 16 side quests); no branching dialogue/story scenes",
+   "evidence": "27 NPCs, 47 quests (main chain mq01–mq24 to the Lv115 raid finale, 20 side quests); no branching dialogue/story scenes",
    "mode": "artifact+online"
   },
   {
@@ -4326,8 +4326,8 @@
    "id": "S28",
    "name": "Dungeons and raids",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "3 story dungeons (Mossy Hollow, Tidal Grotto Lv35, Starfall Vault Lv55) + 50 daily floors, party instances online + bots in artifact; no raids (8+ players)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 36; multiplayer: tests/multiplayer/two-clients.test.ts \"raid\" — 3 story dungeons + 50 daily floors + 8-player raid (HP scaling, hard enrage, wipe, weekly lockout); online party/raid groups share the instance, artifact fills with simulated allies",
    "mode": "artifact+online"
   },
   {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0 — 2026-11-27 — Endgame Lv90–120 + raid
+- Two final zones: **Skyreach Isles** (Lv92–102; cloud islands over a void that blocks movement) and **Shattered Rift** (Lv106–120; rift floor, void, crystals). 10 new monsters (2 elites, 2 guard elites), 2 NPCs (Aeronaut Pell, Warden Nyx), 3 materials, new **Primordial** equipment tier (Lv100, generated like the other tiers).
+- **Raid: Sanctum of the First Flame** (Lv110, up to 8): leader converts a party into a raid group (`partyRaid`, cap 6 → 8); boss Ignarch (3 phases with summons) HP +60% per extra combatant; hard enrage ×3 damage after 8 min; wipe = fail; reward once per week (lockout until Monday 00:00 Asia/Bangkok) + «Flamebreaker» title. Online: raid group members on the same map share the instance. Artifact: 7 simulated allies (·sim).
+- Main story finale mq19–mq24 (Lv88→115, ends with the raid; dungeon objectives can now name a specific dungeon) + 4 side quests.
+- Tests: unit 68, E2E 36/36, multiplayer 25/25, online browser E2E 3/3.
+
 ## 0.10.0 — 2026-11-27 — Task 8: content expansion
 - Three new zones fill the Lv30–90 gap: **Coral Coast** (Lv32–44, east of Amber Hills; sea + coral tiles), **Starfall Ruins** (Lv47–62; ruin tiles, pillars), **Emberpeak Caldera** (Lv68–86; ash + animated lava, lava blocks movement). 13 new monsters incl. 2 guard elites, 3 NPCs (Captain Mara, Scholar Ilya, Volka the Forgewarden), 4 new materials.
 - Two new story dungeons with their own maps and bosses: **Tidal Grotto** (Lv35, Abyssal Kraken, 2 phases) and **Starfall Vault** (Lv55, Vault Archon, summons in 2 phases).

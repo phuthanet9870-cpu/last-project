@@ -531,6 +531,7 @@ export class PlayerService {
         if (o.kind === 'kill' && o.target !== 'any' && o.target !== key) return;
         if (o.kind === 'talk' && o.npc !== key) return;
         if (o.kind === 'visit' && o.map !== key) return;
+        if (o.kind === 'dungeon' && 'id' in o && o.id && o.id !== key) return;
         if (o.kind === 'gather' && o.node !== key) return;
         if (o.kind === 'collect') { qp.progress[i] = Math.min(o.count, this.countItem(o.item)); return; }
         if (o.kind === 'level') { qp.progress[i] = Math.min(o.level, this.p.level); return; }
@@ -682,11 +683,12 @@ export class PlayerService {
   }
 
   // ---- dungeons (§28) bookkeeping ----
-  canEnterDungeon(id: string): Result { this.resetDailyIfNeeded(); const d = DUNGEONS[id]; if (!d) return fail('INVALID'); if (this.p.level < d.levelReq) return fail('LEVEL_TOO_LOW', `Requires level ${d.levelReq}`); if ((this.p.dungeon.runs[id] ?? 0) >= d.dailyLimit) return fail('DAILY_LIMIT'); return ok(); }
+  canEnterDungeon(id: string): Result { this.resetDailyIfNeeded(); const d = DUNGEONS[id]; if (!d) return fail('INVALID'); if (this.p.level < d.levelReq) return fail('LEVEL_TOO_LOW', `Requires level ${d.levelReq}`); if ((this.p.dungeon.runs[id] ?? 0) >= d.dailyLimit) return fail('DAILY_LIMIT'); if (d.type === 'raid' && this.p.counters[`raid:${id}:${weekKey(this.now())}`]) return fail('WEEKLY_LOCKOUT', 'Raid already cleared this week (resets Monday 00:00 Asia/Bangkok)'); return ok(); }
   startDungeon(id: string): Result { const c = this.canEnterDungeon(id); if (!c.ok) return c; this.p.dungeon.runs[id] = (this.p.dungeon.runs[id] ?? 0) + 1; return ok(); }
   completeDungeon(id: string, runId: string): Result {
     const d = DUNGEONS[id]!; const key = `dun:${runId}`; if (this.p.counters[key]) return fail('ALREADY_CLAIMED'); this.p.counters[key] = 1;
     const first = !this.p.dungeon.firstClears.includes(id); if (first) this.p.dungeon.firstClears.push(id);
+    if (d.type === 'raid') { this.p.counters[`raid:${id}:${weekKey(this.now())}`] = 1; if (!this.p.titles.includes('title_flamebreaker')) this.p.titles.push('title_flamebreaker'); } // weekly lockout + raid title
     this.gainExp(d.reward.exp * (first ? 2 : 1), 'dungeon'); this.earn('gold', d.reward.gold, 'dungeon', key);
     for (const it of d.reward.items) this.addItem(it.itemId, it.qty, { rollOptions: true });
     this.bump('dungeons'); this.progressObjective('dungeon', id, 1); return ok({ first });
