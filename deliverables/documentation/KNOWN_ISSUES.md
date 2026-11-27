@@ -14,6 +14,8 @@
 9. **RNG**: seeded sfc32 held server-side; not a CSPRNG — must be replaced before any paid random rewards.
 
 ## Severity: Low
+- Guild war winner on a 0:0 Siege score is decided by the arena tie-break rule (the test war ran only 3 s, so no objective play happened). Guild kick/transfer/disband are implemented but not covered by an automated test. The artifact guild is single-player (members and rival guilds are simulated).
+- Wedding guests online must be in the plaza and near the aisle to receive cake; there is no RSVP/invitation list, scheduled booking or wedding photo.
 - Weekly champion uses all-time PvP rating (characters with at least one win), not rating gained during the week. Membership bonuses read the wall clock (not the injected test clock).
 - Event missions are claimed by mission id forever: when an event returns in a later rotation its missions cannot be claimed again (no per-occurrence reset yet).
 10. Thai translation covers UI keys and content names; many panel strings are English only.

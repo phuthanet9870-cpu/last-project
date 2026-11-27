@@ -6,14 +6,14 @@ import type { WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
 import {
   CONFIG as GAME, DYNAMIC_KEYS, STARTER_DECKS, absoluteAction, applyAction, newMatch, perspective, validateDeck, type TcgAction, type TcgState, publicEntity, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
-  activeEventAt, playerCP, CURRENCIES, type Currency, type PlayerState, type Result, type Session,
+  activeEventAt, playerCP, CURRENCIES, guildCan, type Currency, type PlayerState, type Result, type Session,
 } from '../../../packages/game-core/src/index.js';
 import { pool, tx } from './db.js';
 import { CONFIG } from './env.js';
 import type { Redis } from 'ioredis';
 
 interface Conn { tcgPvp?: { id: string; side: 0 | 1 } | null; phase: number; aoi?: { ids: string[]; at: number; inst: string }; known: Map<string, string>; mapSent: string; ws: WebSocket; accountId: string; role: string; charId: string; svc: PlayerService; world: World; session: Session; lastSnap: number; dirty: boolean; muted: boolean; lastPersist: number }
-interface Invite { kind: 'party' | 'trade' | 'duel' | 'guild' | 'marriage' | 'tcg'; from: string; at: number; data?: any }
+interface Invite { kind: 'party' | 'trade' | 'duel' | 'guild' | 'marriage' | 'tcg' | 'guildwar'; from: string; at: number; data?: any }
 interface Trade { id: string; a: string; b: string; offer: Record<string, { items: string[]; gold: bigint; cards?: Record<string, number> }>; lock: Record<string, boolean>; confirm: Record<string, boolean>; done: boolean }
 const ok = (data?: unknown, msg?: string): Result => ({ ok: true, data, msg });
 const fail = (err: string, msg?: string): Result => ({ ok: false, err, msg: msg ?? err });
@@ -23,7 +23,7 @@ const SERVER_ONLY = new Set(['dev']);
 export class GameServer {
   ledger = new Ledger(); market: MarketService; worlds = new Map<string, World>(); conns = new Map<string, Conn>(); invites = new Map<string, Invite>(); trades = new Map<string, Trade>();
   tcgMatches = new Map<string, { id: string; state: TcgState; a: string; b: string; settled: boolean }>();
-  arenaQueues = new Map<string, string[]>(); get arenaQueue(): string[] { return [...this.arenaQueues.values()].flat(); } matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
+  arenaQueues = new Map<string, string[]>(); get arenaQueue(): string[] { return [...this.arenaQueues.values()].flat(); } matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean; war?: { a: string; b: string } }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
   private timer?: NodeJS.Timeout; private rng = new Rng(Date.now() & 0xffffff); private chatOut: [string, string, string | null, string | null, string][] = [];
   constructor(public redis: Redis | null) { this.ledger.trackPending = true; this.market = new MarketService(this.ledger, new Rng(7)); this.market.onNewListing = (l) => { for (const c of this.conns.values()) { const w = c.svc.p.wishlist?.find((x) => x.defId === l.item.defId); if (w && Number(l.price) <= w.maxPrice && l.seller !== walletId(c.svc.p)) this.notice(c, `Wishlist alert: ${ITEMS[l.item.defId]?.name.en} listed at ${l.price}G (your limit ${w.maxPrice}G)`); } }; }
 
@@ -53,7 +53,7 @@ export class GameServer {
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [accountId])).rowCount! > 0;
     const c: Conn = { phase: this.conns.size % 2, known: new Map(), mapSent: '', ws, accountId, role, charId, svc, world, session: {}, lastSnap: 0, dirty: true, muted, lastPersist: Date.now() };
     this.conns.set(charId, c);
-    svc.onEvent = () => { c.dirty = true; }; this.applyChampion(c); // any domain event (loot, gold, level, quest…) re-syncs the owner's state, even when it happens inside the tick
+    svc.onEvent = () => { c.dirty = true; }; this.applyChampion(c); await this.syncGuild(c).catch(() => undefined); // any domain event (loot, gold, level, quest…) re-syncs the owner's state, even when it happens inside the tick
     await this.redis?.sadd('hb:online', charId).catch(() => undefined); await this.redis?.set(`hb:presence:${charId}`, map, 'EX', 120).catch(() => undefined);
     this.send(c, { type: 'welcome', myId: e.id, mapId: map, player: this.playerJson(c), serverTime: Date.now(), protocolVersion: 1 });
     if (off.minutes) svc.note(`Farm settled ${off.minutes} min while offline.`);
@@ -150,8 +150,11 @@ export class GameServer {
       case 'guildInvite': { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.name ?? '').toLowerCase()); if (!t) return fail('PLAYER_OFFLINE'); if (!c.svc.p.guild || c.svc.p.guild.role === 'member') return fail('NO_PERMISSION'); this.invites.set(t.charId, { kind: 'guild', from: c.charId, at: Date.now(), data: c.svc.p.guild.id }); this.notice(t, `${c.svc.p.name} invites you to guild ${c.svc.p.guild.name} (guildAccept).`); return ok(); }
       case 'guildAccept': return this.guildAccept(c);
       case 'guildDonate': { const r = executeCommand(this.ctx(c), cmd, a); if (r.ok && c.svc.p.guild) { await pool.query('UPDATE guilds SET exp=exp+$2 WHERE id=$1', [c.svc.p.guild.id, Math.floor(Math.max(100, Number(a.gold) || 0) / 10)]); await pool.query('UPDATE guild_members SET contribution=contribution+$3 WHERE guild_id=$1 AND character_id=$2', [c.svc.p.guild.id, c.charId, Math.floor(Math.max(100, Number(a.gold) || 0) / 10)]); } return r; }
+      case 'guildStorage': case 'guildPromote': case 'guildKick': case 'guildTransfer': case 'guildAnnounce': case 'guildDisband': case 'guildWarChallenge': case 'guildWarAccept': return this.guildCmd(c, cmd, a);
+      case 'weddingStart': return this.weddingStartServer(c);
+      case 'partnerTeleport': return this.partnerTeleport(c);
       case 'guildInfo': { if (!c.svc.p.guild) return fail('NO_GUILD'); const g = (await pool.query('SELECT * FROM guilds WHERE id=$1', [c.svc.p.guild.id])).rows[0]; const m = (await pool.query('SELECT c.name, gm.role, gm.contribution FROM guild_members gm JOIN characters c ON c.id=gm.character_id WHERE gm.guild_id=$1 ORDER BY gm.role, c.name', [c.svc.p.guild.id])).rows; return ok({ guild: g, members: m }); }
-      case 'guildLeave': { if (c.svc.p.guild) await pool.query('DELETE FROM guild_members WHERE character_id=$1', [c.charId]); return executeCommand(this.ctx(c), cmd, a); }
+      case 'guildLeave': return this.guildCmd(c, cmd, a);
       case 'report': { await pool.query('INSERT INTO player_reports(id,reporter,target_name,reason) VALUES ($1,$2,$3,$4)', [`rpt_${randomBytes(6).toString('hex')}`, c.charId, String(a.name).slice(0, 20), String(a.reason).slice(0, 60)]); return ok(); }
       case 'marketView': return ok();
       // ---- friend farm visit (§26): only if the owner lists you as a friend; likes persist to the owner (online or offline) ----
@@ -181,8 +184,8 @@ export class GameServer {
       case 'marriageAccept': {
         const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'marriage') return fail('NO_PROPOSAL'); this.invites.delete(c.charId); const p = this.conns.get(inv.from); if (!p) return fail('PROPOSER_OFFLINE'); if (p.svc.p.marriage || c.svc.p.marriage) return fail('ALREADY_MARRIED');
         if (!p.svc.removeItem('wedding_ring', 1) && !p.svc.spend('gold', 10000, 'wedding')) return fail('PROPOSER_CANNOT_PAY');
-        const now = Date.now(); for (const [x, y] of [[p, c], [c, p]] as const) { x.svc.p.marriage = { partner: y.svc.p.name, since: now, anniversary: 0 }; if (!x.svc.p.titles.includes('title_hearthbound')) x.svc.p.titles.push('title_hearthbound'); x.dirty = true; x.world.refreshPlayer(`pl_${x.charId}`); }
-        await this.persist([p, c]); for (const x of [p, c]) x.world.fx.push({ t: 'notice', msg: `${p.svc.p.name} and ${c.svc.p.name} are now wed!` }); return ok();
+        for (const [x, y] of [[p, c], [c, p]] as const) { x.svc.engage(y.svc.p.name); x.dirty = true; } // engagement; the ceremony at the Wedding Plaza completes the marriage
+        await this.persist([p, c]); for (const x of [p, c]) this.notice(x, `${p.svc.p.name} and ${c.svc.p.name} are engaged! Hold your ceremony at the Blossom Wedding Plaza (south of Emberglen).`); return ok({ engaged: true });
       }
       case 'divorce': {
         const m = c.svc.p.marriage; if (!m) return fail('NOT_MARRIED'); const r = executeCommand(this.ctx(c), 'divorce', {});
@@ -271,11 +274,12 @@ export class GameServer {
         const A: Conn[] = [], B: Conn[] = []; picked.forEach((c, i) => ((i % 4 === 0 || i % 4 === 3) ? A : B).push(c)); this.startMatch(A, B, `ranked${key}`, true, key.split(':')[1] as any); }
     }
   }
-  private startMatch(A: Conn[], B: Conn[], mode: string, rated: boolean, type: 'deathmatch' | 'siege' | 'rush' = 'deathmatch') {
+  private startMatch(A: Conn[], B: Conn[], mode: string, rated: boolean, type: 'deathmatch' | 'siege' | 'rush' = 'deathmatch', durationMs = 120_000): string {
     const id = `m_${randomBytes(6).toString('hex')}`; for (const c of [...A, ...B]) this.changeMap(c, 'arena', undefined, undefined, { arena: id });
     const w = this.worlds.get([...this.worlds.keys()].find((k) => k.startsWith(`arena:${id}`))!)!; for (const c of [...A, ...B]) { if (c.world !== w) { c.world.removePlayer(`pl_${c.charId}`); w.addPlayer(c.svc); c.world = w; } }
-    w.startArena(A.map((c) => `pl_${c.charId}`), B.map((c) => `pl_${c.charId}`), 120_000, type); this.matches.set(id, { world: w, a: A.map((c) => c.charId), b: B.map((c) => c.charId), mode, rated, settled: false });
+    w.startArena(A.map((c) => `pl_${c.charId}`), B.map((c) => `pl_${c.charId}`), durationMs, type, mode === 'guildwar'); this.matches.set(id, { world: w, a: A.map((c) => c.charId), b: B.map((c) => c.charId), mode, rated, settled: false });
     pool.query('INSERT INTO pvp_matches(id,world_id,mode,team_a,team_b) VALUES ($1,$2,$3,$4,$5)', [id, CONFIG.worldId, mode, JSON.stringify(A.map((c) => c.charId)), JSON.stringify(B.map((c) => c.charId))]).catch(() => undefined);
+    return id;
   }
   private settleMatches() {
     for (const [id, m] of this.matches) {
@@ -286,8 +290,97 @@ export class GameServer {
       const mvp = m.world.arena.mvp?.replace(/^pl_/, ''); if (mvp && this.conns.get(mvp)) this.conns.get(mvp)!.svc.awardMvp();
       for (const c of [...A, ...B]) { this.notice(c, `Match finished: ${((win === 0) === A.includes(c)) ? 'VICTORY' : 'DEFEAT'}${deltas[c.charId] !== undefined ? ` (${deltas[c.charId]! >= 0 ? '+' : ''}${deltas[c.charId]} rating)` : ''}. Use "Leave arena".`); c.dirty = true; }
       pool.query('UPDATE pvp_matches SET winner=$2, rating_delta=$3, finished_at=now() WHERE id=$1', [id, win, JSON.stringify(deltas)]).catch(() => undefined);
+      if (m.war) this.settleGuildWar(id, m.war, win, m.world.arena.score).catch((e) => console.error('guild war settle failed', e));
       this.persist([...A, ...B]).catch(() => undefined);
     }
+  }
+  // ---------------- guild (§40): shared DB storage, roles, wars ----------------
+  /** Re-read membership + guild row from the DB (source of truth) into the player's state; clears it if the character was removed while offline. */
+  async syncGuild(c: Conn) {
+    const r = await pool.query('SELECT g.id, g.name, g.level, g.exp, gm.role, gm.contribution FROM guild_members gm JOIN guilds g ON g.id=gm.guild_id WHERE gm.character_id=$1', [c.charId]); const row = r.rows[0];
+    if (!row) { if (c.svc.p.guild) { c.svc.p.guild = null; c.dirty = true; c.world.refreshPlayer(`pl_${c.charId}`); } return null; }
+    const prev = c.svc.p.guild; c.svc.p.guild = { id: row.id, name: row.name, role: row.role, contribution: Number(row.contribution), level: row.level, exp: Number(row.exp), storage: prev && prev.id === row.id ? prev.storage : [], log: prev && prev.id === row.id ? prev.log : [] }; c.dirty = true; return c.svc.p.guild;
+  }
+  private guildMembersOnline(guildId: string) { return [...this.conns.values()].filter((x) => x.svc.p.guild?.id === guildId); }
+  private async guildLog(guildId: string, msg: string, cl?: import('pg').PoolClient) { await (cl ?? pool).query('INSERT INTO guild_logs(guild_id,msg) VALUES ($1,$2)', [guildId, msg.slice(0, 200)]); }
+  private async guildCmd(c: Conn, cmd: string, a: any): Promise<Result> {
+    const g = await this.syncGuild(c); if (!g) return fail('NO_GUILD');
+    const target = async (name: string) => (await pool.query('SELECT gm.character_id AS id, gm.role, c.name FROM guild_members gm JOIN characters c ON c.id=gm.character_id WHERE gm.guild_id=$1 AND lower(c.name)=lower($2)', [g.id, String(name ?? '')])).rows[0] as { id: string; role: 'leader' | 'officer' | 'member'; name: string } | undefined;
+    const refreshOnline = async (id: string) => { const x = this.conns.get(id); if (x) { await this.syncGuild(x); x.world.refreshPlayer(`pl_${x.charId}`); } };
+    switch (cmd) {
+      case 'guildStorage': {
+        if (a.list || (!a.deposit && !a.withdraw && !a.uid)) { const items = (await pool.query('SELECT id, item, deposited_by, at FROM guild_storage WHERE guild_id=$1 ORDER BY at DESC LIMIT 200', [g.id])).rows; const log = (await pool.query('SELECT msg, at FROM guild_logs WHERE guild_id=$1 ORDER BY id DESC LIMIT 30', [g.id])).rows; return ok({ items: items.map((r) => ({ id: r.id, item: r.item, by: r.deposited_by, at: r.at })), log }); }
+        if (a.deposit) {
+          const it = c.svc.findInv(String(a.uid)); if (!it) return fail('NOT_FOUND'); if (it.bound || it.locked) return fail('ITEM_BOUND', 'Bound or locked items cannot be stored'); if (Object.values(c.svc.p.equipment ?? {}).includes(it.uid as any)) return fail('EQUIPPED');
+          const count = Number((await pool.query('SELECT count(*) FROM guild_storage WHERE guild_id=$1', [g.id])).rows[0].count); if (count >= 50 + g.level * 10) return fail('STORAGE_FULL');
+          c.svc.p.inventory.splice(c.svc.p.inventory.indexOf(it), 1); const sid = `gs_${randomBytes(6).toString('hex')}`;
+          try { await this.persist([c], async (cl) => { await cl.query('INSERT INTO guild_storage(id,guild_id,item,deposited_by) VALUES ($1,$2,$3,$4)', [sid, g.id, JSON.stringify(it), c.svc.p.name]); await this.guildLog(g.id, `${c.svc.p.name} deposited ${ITEMS[it.defId]?.name.en ?? it.defId}${it.qty > 1 ? ` ×${it.qty}` : ''}`, cl); }); }
+          catch (e) { c.svc.p.inventory.push(it); throw e; } // DB failed: item returns to the bag
+          return ok({ id: sid });
+        }
+        if (!guildCan(g.role, 'storage_withdraw')) return fail('NO_PERMISSION', 'Only officers and the leader can withdraw'); if (c.svc.freeSlots() <= 0) return fail('INVENTORY_FULL');
+        let got: any = null; await this.persist([c], async (cl) => { const r = await cl.query('DELETE FROM guild_storage WHERE id=$1 AND guild_id=$2 RETURNING item', [String(a.id), g.id]); if (!r.rowCount) throw Object.assign(new Error('GONE'), { code: 'GONE' }); got = r.rows[0].item; c.svc.p.inventory.push(got); await this.guildLog(g.id, `${c.svc.p.name} withdrew ${ITEMS[got.defId]?.name.en ?? got.defId}`, cl); }).catch((e) => { if (got) c.svc.p.inventory.splice(c.svc.p.inventory.indexOf(got), 1); if (e?.code !== 'GONE') throw e; got = null; });
+        return got ? ok({ item: got.defId }) : fail('NOT_FOUND', 'Someone else took it');
+      }
+      case 'guildPromote': {
+        if (g.role !== 'leader') return fail('NO_PERMISSION', 'Only the leader can change ranks'); const t = await target(a.name); if (!t || t.id === c.charId) return fail('NOT_A_MEMBER'); const role = a.role === 'officer' ? 'officer' : 'member';
+        await pool.query('UPDATE guild_members SET role=$3 WHERE guild_id=$1 AND character_id=$2', [g.id, t.id, role]); await this.guildLog(g.id, `${c.svc.p.name} set ${t.name} to ${role}`); await refreshOnline(t.id); return ok({ role });
+      }
+      case 'guildKick': {
+        if (!guildCan(g.role, 'kick')) return fail('NO_PERMISSION'); const t = await target(a.name); if (!t || t.id === c.charId) return fail('NOT_A_MEMBER'); if (t.role === 'leader' || (t.role === 'officer' && g.role !== 'leader')) return fail('NO_PERMISSION', 'Cannot remove someone of equal or higher rank');
+        await pool.query('DELETE FROM guild_members WHERE guild_id=$1 AND character_id=$2', [g.id, t.id]); await this.guildLog(g.id, `${c.svc.p.name} removed ${t.name}`); const x = this.conns.get(t.id); if (x) { await this.syncGuild(x); this.notice(x, `You were removed from ${g.name}.`); } return ok();
+      }
+      case 'guildTransfer': {
+        if (g.role !== 'leader') return fail('NO_PERMISSION'); const t = await target(a.name); if (!t || t.id === c.charId) return fail('NOT_A_MEMBER');
+        await tx(async (cl) => { await cl.query(`UPDATE guild_members SET role='officer' WHERE guild_id=$1 AND character_id=$2`, [g.id, c.charId]); await cl.query(`UPDATE guild_members SET role='leader' WHERE guild_id=$1 AND character_id=$2`, [g.id, t.id]); await this.guildLog(g.id, `${c.svc.p.name} passed leadership to ${t.name}`, cl); });
+        await this.syncGuild(c); await refreshOnline(t.id); return ok();
+      }
+      case 'guildAnnounce': { if (!guildCan(g.role, 'announce')) return fail('NO_PERMISSION'); const text = String(a.text ?? '').replace(/<[^>]*>/g, '').replace(/[<>]/g, '').slice(0, 160); await pool.query('UPDATE guilds SET announcement=$2 WHERE id=$1', [g.id, text]); await this.guildLog(g.id, `${c.svc.p.name} updated the announcement`); for (const x of this.guildMembersOnline(g.id)) this.notice(x, `[Guild] ${text}`); return ok(); }
+      case 'guildLeave': {
+        const n = Number((await pool.query('SELECT count(*) FROM guild_members WHERE guild_id=$1', [g.id])).rows[0].count); if (g.role === 'leader' && n > 1) return fail('TRANSFER_FIRST', 'Pass leadership to another member before leaving');
+        await pool.query('DELETE FROM guild_members WHERE character_id=$1', [c.charId]); if (n <= 1) await pool.query('DELETE FROM guilds WHERE id=$1', [g.id]); else await this.guildLog(g.id, `${c.svc.p.name} left the guild`); await this.syncGuild(c); return ok({ disbanded: n <= 1 });
+      }
+      case 'guildDisband': {
+        if (g.role !== 'leader') return fail('NO_PERMISSION'); const items = Number((await pool.query('SELECT count(*) FROM guild_storage WHERE guild_id=$1', [g.id])).rows[0].count); if (items > 0) return fail('STORAGE_NOT_EMPTY', 'Empty the guild storage first');
+        const members = this.guildMembersOnline(g.id); await pool.query('DELETE FROM guilds WHERE id=$1', [g.id]); for (const x of members) { await this.syncGuild(x); this.notice(x, `${g.name} has been disbanded.`); } return ok();
+      }
+      case 'guildWarChallenge': {
+        if (!guildCan(g.role, 'invite')) return fail('NO_PERMISSION', 'Leader or officer only'); const og = (await pool.query('SELECT id, name FROM guilds WHERE world_id=$1 AND lower(name)=lower($2)', [CONFIG.worldId, String(a.guild ?? '')])).rows[0]; if (!og || og.id === g.id) return fail('GUILD_NOT_FOUND');
+        const officers = this.guildMembersOnline(og.id).filter((x) => x.svc.p.guild!.role !== 'member'); if (!officers.length) return fail('NO_OFFICER_ONLINE', 'A leader or officer of that guild must be online');
+        for (const x of officers) { this.invites.set(x.charId, { kind: 'guildwar', from: c.charId, at: Date.now(), data: { a: g.id, b: og.id } }); this.notice(x, `${g.name} declares a guild war on ${og.name}! (guildWarAccept)`); } return ok({ pending: true });
+      }
+      case 'guildWarAccept': {
+        const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'guildwar' || inv.data.b !== g.id || g.role === 'member') return fail('NO_CHALLENGE'); this.invites.delete(c.charId);
+        const A = this.guildMembersOnline(inv.data.a).filter((x) => !this.inMatch(x)).slice(0, 5), B = this.guildMembersOnline(inv.data.b).filter((x) => !this.inMatch(x)).slice(0, 5); if (!A.length || !B.length) return fail('NOT_ENOUGH_MEMBERS');
+        const id = this.startMatch(A, B, 'guildwar', false, 'siege', Number(process.env.GUILD_WAR_MS ?? 300_000)); const m = this.matches.get(id)!; m.war = { a: inv.data.a, b: inv.data.b };
+        await pool.query('INSERT INTO guild_wars(id,guild_a,guild_b,match_id) VALUES ($1,$2,$3,$4)', [`gw_${id}`, inv.data.a, inv.data.b, id]); return ok({ match: id, teams: [A.length, B.length] });
+      }
+    }
+    return fail('UNKNOWN_COMMAND');
+  }
+  private inMatch(c: Conn) { return [...this.matches.values()].some((m) => !m.settled && c.world === m.world && !m.world.arena?.done); } // only the arena the player is actually standing in
+  private async settleGuildWar(id: string, war: { a: string; b: string }, winner: number, score: [number, number]) {
+    const [wg, lg] = winner === 0 ? [war.a, war.b] : [war.b, war.a];
+    await pool.query('UPDATE guild_wars SET winner=$2, score=$3, finished_at=now() WHERE match_id=$1', [id, wg, JSON.stringify(score)]); await pool.query('UPDATE guilds SET exp=exp+2000 WHERE id=$1', [wg]); await pool.query('UPDATE guilds SET exp=exp+300 WHERE id=$1', [lg]);
+    await this.guildLog(wg, `Won a guild war (${Math.floor(score[0])}:${Math.floor(score[1])})`); await this.guildLog(lg, `Lost a guild war (${Math.floor(score[0])}:${Math.floor(score[1])})`);
+    for (const x of this.conns.values()) { const gid = x.svc.p.guild?.id; if (gid === wg || gid === lg) { if ([...this.matches.get(id)!.a, ...this.matches.get(id)!.b].includes(x.charId)) x.svc.earn('guild_token', gid === wg ? 50 : 10, 'guild_war', `gw:${id}:${x.charId}`); await this.syncGuild(x); } }
+  }
+  // ---------------- wedding ceremony (§41) ----------------
+  private weddingStartServer(c: Conn): Result {
+    const m = c.svc.p.marriage; if (!m || m.stage !== 'engaged') return fail('NOT_ENGAGED'); const w = c.world; if (w.mapId !== 'wedding_plaza') return fail('NEED_PLANNER', 'Go to the Wedding Plaza');
+    const planner = { x: 15 * TILE + 16, y: 5 * TILE + 16 }; const near = (x: Conn) => { const e = x.world.entities.get(`pl_${x.charId}`); return !!e && x.world === w && Math.hypot(e.x - planner.x, e.y - planner.y) < 260; };
+    const p = [...this.conns.values()].find((x) => x.svc.p.name === m.partner); if (!p) return fail('PARTNER_OFFLINE'); if (p.svc.p.marriage?.partner !== c.svc.p.name || p.svc.p.marriage.stage !== 'engaged') return fail('NOT_ENGAGED_TO_PARTNER');
+    if (!near(c) || !near(p)) return fail('BOTH_AT_ALTAR', 'Both partners must stand near Planner Rosa'); if (w.wedding && !['done', 'cancelled'].includes(w.wedding.phase)) return fail('CEREMONY_IN_PROGRESS');
+    if (!c.svc.spend('gold', GAME.weddingCost, 'wedding_ceremony')) return fail('NOT_ENOUGH_GOLD', `The ceremony costs ${GAME.weddingCost} Gold`);
+    const st = w.startWedding(`pl_${c.charId}`, `pl_${p.charId}`, Number(process.env.WEDDING_PHASE_MS ?? GAME.weddingPhaseMs)); if (!st) return fail('CANNOT_START');
+    for (const x of this.conns.values()) if (x.svc.p.friends.some((f) => f.name === c.svc.p.name || f.name === p.svc.p.name) && x !== c && x !== p) this.notice(x, `${c.svc.p.name} & ${p.svc.p.name} are getting married at the Blossom Wedding Plaza — come and celebrate!`);
+    return ok({ phase: st.phase });
+  }
+  private partnerTeleport(c: Conn): Result {
+    const m = c.svc.p.marriage; if (!m || m.stage === 'engaged') return fail('NOT_MARRIED'); const p = [...this.conns.values()].find((x) => x.svc.p.name === m.partner); if (!p) return fail('PARTNER_OFFLINE');
+    const key = 'partner_tp_at'; const last = c.svc.p.counters[key] ?? 0; if (Date.now() - last < 10 * 60_000) return fail('COOLDOWN', `Ready in ${Math.ceil((10 * 60_000 - (Date.now() - last)) / 60000)} min`);
+    if (MAPS[p.world.mapId]!.instanced || MAPS[c.world.mapId]!.instanced) return fail('NOT_HERE', 'Couple teleport does not work inside instances'); const e = p.world.entities.get(`pl_${p.charId}`)!;
+    c.svc.p.counters[key] = Date.now(); return this.changeMap(c, p.world.mapId, e.x + 24, e.y);
   }
   private async guildCreate(c: Conn, name: string): Promise<Result> {
     if (c.svc.p.guild) return fail('ALREADY_IN_GUILD'); if (!/^[\p{L}\p{N} ]{3,16}$/u.test(name.trim())) return fail('INVALID_NAME'); if (c.svc.gold() < 10000n) return fail('NOT_ENOUGH_GOLD');

@@ -45,6 +45,7 @@ export class Renderer {
       else if (f.t === 'skill') this.skillFx(f);
       else if (f.t === 'death') for (let i = 0; i < 14; i++) this.particles.push({ x: f.x, y: f.y, vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.8) * 120, life: 600, max: 600, color: i % 2 ? '#ffffff' : '#c0c0c0', size: 3, kind: 'dot', grav: 200 });
       else if (f.t === 'level') { const e = ents.get(f.id); if (e) { for (let i = 0; i < 30; i++) this.particles.push({ x: e.x + (Math.random() - 0.5) * 30, y: e.y, vx: 0, vy: -60 - Math.random() * 80, life: 1200, max: 1200, color: '#ffe060', size: 3, kind: 'dot' }); this.particles.push({ x: e.x, y: e.y - 50, vx: 0, vy: -20, life: 2000, max: 2000, color: '#ffe060', size: 16, kind: 'text', text: 'LEVEL UP!', big: true }); } }
+      else if (f.t === 'petals') for (let i = 0; i < 18; i++) this.particles.push({ x: f.x + (Math.random() - 0.5) * 80, y: f.y - 30 - Math.random() * 30, vx: (Math.random() - 0.5) * 30, vy: 20 + Math.random() * 30, life: 1800, max: 1800, color: ['#ff90b0', '#ffffff', '#ffd0e0', '#ffb0c8'][i % 4]!, size: 3 } as any);
       else if (f.t === 'telegraph') this.telegraphs.push({ x: f.x, y: f.y, r: f.r, start: performance.now(), until: performance.now() + f.ms });
     }
     void meId;
