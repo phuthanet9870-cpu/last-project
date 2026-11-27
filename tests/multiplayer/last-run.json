@@ -1,0 +1,74 @@
+{
+  "when": "2026-11-27T00:25:43.586Z",
+  "server": "http://localhost:2567",
+  "durationMs": 30735,
+  "passed": 13,
+  "total": 13,
+  "results": [
+    {
+      "name": "register + login two accounts (Argon2id)",
+      "ok": true,
+      "detail": "tokens issued, refresh rotation + reuse detection ok"
+    },
+    {
+      "name": "create characters (unique names, slot validation)",
+      "ok": true,
+      "detail": "ch_mwy8pbgu1cx8h, ch_mwy8pbh1bgimv"
+    },
+    {
+      "name": "unauthorized WebSocket + foreign character rejected",
+      "ok": true,
+      "detail": "rejected 4401 / 4404"
+    },
+    {
+      "name": "two clients join same world and see each other",
+      "ok": true,
+      "detail": "map emberglen"
+    },
+    {
+      "name": "server-authoritative movement replicated (collision-checked)",
+      "ok": true,
+      "detail": "912→1008"
+    },
+    {
+      "name": "chat local + world + whisper delivered; malformed packet rejected",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "party invite requires acceptance",
+      "ok": true,
+      "detail": "party formed"
+    },
+    {
+      "name": "direct trade: item ↔ gold, both lock+confirm, persisted",
+      "ok": true,
+      "detail": "potion ↔ 100G"
+    },
+    {
+      "name": "marketplace: list (escrow) → buy → double-buy rejected → persisted ledger balanced",
+      "ok": true,
+      "detail": "sold 1 net for 10G (fee burned)"
+    },
+    {
+      "name": "combat on server: travel to field, kill monster, EXP + gold persisted",
+      "ok": true,
+      "detail": "kills=1, exp=28, db kills=1"
+    },
+    {
+      "name": "disconnect → reconnect restores persisted state",
+      "ok": true,
+      "detail": "map whisperwood"
+    },
+    {
+      "name": "ranked arena 1v1 between the two real players",
+      "ok": true,
+      "detail": "winner team 0, deltas {\"ch_mwy8pbgu1cx8h\":16,\"ch_mwy8pbh1bgimv\":-16}, B rating 1000→984"
+    },
+    {
+      "name": "admin RBAC: player forbidden, admin overview + audited grant",
+      "ok": true,
+      "detail": "online=2 p95 tick=0.52ms ledger ok=true"
+    }
+  ]
+}

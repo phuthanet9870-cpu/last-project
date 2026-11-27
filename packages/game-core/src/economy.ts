@@ -17,6 +17,8 @@ export class Ledger {
   balances = new Map<string, Map<Currency, WalletBalance>>();
   private applied = new Set<string>();
   private seq = 0;
+  /** Persistence hooks (server): accounts whose balances changed and entries posted since last flush. */
+  dirty = new Set<string>(); pending: LedgerEntry[] = []; trackPending = false;
 
   bal(account: string, c: Currency): WalletBalance {
     let m = this.balances.get(account); if (!m) { m = new Map(); this.balances.set(account, m); }
@@ -33,7 +35,7 @@ export class Ledger {
     for (const l of legs) sums.set(l.currency, (sums.get(l.currency) ?? 0n) + l.amount);
     for (const [c, s] of sums) if (s !== 0n) throw new EconomyError('UNBALANCED', `ledger unbalanced for ${c}: ${s}`);
     for (const l of legs) if (!l.account.startsWith('system:') && this.bal(l.account, l.currency).available + l.amount < 0n) throw new EconomyError('INSUFFICIENT_FUNDS', `${l.account} lacks ${l.currency}`);
-    for (const l of legs) { this.bal(l.account, l.currency).available += l.amount; this.entries.push({ txId: key, account: l.account, currency: l.currency, amount: l.amount, reason, ts }); }
+    for (const l of legs) { this.bal(l.account, l.currency).available += l.amount; const e = { txId: key, account: l.account, currency: l.currency, amount: l.amount, reason, ts }; this.entries.push(e); this.dirty.add(l.account); if (this.trackPending) this.pending.push(e); }
     this.applied.add(key);
     if (this.entries.length > 5000) this.entries.splice(0, this.entries.length - 5000);
     return key;
@@ -42,8 +44,8 @@ export class Ledger {
   burn(account: string, c: Currency, amount: bigint, reason: string, key?: string) { if (amount <= 0n) return; this.post([{ account, currency: c, amount: -amount }, { account: `system:burn:${reason}`, currency: c, amount }], reason, key); }
   transfer(from: string, to: string, c: Currency, amount: bigint, reason: string, key?: string) { this.post([{ account: from, currency: c, amount: -amount }, { account: to, currency: c, amount }], reason, key); }
   /** Move available → reserved (escrow) without leaving the account. */
-  reserve(account: string, c: Currency, amount: bigint) { const b = this.bal(account, c); if (amount < 0n || b.available < amount) throw new EconomyError('INSUFFICIENT_FUNDS'); b.available -= amount; b.reserved += amount; }
-  release(account: string, c: Currency, amount: bigint) { const b = this.bal(account, c); if (amount < 0n || b.reserved < amount) throw new EconomyError('RESERVATION_MISMATCH'); b.reserved -= amount; b.available += amount; }
+  reserve(account: string, c: Currency, amount: bigint) { this.dirty.add(account); const b = this.bal(account, c); if (amount < 0n || b.available < amount) throw new EconomyError('INSUFFICIENT_FUNDS'); b.available -= amount; b.reserved += amount; }
+  release(account: string, c: Currency, amount: bigint) { this.dirty.add(account); const b = this.bal(account, c); if (amount < 0n || b.reserved < amount) throw new EconomyError('RESERVATION_MISMATCH'); b.reserved -= amount; b.available += amount; }
   /** Settle from reserved funds directly to another account (escrowed payment). */
   settleReserved(from: string, legs: { to: string; amount: bigint }[], c: Currency, reason: string, key?: string) {
     const total = legs.reduce((s, l) => s + l.amount, 0n);

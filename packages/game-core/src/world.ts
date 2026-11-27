@@ -38,7 +38,7 @@ export type Fx =
   | { t: 'notice'; msg: string; to?: string }
   | { t: 'status'; id: string; s: string };
 
-export interface DungeonRun { runId: string; dungeonId: string; state: 'created' | 'waiting' | 'active' | 'encounter' | 'completed' | 'failed' | 'settled' | 'closed'; wave: number; startedAt: number; endsAt: number; participants: string[] }
+export interface DungeonRun { runId: string; bossEntity?: string; dungeonId: string; state: 'created' | 'waiting' | 'active' | 'encounter' | 'completed' | 'failed' | 'settled' | 'closed'; wave: number; startedAt: number; endsAt: number; participants: string[] }
 export interface BossSession { id: string; bossId: string; entityId: string; startedAt: number; contributions: Record<string, { dmg: number; heal: number; tank: number }>; settled: boolean }
 
 const ELEMENT_COLOR: Record<Element, string> = { neutral: '#ffffff', fire: '#ff7a30', water: '#4aa8ff', earth: '#c0a060', wind: '#a0ffb0', ice: '#a0f0ff', light: '#fff0a0', dark: '#b070ff', spirit: '#70ffe0' };
@@ -262,7 +262,7 @@ export class World {
       }
       if (svc.p.level > before) { const pe = this.entities.get(id)!; this.refreshPlayer(id); pe.hp = pe.maxHp; pe.mp = pe.maxMp; this.fx.push({ t: 'level', id, level: svc.p.level }); }
     }
-    if (def.rank === 'boss' && this.dungeon) this.advanceDungeon(true);
+    if (this.dungeon && (t.id === this.dungeon.bossEntity || (def.rank === 'boss' && this.dungeon.state === 'encounter'))) this.advanceDungeon(true);
     if (this.boss && t.id === this.boss.entityId) this.settleBoss();
     if (def.respawnMs > 0 && !this.dungeon) t.ai!.state = 'dead'; else t.expiresAt = this.now() + 3000;
   }
@@ -302,7 +302,7 @@ export class World {
     if (bossDead || run.state === 'encounter') { if (bossDead) { run.state = 'completed'; this.fx.push({ t: 'notice', msg: 'Dungeon cleared! Rewards granted.' }); for (const pid of run.participants) { const svc = this.services.get(pid); svc?.completeDungeon(run.dungeonId, run.runId); } run.state = 'settled'; } return; }
     run.wave++;
     if (run.wave < d.waves.length) { this.spawnWave(d.waves[run.wave]!); this.fx.push({ t: 'notice', msg: `Wave ${run.wave + 1}/${d.waves.length}` }); }
-    else { run.state = 'encounter'; const [x, y] = [this.map.def.w * TILE / 2, this.map.def.h * TILE / 3]; const b = this.spawnMonster(d.boss, x, y); const bd = MONSTERS[d.boss]!; if (d.levelReq > bd.level) { b.maxHp = b.hp = Math.floor(bd.maxHp * (1 + (d.levelReq - bd.level) * 0.15) * (bd.rank === 'boss' ? 1 : 3)); } if (bd.rank !== 'boss') { b.name = `${bd.name.en} (Champion)`; } b.ai!.state = 'chase'; this.fx.push({ t: 'notice', msg: `Boss: ${b.name}!` }); }
+    else { run.state = 'encounter'; const [x, y] = [this.map.def.w * TILE / 2, this.map.def.h * TILE / 3]; const b = this.spawnMonster(d.boss, x, y); run.bossEntity = b.id; const bd = MONSTERS[d.boss]!; if (d.levelReq > bd.level) { b.maxHp = b.hp = Math.floor(bd.maxHp * (1 + (d.levelReq - bd.level) * 0.15) * (bd.rank === 'boss' ? 1 : 3)); } if (bd.rank !== 'boss') { b.name = `${bd.name.en} (Champion)`; } b.ai!.state = 'chase'; this.fx.push({ t: 'notice', msg: `Boss: ${b.name}!` }); }
   }
   // ---------------- world boss (§29) ----------------
   spawnWorldBoss(bossId?: string) {
@@ -368,6 +368,7 @@ export class World {
       else if (e.kind === 'bot') this.botAI(e, dt, now);
     }
     if (this.dungeon && (this.dungeon.state === 'active') && ![...this.entities.values()].some((e) => e.kind === 'monster' && !e.dead)) this.advanceDungeon();
+    if (this.dungeon && this.dungeon.state === 'encounter' && this.dungeon.bossEntity && !this.entities.get(this.dungeon.bossEntity)) this.advanceDungeon(true);
     if (this.dungeon && this.dungeon.state === 'active' && now > this.dungeon.endsAt) { this.dungeon.state = 'failed'; this.fx.push({ t: 'notice', msg: 'Dungeon failed: time expired.' }); }
     if (this.map.def.biome === 'crater' && (!this.boss || this.boss.settled) && this.nextBossAt && now >= this.nextBossAt) this.spawnWorldBoss();
     if (this.arena && !this.arena.done) this.checkArena();
@@ -457,6 +458,9 @@ export class World {
     if (!this.arena && now > prof.chatAt) { prof.chatAt = now + this.rng.int(25000, 90000); if (this.rng.chance(0.5)) this.fx.push({ t: 'chat', ch: 'world', from: `${e.name} [sim]`, msg: this.rng.pick(BOT_LINES) }); }
     if (hasCC(e.effects, 'stun', 'freeze', 'sleep')) return;
     let t = e.targetId ? this.entities.get(e.targetId) : undefined; if (t && (t.dead || !this.hostile(e, t))) { t = undefined; e.targetId = null; }
+    const leader = e.partyId ? (this.parties.get(e.partyId) ?? []).map((id) => this.entities.get(id)).find((x) => x?.kind === 'player') : undefined;
+    if (leader && !t && leader.targetId) { const lt = this.entities.get(leader.targetId); if (lt && this.hostile(e, lt)) t = lt; }
+    if (leader && !t) { const d = dist(e, leader); if (d > 90) this.step(e, (leader.x - e.x) / d, (leader.y - e.y) / d, dt); else e.moving = false; if (d > 700) { e.x = leader.x + 30; e.y = leader.y; } return; }
     if (!t && (prof.aggressive || this.arena)) t = this.nearestHostile(e, this.arena ? 2000 : 220); if (t) e.targetId = t.id;
     if (t) {
       const ranged = ['bow', 'staff', 'tome', 'gun', 'lute', 'cards'].includes(this.weaponOf(e)); const range = ranged ? 240 : 55; const dd = dist(e, t);

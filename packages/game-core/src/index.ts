@@ -12,3 +12,4 @@ export * from './mapgen.js';
 export * from './player.js';
 export * from './world.js';
 export * from './market.js';
+export * from './commands.js';
