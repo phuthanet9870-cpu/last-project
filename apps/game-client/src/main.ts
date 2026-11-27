@@ -209,7 +209,7 @@ function startGame(a: Adapter) {
     if (a.p.inventory.length >= a.p.invSlots) { auto = false; toast('Auto-battle stopped: bag full', 'err'); return; }
     if (me.hp / me.mhp < 0.35) useHotbar(8); if (me.mp / me.mmp < 0.2) useHotbar(9);
     if (Object.values(a.p.equipment).some((i) => i && i.durability < 20)) { const kit = a.p.inventory.find((x) => x.defId === 'repair_kit'); if (kit) a.send('useItem', { uid: kit.uid }).then((r) => r.ok && toast('Auto-repair: Tinker Kit used', 'info')); } // official auto-repair (§31)
-    if (settings.autoLoot) { const bag = a.entities().filter((e) => e.k === 'loot').map((e) => ({ e, d: Math.hypot(e.x - me.x, e.y - me.y) })).filter((x) => x.d < 400).sort((x, y) => x.d - y.d)[0]; if (bag && bag.d > 30) { a.send('moveTo', { x: bag.e.x, y: bag.e.y }); return; } } // collect drops before the next fight (auto-loot)
+    if (settings.autoLoot) { const bag = a.entities().filter((e) => e.k === 'loot').map((e) => ({ e, d: Math.hypot(e.x - me.x, e.y - me.y) })).filter((x) => x.d < 600).sort((x, y) => x.d - y.d)[0]; if (bag && bag.d > 30) { a.send('moveTo', { x: bag.e.x, y: bag.e.y }); return; } } // collect drops before the next fight (auto-loot)
     if (!target || target.dead || target.k !== 'monster') { target = null; attack(); return; }
     for (let i = 0; i < 8; i++) { const sk = a.p.hotbar[i]; const s = sk ? ALL_SKILLS[sk] : null; if (s && s.dmgType !== 'heal' && s.dmgType !== 'none' && me.mp > s.mp + 10 && Math.random() < 0.3) { useHotbar(i); return; } }
     attack();
