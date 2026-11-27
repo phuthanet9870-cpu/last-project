@@ -1,13 +1,13 @@
 {
- "generated": "2026-11-27T13:52:32.401Z",
+ "generated": "2026-11-27T14:10:46.837Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 330,
-  "PARTIAL": 82,
-  "NOT_STARTED": 61,
+  "COMPLETE": 359,
+  "PARTIAL": 74,
+  "NOT_STARTED": 36,
   "BLOCKED": 8,
-  "TESTING": 96,
-  "SIMULATED": 4
+  "TESTING": 101,
+  "SIMULATED": 3
  },
  "systems": [
   {
@@ -2254,9 +2254,9 @@
    "id": "L281",
    "name": "Life Skill Ranking",
    "section": "Life skills",
-   "status": "NOT_STARTED",
-   "evidence": "life skill ranking",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L282",
@@ -2870,9 +2870,9 @@
    "id": "L358",
    "name": "Card Battle Tutorial",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "interactive tutorial (rules text only)",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33 — interactive tutorial duel with step hints + one-time reward",
+   "mode": "artifact+online"
   },
   {
    "id": "L359",
@@ -2974,25 +2974,25 @@
    "id": "L371",
    "name": "Card Exchange",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "card exchange",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33 — 3 same-rarity spare cards → 1 of next rarity",
+   "mode": "artifact+online"
   },
   {
    "id": "L372",
    "name": "Card Trading",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "card trading",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L373",
    "name": "Bound Card",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "bound cards",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\" — starter cards account-bound (no trade/dust/exchange)",
+   "mode": "artifact+online"
   },
   {
    "id": "L374",
@@ -3014,25 +3014,25 @@
    "id": "L376",
    "name": "Card Back",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "card back cosmetics",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33",
+   "mode": "artifact+online"
   },
   {
    "id": "L377",
    "name": "Playmat",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33",
+   "mode": "artifact+online"
   },
   {
    "id": "L378",
    "name": "Animated Battle Table",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 33",
+   "mode": "artifact+online"
   },
   {
    "id": "L379",
@@ -3110,41 +3110,41 @@
    "id": "L388",
    "name": "Seasonal Gacha",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "seasonal banners",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33 — monthly featured mythic",
+   "mode": "artifact+online"
   },
   {
    "id": "L389",
    "name": "Fashion Box",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "fashion box",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
+   "mode": "artifact+online"
   },
   {
    "id": "L390",
    "name": "Gem Box",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "gem box",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33",
+   "mode": "artifact+online"
   },
   {
    "id": "L391",
    "name": "Weekly Pass",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "weekly pass",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
+   "mode": "artifact+online"
   },
   {
    "id": "L392",
    "name": "Monthly Pass",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "monthly pass",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33",
+   "mode": "artifact+online"
   },
   {
    "id": "L393",
@@ -3166,25 +3166,25 @@
    "id": "L395",
    "name": "Festival Pass",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
+   "mode": "artifact+online"
   },
   {
    "id": "L396",
    "name": "Permanent Hearth Pass (original membership)",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
+   "mode": "artifact+online"
   },
   {
    "id": "L397",
    "name": "Grand Lantern Pass (original membership)",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "TESTING",
+   "evidence": "grand membership (+5% EXP/Gold permanent)",
+   "mode": "artifact+online"
   },
   {
    "id": "L398",
@@ -3198,17 +3198,17 @@
    "id": "L399",
    "name": "Pass Benefit",
    "section": "Commerce",
-   "status": "PARTIAL",
-   "evidence": "no benefit multipliers",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L400",
    "name": "Seasonal Shop",
    "section": "Commerce",
-   "status": "NOT_STARTED",
-   "evidence": "seasonal shop",
-   "mode": "-"
+   "status": "TESTING",
+   "evidence": "seasonal shop (event tokens from event missions)",
+   "mode": "artifact+online"
   },
   {
    "id": "L401",
@@ -3238,16 +3238,16 @@
    "id": "L404",
    "name": "Seasonal Event",
    "section": "Events",
-   "status": "PARTIAL",
-   "evidence": "2 rotating events",
+   "status": "TESTING",
+   "evidence": "3 rotating weekly events",
    "mode": "artifact+online"
   },
   {
    "id": "L405",
    "name": "Festival Event",
    "section": "Events",
-   "status": "PARTIAL",
-   "evidence": "Lantern Festival event",
+   "status": "TESTING",
+   "evidence": "Lantern Festival + Festival Pass doubling",
    "mode": "artifact+online"
   },
   {
@@ -3262,17 +3262,17 @@
    "id": "L407",
    "name": "Gold Boost Event",
    "section": "Events",
-   "status": "NOT_STARTED",
-   "evidence": "gold boost event",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts",
+   "mode": "artifact+online"
   },
   {
    "id": "L408",
    "name": "Event Countdown",
    "section": "Events",
-   "status": "NOT_STARTED",
-   "evidence": "event countdown",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 33",
+   "mode": "artifact+online"
   },
   {
    "id": "L409",
@@ -3318,24 +3318,24 @@
    "id": "L414",
    "name": "Combat Power Ranking",
    "section": "Rankings",
-   "status": "PARTIAL",
-   "evidence": "artifact simulated board; online /api/rankings/cp",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
    "mode": "artifact+online"
   },
   {
    "id": "L415",
    "name": "Class Ranking",
    "section": "Rankings",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L416",
    "name": "Level Ranking",
    "section": "Rankings",
-   "status": "PARTIAL",
-   "evidence": "online /api/rankings/level; artifact simulated",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
    "mode": "artifact+online"
   },
   {
@@ -3350,17 +3350,17 @@
    "id": "L418",
    "name": "Pet Ranking",
    "section": "Rankings",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L419",
    "name": "Life Skill Ranking",
    "section": "Rankings",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L420",
@@ -3374,9 +3374,9 @@
    "id": "L421",
    "name": "Lantern Ranking (mastery ranking)",
    "section": "Rankings",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L422",
@@ -3390,17 +3390,17 @@
    "id": "L423",
    "name": "Arena Ranking",
    "section": "Rankings",
-   "status": "PARTIAL",
-   "evidence": "online /api/rankings/pvp",
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
    "mode": "artifact+online"
   },
   {
    "id": "L424",
    "name": "Card Duel Ranking",
    "section": "Rankings",
-   "status": "SIMULATED",
-   "evidence": "simulated board",
-   "mode": "artifact only (simulated others)"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L425",
@@ -3414,9 +3414,9 @@
    "id": "L426",
    "name": "Weekly Title",
    "section": "Rankings",
-   "status": "NOT_STARTED",
-   "evidence": "not implemented",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"; worker weeklyChampion job — all-time PvP rating, not weekly gain",
+   "mode": "artifact+online"
   },
   {
    "id": "L427",
@@ -3750,9 +3750,9 @@
    "id": "L468",
    "name": "Event Reminder",
    "section": "UI",
-   "status": "NOT_STARTED",
-   "evidence": "event reminders",
-   "mode": "-"
+   "status": "TESTING",
+   "evidence": "login toast: event time left + unclaimed membership dailies",
+   "mode": "artifact+online"
   },
   {
    "id": "L469",
@@ -4454,8 +4454,8 @@
    "id": "S44",
    "name": "Card packs and cosmetics",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "packs + pity; no cosmetics",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33 — packs + pity, card backs/mats/animated table bought with card dust",
    "mode": "artifact+online"
   },
   {
@@ -4471,15 +4471,15 @@
    "name": "Gacha and probability rules",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "simulated-currency gacha with published odds + pity; paid gacha disabled",
+   "evidence": "4 simulated-currency banners (standard/seasonal featured/fashion/gem) with published odds + per-banner pity; paid gacha disabled",
    "mode": "artifact+online"
   },
   {
    "id": "S47",
    "name": "Pass and membership",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "adventure pass free/premium (simulated)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/core.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 33 — adventure pass + weekly/monthly/festival/permanent memberships with dailies and bonuses (simulated Crystal; real payments disabled)",
    "mode": "artifact+online"
   },
   {
@@ -4487,7 +4487,7 @@
    "name": "Event framework and recurring rewards",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "login calendar, missions, chests, 2 rotating events",
+   "evidence": "login calendar, missions, chests, 3 rotating weekly events (EXP/drop/gold), countdown, event tokens + seasonal shop; no admin-scheduled events",
    "mode": "artifact+online"
   },
   {
@@ -4495,7 +4495,7 @@
    "name": "Achievements, titles, ranking",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "achievements/titles; rankings partly simulated",
+   "evidence": "achievements/titles; server rankings level/cp/pvp/tcg/pet/life/mastery/class + weekly champion title; artifact boards simulated; no stat/achievement ranking online",
    "mode": "artifact+online"
   },
   {

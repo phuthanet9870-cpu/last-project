@@ -123,13 +123,14 @@ export const NPCS: Record<string, NpcDef> = Object.fromEntries(([
 ] as const).map(([id, en, th, ten, tth, roles, map, x, y, pal, lines, shop]) => [id, { id, name: { en, th }, title: { en: ten, th: tth }, roles: [...roles], map, x, y, palette: [...pal] as [string, string, string], lines: [{ en: lines[0], th: lines[1] }], shop } as NpcDef]));
 
 // ---------------- Shops (§34) ----------------
-export const SHOPS: Record<string, { currency: 'gold' | 'arena_token' | 'boss_coin' | 'card_dust' | 'stable_seal'; items: { itemId: string; price: number; dailyLimit?: number }[] }> = {
+export const SHOPS: Record<string, { currency: 'gold' | 'arena_token' | 'boss_coin' | 'card_dust' | 'stable_seal' | 'event_token'; items: { itemId: string; price: number; dailyLimit?: number }[] }> = {
   general: { currency: 'gold', items: ['repair_kit', 'potion_hp_s', 'potion_hp_m', 'potion_mp_s', 'potion_mp_m', 'food_stew', 'scroll_return', 'scroll_haste', 'tool_pickaxe', 'tool_axe', 'tool_rod', 'tool_sickle', 'capture_net', 'dungeon_ticket', 'cloth', 'blessing_scroll'].map((itemId) => ({ itemId, price: 0 })) },
   weapons: { currency: 'gold', items: ['wood_sword', 'wood_greatsword', 'wood_spear', 'wood_dagger', 'wood_bow', 'wood_staff', 'wood_tome', 'wood_knuckle', 'wood_gun', 'wood_lute', 'wood_cards', 'wood_whip', 'wood_body', 'wood_head', 'wood_boots', 'wood_off', 'iron_sword', 'iron_bow', 'iron_staff', 'iron_body', 'refine_ore'].map((itemId) => ({ itemId, price: 0 })) },
   stable: { currency: 'stable_seal', items: [{ itemId: 'mount_key_owl', price: 60 }, { itemId: 'mount_key_ram', price: 120 }, { itemId: 'mount_key_lizard', price: 40 }] },
   pets: { currency: 'gold', items: [{ itemId: 'food_forest', price: 0 }, { itemId: 'food_hills', price: 0 }, { itemId: 'food_snow', price: 0 }, { itemId: 'pet_food', price: 0 }, { itemId: 'pet_food_fine', price: 0 }, { itemId: 'capture_net', price: 0 }, { itemId: 'pet_egg', price: 0, dailyLimit: 3 }] },
   mounts: { currency: 'gold', items: [{ itemId: 'mount_key_pony', price: 2000 }, { itemId: 'mount_key_lizard', price: 8000 }] },
   arena: { currency: 'arena_token', items: [{ itemId: 'potion_hp_m', price: 2 }, { itemId: 'enchant_stone', price: 10 }, { itemId: 'amber_dagger', price: 40 }, { itemId: 'mount_key_owl', price: 120 }, { itemId: 'ward_scroll', price: 60 }] },
+  seasonal: { currency: 'event_token', items: [{ itemId: 'deco_lantern', price: 20 }, { itemId: 'blessing_scroll', price: 60 }, { itemId: 'gacha_ticket', price: 80 }, { itemId: 'costume_festival', price: 200 }, { itemId: 'wings_fairy', price: 400 }] },
   boss: { currency: 'boss_coin', items: [{ itemId: 'refine_ore_hi', price: 5 }, { itemId: 'gacha_ticket', price: 20 }, { itemId: 'mount_key_ram', price: 150 }, { itemId: 'wings_ember', price: 200 }] },
   cards: { currency: 'gold', items: [{ itemId: 'card_pack', price: 0 }] },
 };
@@ -281,6 +282,7 @@ export const TITLES: Record<string, { name: L10n; mods: Omit<Modifier, 'source'>
   title_helper: { name: { en: 'Helpful Soul', th: 'ผู้มีน้ำใจ' }, mods: [{ stat: 'expBonus', kind: 'flat', value: 3 }] },
   title_mvp: { name: { en: 'Arena MVP', th: 'ผู้เล่นยอดเยี่ยม' }, mods: [{ stat: 'pvpBonus', kind: 'flat', value: 2 }] },
   title_gladiator: { name: { en: 'Diamond Gladiator', th: 'นักสู้เพชร' }, mods: [{ stat: 'pvpReduce', kind: 'flat', value: 3 }] },
+  title_weekly: { name: { en: 'Champion of the Week', th: 'แชมป์ประจำสัปดาห์' }, mods: [{ stat: 'expBonus', kind: 'flat', value: 2 }] },
   title_hearthbound: { name: { en: 'Hearthbound', th: 'ผูกพันเตาผิง' }, mods: [{ stat: 'maxHp', kind: 'pct', value: 2 }] },
 };
 
@@ -289,9 +291,14 @@ export const LOGIN_CALENDAR: { itemId: string; qty: number }[] = [
   { itemId: 'potion_hp_s', qty: 10 }, { itemId: 'pet_food', qty: 20 }, { itemId: 'refine_ore', qty: 3 }, { itemId: 'enchant_stone', qty: 1 }, { itemId: 'gacha_ticket', qty: 1 }, { itemId: 'card_pack', qty: 1 }, { itemId: 'pet_egg', qty: 1 },
 ];
 export const EVENTS = [
-  { id: 'ev_lantern_festival', name: { en: 'Lantern Festival', th: 'เทศกาลโคมไฟ' }, desc: { en: '+50% EXP and festival missions.', th: 'EXP +50% และภารกิจเทศกาล' }, expMult: 1.5, dropMult: 1, missions: [{ id: 'evm_kill', counter: 'kills', target: 30, reward: { itemId: 'costume_festival', qty: 1 } }, { id: 'evm_craft', counter: 'crafts', target: 3, reward: { itemId: 'deco_lantern', qty: 3 } }] },
-  { id: 'ev_harvest_moon', name: { en: 'Harvest Moon', th: 'จันทร์เก็บเกี่ยว' }, desc: { en: '+30% drop rate and gathering missions.', th: 'อัตราดรอป +30% และภารกิจเก็บของ' }, expMult: 1, dropMult: 1.3, missions: [{ id: 'evm_gather', counter: 'gathers', target: 15, reward: { itemId: 'gacha_ticket', qty: 2 } }] },
+  { id: 'ev_lantern_festival', name: { en: 'Lantern Festival', th: 'เทศกาลโคมไฟ' }, desc: { en: '+50% EXP and festival missions.', th: 'EXP +50% และภารกิจเทศกาล' }, expMult: 1.5, dropMult: 1, goldMult: 1, missions: [{ id: 'evm_kill', counter: 'kills', target: 30, reward: { itemId: 'costume_festival', qty: 1 } }, { id: 'evm_craft', counter: 'crafts', target: 3, reward: { itemId: 'deco_lantern', qty: 3 } }] },
+  { id: 'ev_harvest_moon', name: { en: 'Harvest Moon', th: 'จันทร์เก็บเกี่ยว' }, desc: { en: '+30% drop rate and gathering missions.', th: 'อัตราดรอป +30% และภารกิจเก็บของ' }, expMult: 1, dropMult: 1.3, goldMult: 1, missions: [{ id: 'evm_gather', counter: 'gathers', target: 15, reward: { itemId: 'gacha_ticket', qty: 2 } }] },
+  { id: 'ev_gold_rush', name: { en: 'Gold Rush Week', th: 'สัปดาห์ตื่นทอง' }, desc: { en: '+50% Gold from monsters and crafting missions.', th: 'ทองจากมอนสเตอร์ +50% และภารกิจคราฟต์' }, expMult: 1, dropMult: 1, goldMult: 1.5, missions: [{ id: 'evm_gold_kill', counter: 'kills', target: 40, reward: { itemId: 'refine_ore_hi', qty: 2 } }, { id: 'evm_gold_craft', counter: 'crafts', target: 5, reward: { itemId: 'blessing_scroll', qty: 1 } }] },
 ];
+/** Events rotate weekly (Monday 00:00 UTC boundaries); one active at a time. */
+export const WEEK_MS = 7 * 86400_000;
+export function activeEventAt(now: number) { return EVENTS[Math.floor(now / WEEK_MS) % EVENTS.length]!; }
+export function eventEndsAt(now: number) { return (Math.floor(now / WEEK_MS) + 1) * WEEK_MS; }
 export const PASS = { levels: 30, expPerLevel: 100, free: Array.from({ length: 30 }, (_, i) => ({ itemId: i % 5 === 4 ? 'gacha_ticket' : i % 3 === 0 ? 'refine_ore' : 'potion_hp_m', qty: i % 5 === 4 ? 1 : 3 })), premium: Array.from({ length: 30 }, (_, i) => ({ itemId: i === 29 ? 'wings_fairy' : i % 5 === 4 ? 'pet_egg' : i % 2 ? 'enchant_stone' : 'card_pack', qty: 1 })) };
 export const MISSIONS_DAILY = [
   { id: 'md_kill', counter: 'kills', target: 20, points: 20 }, { id: 'md_gather', counter: 'gathers', target: 5, points: 15 }, { id: 'md_dungeon', counter: 'dungeons', target: 1, points: 25 }, { id: 'md_tcg', counter: 'tcg_games', target: 1, points: 15 }, { id: 'md_refine', counter: 'refines', target: 1, points: 10 }, { id: 'md_feed', counter: 'pet_feeds', target: 1, points: 15 },
@@ -299,8 +306,37 @@ export const MISSIONS_DAILY = [
 export const ACTIVITY_CHESTS = [{ points: 40, itemId: 'potion_hp_m', qty: 5 }, { points: 70, itemId: 'refine_ore', qty: 3 }, { points: 100, itemId: 'gacha_ticket', qty: 1 }];
 
 // ---------------- Gacha banners (§46) — simulated currency only in artifact ----------------
+/** Passes & memberships (§47). Bought with SIMULATED Crystal only (real payments disabled). */
+export const MEMBERSHIPS: Record<string, { name: { en: string; th: string }; cost: number; days: number | null; daily?: { currency: 'crystal_free' | 'gold'; amount: number }; bonus?: { stat: 'expBonus' | 'dropBonus' | 'goldBonus'; value: number }[]; festival?: boolean; desc: { en: string; th: string } }> = {
+  weekly: { name: { en: 'Weekly Pass', th: 'พาสรายสัปดาห์' }, cost: 300, days: 7, daily: { currency: 'crystal_free', amount: 60 }, desc: { en: '60 Free Crystal every day for 7 days.', th: 'รับคริสตัลฟรี 60 ทุกวัน 7 วัน' } },
+  monthly: { name: { en: 'Monthly Pass', th: 'พาสรายเดือน' }, cost: 980, days: 30, daily: { currency: 'crystal_free', amount: 50 }, bonus: [{ stat: 'expBonus', value: 5 }], desc: { en: '50 Free Crystal daily + 5% EXP for 30 days.', th: 'คริสตัลฟรี 50 ต่อวัน + EXP 5% นาน 30 วัน' } },
+  festival: { name: { en: 'Festival Pass', th: 'พาสเทศกาล' }, cost: 480, days: 7, festival: true, desc: { en: 'Doubles event mission rewards and Event Tokens for this week’s event.', th: 'รางวัลภารกิจอีเวนต์และโทเคนอีเวนต์เป็นสองเท่าในสัปดาห์นี้' } },
+  hearth: { name: { en: 'Permanent Hearth Pass', th: 'พาสเตาผิงถาวร' }, cost: 2980, days: null, daily: { currency: 'gold', amount: 500 }, bonus: [{ stat: 'dropBonus', value: 3 }], desc: { en: 'Forever: 500 Gold daily + 3% drop rate.', th: 'ถาวร: ทอง 500 ต่อวัน + อัตราดรอป 3%' } },
+  grand: { name: { en: 'Grand Lantern Pass', th: 'พาสโคมไฟใหญ่' }, cost: 4980, days: null, bonus: [{ stat: 'expBonus', value: 5 }, { stat: 'goldBonus', value: 5 }], desc: { en: 'Forever: +5% EXP and +5% Gold.', th: 'ถาวร: EXP +5% และทอง +5%' } },
+};
+export const TCG_COSMETICS: Record<string, { kind: 'back' | 'mat' | 'table'; name: { en: string; th: string }; cost: number; css: string }> = {
+  back_classic: { kind: 'back', name: { en: 'Classic Back', th: 'หลังการ์ดคลาสสิก' }, cost: 0, css: 'linear-gradient(135deg,#5a3e2e,#3e2a20)' },
+  back_ember: { kind: 'back', name: { en: 'Ember Back', th: 'หลังการ์ดถ่านไฟ' }, cost: 200, css: 'linear-gradient(135deg,#ff7030,#802010)' },
+  back_tide: { kind: 'back', name: { en: 'Tide Back', th: 'หลังการ์ดกระแสน้ำ' }, cost: 200, css: 'linear-gradient(135deg,#40a0e0,#103060)' },
+  back_starry: { kind: 'back', name: { en: 'Starry Back', th: 'หลังการ์ดดวงดาว' }, cost: 400, css: 'radial-gradient(circle at 30% 30%,#fff 1px,transparent 2px),linear-gradient(135deg,#302060,#100820)' },
+  mat_wood: { kind: 'mat', name: { en: 'Oak Table Mat', th: 'แผ่นรองไม้โอ๊ค' }, cost: 0, css: '#1a1420' },
+  mat_moss: { kind: 'mat', name: { en: 'Moss Mat', th: 'แผ่นรองมอส' }, cost: 300, css: 'linear-gradient(#1e3a22,#122416)' },
+  mat_night: { kind: 'mat', name: { en: 'Night Sky Mat', th: 'แผ่นรองฟ้าราตรี' }, cost: 300, css: 'linear-gradient(#141a3a,#06081a)' },
+  table_classic: { kind: 'table', name: { en: 'Classic Table', th: 'โต๊ะคลาสสิก' }, cost: 0, css: '' },
+  table_animated: { kind: 'table', name: { en: 'Lantern-lit Table (animated)', th: 'โต๊ะแสงโคม (เคลื่อนไหว)' }, cost: 600, css: 'linear-gradient(120deg,#3a2410,#7a5420,#3a2410,#6a4818)' },
+};
 export const GACHA_BANNERS = {
   standard: { name: { en: 'Hearth Wishes', th: 'คำอธิษฐานเตาผิง' }, cost: { ticket: 1, crystal: 150 }, pools: {
     mythic: ['pet_phoenix_egg', 'astral_greatsword', 'astral_staff'], legendary: ['dawn_sword', 'dawn_staff', 'dawn_bow', 'wings_fairy'], epic: ['frost_sword', 'frost_staff', 'costume_witch', 'ward_scroll'],
     rare: ['pet_egg', 'enchant_stone', 'skill_stone', 'gem_opal_2'], uncommon: ['refine_ore', 'potion_hp_m', 'card_pack', 'pet_food_fine'] } },
+  seasonal: { name: { en: 'Seasonal Wishes', th: 'คำอธิษฐานตามฤดูกาล' }, cost: { ticket: 1, crystal: 150 }, rotating: true, pools: {
+    mythic: ['astral_bow', 'astral_dagger', 'astral_lute', 'astral_cards'], legendary: ['dawn_greatsword', 'dawn_spear', 'dawn_gun', 'dawn_tome'], epic: ['frost_bow', 'frost_greatsword', 'wings_ember', 'blessing_scroll'],
+    rare: ['pet_egg', 'skill_stone', 'gem_garnet_2', 'gem_onyx_2'], uncommon: ['refine_ore', 'card_pack', 'food_forest', 'potion_mp_m'] } },
+  fashion: { name: { en: 'Fashion Box', th: 'กล่องแฟชั่น' }, cost: { ticket: 1, crystal: 120 }, pools: {
+    mythic: ['wings_fairy'], legendary: ['wings_ember'], epic: ['costume_witch', 'costume_festival'], rare: ['deco_fountain', 'deco_bench'], uncommon: ['deco_lantern', 'deco_flowers', 'star_dust'] } },
+  gems: { name: { en: 'Gem Box', th: 'กล่องอัญมณี' }, cost: { ticket: 1, crystal: 100 }, pools: {
+    mythic: ['gem_onyx_3', 'gem_ruby_3', 'gem_sapphire_3'], legendary: ['gem_topaz_3', 'gem_emerald_3', 'gem_amethyst_3', 'gem_opal_3'], epic: ['gem_garnet_2', 'gem_aquamarine_2', 'gem_ruby_2', 'gem_sapphire_2'],
+    rare: ['gem_ruby_1', 'gem_topaz_1', 'gem_emerald_1', 'gem_sapphire_1', 'gem_amethyst_1', 'gem_opal_1'], uncommon: ['gem_dust'] } },
 };
+/** Seasonal banner features one mythic per calendar month (rotating). */
+export function seasonalFeatured(now: number) { const pool = GACHA_BANNERS.seasonal.pools.mythic; return pool[new Date(now).getUTCMonth() % pool.length]!; }

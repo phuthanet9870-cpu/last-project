@@ -120,3 +120,13 @@ pre { background: #1a1420; padding: 8px; border-radius: 6px; white-space: pre-wr
 .hb-notice { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 10000; background: #3a1a1a; border: 2px solid var(--err); color: var(--text); padding: 8px 14px; border-radius: 8px; max-width: 90vw; }
 textarea { background: #1a1420; color: var(--text); border: 2px solid var(--edge2); border-radius: 6px; font: 12px monospace; }
 .banner { display: none; background: #1a1420dd; border: 2px solid var(--accent); border-radius: 8px; padding: 4px 14px; font-weight: bold; color: var(--accent); white-space: nowrap; }
+/* v0.8 LiveOps / TCG cosmetics */
+.note.tutor { border-color: #ffcf60; background: #3a2e10; font-weight: 600; }
+.duel .dside { background: var(--mat, #1a1420); }
+.duel.anim .dside { background-size: 200% 200%; animation: hbmat 8s ease-in-out infinite; }
+@keyframes hbmat { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.opp-hand { display: flex; gap: 3px; margin-bottom: 4px; }
+.cback { width: 18px; height: 26px; border-radius: 3px; border: 1px solid #c9a46a; background: var(--back, linear-gradient(135deg,#5a3e2e,#3e2a20)); display: inline-block; }
+.cos-swatch { height: 46px; border-radius: 6px; border: 1px solid #c9a46a; margin-bottom: 4px; }
+.cos-swatch.anim { background-size: 200% 200% !important; animation: hbmat 4s ease-in-out infinite; }
+.btn.gold { background: #8a6a20; border-color: #ffcf60; color: #fff6d0; }

@@ -138,6 +138,24 @@ await step('admin RBAC: player forbidden, admin overview + audited grant', async
   const g = await api('/api/admin/grant', { charId: charB, what: 'gold', qty: 777, reason: 'test compensation' }, tok); assert(g.status === 200, JSON.stringify(g.j));
   const au = await db.query(`SELECT * FROM admin_audit_logs WHERE target=$1 AND action LIKE 'grant:%'`, [charB]); assert(au.rowCount === 1 || au.rowCount === 0, 'audit row'); const au2 = await db.query(`SELECT * FROM admin_audit_logs WHERE action LIKE 'grant:%' AND target IN ($1,$2)`, [charA, charB]); assert(au2.rowCount === 2, `audit rows ${au2.rowCount}`); return `online=${o.j.online} p95 tick=${o.j.tickMsP95.toFixed(2)}ms ledger ok=${o.j.ledger.ok}`;
 });
+await step('Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title', async () => {
+  const A2: Client = (A as any).__c; const tok = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken;
+  assert((await api('/api/admin/grant', { charId: charA, what: 'card_dust', qty: 2000, reason: 'card trade test' }, tok)).status === 200, 'dust grant'); await sleep(200);
+  const card = 'tc_fire_striker'; const n0 = A2.state.tcg.collection[card] ?? 0, b0 = B.state.tcg.collection[card] ?? 0; const cr = await A2.cmd('craftCard', { card }); assert(cr.ok, JSON.stringify(cr)); await sleep(200);
+  const bound = Object.keys(A2.state.tcg.bound ?? {})[0]; assert((await A2.cmd('tradeOpen', { target: B.myId })).ok, 'open'); assert((await B.cmd('tradeAccept')).ok, 'accept');
+  const bad = await A2.cmd('tradeOffer', { items: [], gold: '0', cards: { [bound]: 1 } }); assert(!bad.ok && bad.err === 'CARD_NOT_TRADEABLE', `bound card offer → ${JSON.stringify(bad)}`);
+  assert((await A2.cmd('tradeOffer', { items: [], gold: '0', cards: { [card]: 1 } })).ok, 'offer card'); assert((await B.cmd('tradeOffer', { items: [], gold: '50' })).ok, 'offer gold');
+  await A2.cmd('tradeLock'); await B.cmd('tradeLock'); await A2.cmd('tradeConfirm'); const done = await B.cmd('tradeConfirm'); assert(done.ok && done.data.done, JSON.stringify(done)); await sleep(300);
+  assert((A2.state.tcg.collection[card] ?? 0) === n0 && (B.state.tcg.collection[card] ?? 0) === b0 + 1, `card moved ${A2.state.tcg.collection[card]} / ${B.state.tcg.collection[card]}`);
+  const h = await db.query(`SELECT a_items FROM trade_history WHERE a_char=$1 ORDER BY created_at DESC LIMIT 1`, [charA]); assert(JSON.stringify(h.rows).includes(`card:${card}x1`), 'card in trade_history');
+  const kinds = ['level', 'cp', 'pvp', 'tcg', 'pet', 'life', 'mastery', `class:${B.state.classId}`]; const sizes: string[] = [];
+  for (const k of kinds) { const r = await api(`/api/rankings/${encodeURIComponent(k)}`); assert(r.status === 200 && Array.isArray(r.j.rows), `${k} → ${r.status}`); sizes.push(`${k}:${r.j.rows.length}`); }
+  const badK = await api('/api/rankings/' + encodeURIComponent("level; DROP TABLE x")); assert(badK.status === 400, `bad kind → ${badK.status}`);
+  const cls = await api(`/api/rankings/${encodeURIComponent(`class:${B.state.classId}`)}`); assert(cls.j.rows.every((r: any) => r.classId === B.state.classId), 'class filter');
+  await db.query(`INSERT INTO weekly_champions(week,kind,character_id,name,value) VALUES ($1,'pvp',$2,$3,1) ON CONFLICT (week,kind) DO UPDATE SET character_id=EXCLUDED.character_id, awarded_at=now()`, [`test-${tag}`, charB, B.state.name]);
+  let got = false; for (let i = 0; i < 30 && !got; i++) { await sleep(200); got = B.state.titles.includes('title_weekly'); } assert(got, 'champion title granted to B');
+  return `card ${card} A→B for 50G; bound card refused; rankings ${sizes.join(' ')}; title_weekly → B`;
+});
 const passed = results.filter((r) => r.ok).length; mkdirSync('tests/multiplayer', { recursive: true });
 writeFileSync('tests/multiplayer/last-run.json', JSON.stringify({ when: new Date().toISOString(), server: BASE, durationMs: Date.now() - t0, passed, total: results.length, results }, null, 2));
 console.log(`\n${passed}/${results.length} multiplayer steps passed`); B.ws.close(); ((A as any).__c?.ws ?? A.ws).close(); await db.end(); process.exit(passed === results.length ? 0 : 1);

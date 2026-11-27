@@ -158,6 +158,27 @@ await step('32 market: filters, wishlist alert, auto-bid, sales collection, hist
   await page.click('.win button.tab:has-text("History")'); await page.waitForTimeout(200); await shot('32_history'); await page.keyboard.press('Escape');
   return `${shown} common listings shown; wishlist alert; ${bidInfo}; collected ${c.data.collected}G; history ${h.join(',')}`;
 });
+await step('33 liveops: memberships, banners, event countdown, rankings, TCG tutorial/exchange/cosmetics', async () => {
+  await page.evaluate(() => document.querySelectorAll('.win .x').forEach((b) => b.click())); await cmd('dev', { op: 'crystal', n: 20000 });
+  const m = await cmd('buyMembership', { id: 'monthly' }); assert(m.ok, JSON.stringify(m)); const c = await cmd('claimMembership', { id: 'monthly' }); assert(c.ok, JSON.stringify(c)); assert(!(await cmd('claimMembership', { id: 'monthly' })).ok, 'double claim blocked');
+  await page.click('.mbtn[aria-label="Events"]'); await page.waitForSelector('.win:has-text("Rewards")'); await page.click('.win button.tab:has-text("Memberships")'); await page.waitForTimeout(150);
+  const mtxt = await page.textContent('.win'); assert(/left/.test(mtxt) && /Claimed today/.test(mtxt), 'membership ui'); await shot('33_memberships');
+  await page.click('.win button.tab:text-is("Event")'); await page.waitForTimeout(150); assert(/Ends in/.test(await page.textContent('.win')), 'event countdown');
+  await page.click('.win button.tab:has-text("Wishes")'); await page.click('.win button:has-text("Seasonal Wishes")'); await page.waitForTimeout(150); assert(/Featured this month/.test(await page.textContent('.win')), 'seasonal banner'); await shot('33_seasonal');
+  const g = await cmd('gacha', { times: 10, banner: 'gems' }); assert(g.ok && g.data.every((x) => /^gem_/.test(x.itemId)), JSON.stringify(g)); const pity = await st('(a,p)=>p.gacha.pityBy');
+  await page.keyboard.press('Escape'); await page.click('.mbtn[aria-label="Rankings"]'); await page.waitForSelector('.win:has-text("Achievements")'); await page.click('.win button.tab:has-text("Pets")'); await page.waitForSelector('.win table.tbl tr');
+  const rows = await page.$$eval('.win table.tbl tr', (x) => x.length); assert(rows >= 10, `rows ${rows}`); await shot('33_rankings'); await page.keyboard.press('Escape');
+  const tut = await cmd('tcgStart', { mode: 'tutorial' }); assert(tut.ok && tut.data.hint, JSON.stringify(tut).slice(0, 200)); await page.keyboard.press('b'); await page.waitForSelector('.note.tutor'); await shot('33_tutorial');
+  for (let i = 0; i < 300; i++) { if (await st('(a)=>a.tcg().view.winner!==null')) break; await cmd('tcgAction', { action: await page.evaluate(() => window.__hb.aiMove()) }); }
+  const tutDone = await st('(a,p)=>!!p.tcg.tutorialDone');
+  const ids = (await cmd('dev', { op: 'tcgcards' })).data; const ex = await cmd('tcgExchange', { cards: ids }); assert(ex.ok, JSON.stringify(ex));
+  const starter = await st('(a,p)=>p.tcg.decks[0].cards[0]'); assert(!(await cmd('dustCard', { card: starter })).ok, 'bound starter card cannot be dusted');
+  await cmd('dev', { op: 'currency', c: 'card_dust', n: 2000 }); assert((await cmd('tcgCosmetic', { id: 'table_animated', buy: true })).ok, 'buy table'); assert((await cmd('tcgCosmetic', { id: 'back_starry', buy: true })).ok, 'buy back');
+  await page.evaluate(() => document.querySelectorAll('.win .x').forEach((x) => x.click())); await page.keyboard.press('b'); await page.waitForSelector('.win:has-text("Card Duels")');
+  await page.click('.win button.tab:has-text("Exchange")'); await page.waitForTimeout(150); await shot('33_exchange'); await page.click('.win button.tab:has-text("Cosmetics")'); await page.waitForTimeout(150); const eq = await page.$$eval('.win .card.on', (x) => x.length); assert(eq >= 2, `equipped ${eq}`); await shot('33_cosmetics');
+  await cmd('tcgStart', { mode: 'ai' }); await page.evaluate(() => document.querySelectorAll('.win .x').forEach((x) => x.click())); await page.keyboard.press('b'); await page.waitForSelector('.duel.anim'); await shot('33_duel_cosmetics'); await cmd('tcgAction', { action: { type: 'surrender' } }); await page.keyboard.press('Escape');
+  return `membership buy+claim; gem banner ×10 (pity ${JSON.stringify(pity)}); ranking rows ${rows}; tutorial won=${tutDone}; exchange → ${ex.data}; bound starter protected; cosmetics applied`;
+});
 await step('22 developer System Registry view', async () => { await page.keyboard.press('`'); await page.click('.win button.tab:has-text("System Registry")'); await page.waitForTimeout(200); await shot('22_registry'); const n = await page.$$eval('.reg .li', (x) => x.length); assert(n > 100, `rows ${n}`); await page.keyboard.press('Escape'); return `${n} registry rows`; });
 await step('23 save → reload → continue keeps progress', async () => { const lv = await st('(a,p)=>p.level'); const name = await st('(a,p)=>p.name'); const ok = await st('(a)=>a.save()'); assert(ok, 'saved'); await page.reload(); await page.click('text=Continue'); await page.click('.slot-card:has-text("' + name + '") button:has-text("Play")'); await page.waitForTimeout(800); const lv2 = await st('(a,p)=>p.level'); assert(lv2 === lv, `${lv} vs ${lv2}`); return `level ${lv} restored`; });
 await step('24 export save produces valid file', async () => { const s = await page.evaluate(() => window.__hb.a.exportSave()); const o = JSON.parse(s); assert(o.format === 'hearthbound-save', 'format'); return `${s.length} bytes`; });

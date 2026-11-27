@@ -57,7 +57,20 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
     reply.code(201); return { character: { id: p.id, name: p.name, classId: p.classId, level: 1 } };
   });
   app.delete('/api/characters/:id', async (req) => { const a = auth(req); const id = (req.params as any).id; if (game.conns.has(id)) throw new AuthError(409, 'Character is online'); const r = await pool.query('UPDATE characters SET deleted_at=now() WHERE id=$1 AND account_id=$2 AND deleted_at IS NULL', [id, a.sub]); return { ok: r.rowCount === 1 }; });
-  app.get('/api/rankings/:kind', async (req) => { const kind = (req.params as any).kind; const col = kind === 'pvp' ? 'pvp_rating' : kind === 'cp' ? 'combat_power' : 'level'; return { kind, rows: (await pool.query(`SELECT name, class_id, level, pvp_rating, combat_power FROM characters WHERE deleted_at IS NULL AND world_id=$1 ORDER BY ${col} DESC, name LIMIT 100`, [CONFIG.worldId])).rows }; });
+  // Rankings (§54): whitelisted kinds only -> fixed SQL expressions (no user text reaches SQL except bound parameters).
+  const RANK_EXPR: Record<string, string> = {
+    level: 'level', cp: 'combat_power', pvp: 'pvp_rating',
+    tcg: `COALESCE((state->'tcg'->>'rating')::int, 0)`,
+    pet: `COALESCE((SELECT max((x->>'level')::int) FROM jsonb_array_elements(state->'pets') x), 0)`,
+    life: `COALESCE((SELECT sum((v->>'lvl')::int) FROM jsonb_each(state->'professions') AS t(k, v)), 0) + COALESCE((SELECT sum((v->>'lvl')::int) FROM jsonb_each(state->'gathering') AS t(k, v)), 0)`,
+    mastery: `COALESCE((state->>'mastery')::int, 0)`,
+  };
+  app.get('/api/rankings/:kind', async (req) => {
+    const kind = String((req.params as any).kind); const cls = /^class:([a-z_]{2,24})$/.exec(kind);
+    const expr = cls ? 'level' : RANK_EXPR[kind]; if (!expr) throw new AuthError(400, 'Unknown ranking');
+    const rows = (await pool.query(`SELECT name, class_id, level, ${expr} AS value FROM characters WHERE deleted_at IS NULL AND world_id=$1 ${cls ? 'AND class_id=$2' : ''} ORDER BY value DESC, name LIMIT 100`, cls ? [CONFIG.worldId, cls[1]] : [CONFIG.worldId])).rows;
+    return { kind, rows: rows.map((r, i) => ({ rank: i + 1, name: r.name, classId: r.class_id, level: r.level, value: Number(r.value) })) };
+  });
   app.get('/api/content/maps', async () => ({ maps: Object.values(MAPS).map((m) => ({ id: m.id, name: m.name, levelReq: m.levelReq })) }));
   // ---- admin (§62): RBAC, audited ----
   app.get('/api/admin/overview', async (req) => { admin(req); const db = await pool.query(`SELECT (SELECT count(*) FROM accounts)::int AS accounts, (SELECT count(*) FROM characters WHERE deleted_at IS NULL)::int AS characters, (SELECT count(*) FROM player_reports WHERE status='open')::int AS open_reports, (SELECT count(*) FROM currency_ledger)::int AS ledger_rows`); return { ...game.overview(), db: db.rows[0] }; });

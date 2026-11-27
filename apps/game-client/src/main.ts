@@ -1,5 +1,5 @@
 /** Game client entry: title → mode → character select/create → world. */
-import { ALL_SKILLS, aiChooseAction, CLASSES, CLASS_IDS, EGG_POOL, MAPS, MONSTERS, NPCS, PETS, PlayerService, STARTER_CLASSES, TILE, getMap } from '@hb/game-core';
+import { ALL_SKILLS, aiChooseAction, CLASSES, CLASS_IDS, EGG_POOL, MAPS, MONSTERS, NPCS, PETS, PlayerService, STARTER_CLASSES, TILE, getMap, MEMBERSHIPS, eventEndsAt } from '@hb/game-core';
 import { LocalAdapter, RemoteAdapter, deleteSlot, importSaveString, listSlots, loadSlot, newLocalCharacter, safeStorage, type Adapter, type PubEntity } from './adapter.js';
 import { characterSprite } from './art.js';
 import { Audio } from './audio.js';
@@ -97,6 +97,11 @@ function startGame(a: Adapter) {
   app.innerHTML = ''; running = true; audio.unlock();
   if (DEV) (window as any).__hb = { a, cmd: (c: string, x: any) => a.send(c, x), aiMove: () => (a instanceof LocalAdapter && a.session.tcg ? aiChooseAction(a.session.tcg.state, 0) : { type: 'end' }) }; // test hook (dev/artifact-testing only)
   const cv = h('canvas', { class: 'game', 'aria-label': 'Game world' }) as HTMLCanvasElement; const root = h('div', { class: 'game-root' }, cv); app.append(root);
+  setTimeout(() => { // LiveOps reminders (§47): active event countdown + unclaimed membership dailies
+    const ev = a.activeEvent(); if (ev) { const left = eventEndsAt(a.serverTime()) - a.serverTime(); toast(`Event: ${L(ev.name)} — ${Math.floor(left / 86400_000)}d ${Math.floor((left % 86400_000) / 3600_000)}h left (Events → Event)`, 'info'); }
+    const day = new Date(a.serverTime() + 7 * 3600_000).toISOString().slice(0, 10); const due = Object.entries(a.p.memberships ?? {}).filter(([id, m]) => MEMBERSHIPS[id]?.daily && (m.until === null || m.until > a.serverTime()) && m.lastClaim !== day);
+    if (due.length) toast(`Membership daily reward ready: ${due.map(([id]) => L(MEMBERSHIPS[id]!.name)).join(', ')}`, 'gold');
+  }, 1500);
   const r = new Renderer(cv); let target: PubEntity | null = null; let auto = false; const keys = new Set<string>(); let joy = { x: 0, y: 0 };
   const resize = () => { r.resize(Math.floor(window.innerWidth), Math.floor(window.innerHeight)); r.zoom = 0.75 + settings.zoom * 0.75; }; window.addEventListener('resize', resize); resize();
   const apply = () => { audio.vol.master = settings.master; audio.vol.music = settings.music; audio.vol.sfx = settings.sfx; audio.muted = !!settings.muted; audio.apply(); Object.assign(r.settings, { particles: settings.particles, weather: settings.weather, lighting: settings.lighting, reducedMotion: settings.reducedMotion, lowPerf: settings.lowPerf, showNames: settings.showNames }); r.zoom = 0.75 + settings.zoom * 0.75; document.body.classList.toggle('hc', !!settings.highContrast); document.documentElement.style.setProperty('--ui', String(0.85 + settings.uiScale * 0.3)); relabel(); a.send('settings', { settings: { autoLoot: settings.autoLoot } }); persistSettings(); };

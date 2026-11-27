@@ -1,198 +1,204 @@
 {
-  "when": "2026-11-27T13:49:29.822Z",
-  "passed": 32,
-  "total": 32,
+  "when": "2026-11-27T14:06:18.434Z",
+  "passed": 33,
+  "total": 33,
   "results": [
     {
       "name": "01 open game start screen",
       "ok": true,
-      "ms": 179,
+      "ms": 242,
       "detail": ""
     },
     {
       "name": "02 guest/local mode + character creation + class selection",
       "ok": true,
-      "ms": 1442,
+      "ms": 1418,
       "detail": "class=dawn_priest"
     },
     {
       "name": "03 character movement + collision + camera follow",
       "ok": true,
-      "ms": 6720,
-      "detail": "x 912→997.9920000000002→362.02799999999536"
+      "ms": 6736,
+      "detail": "x 912→997.9919999999997→362.01599999999434"
     },
     {
       "name": "04 NPC interaction + accept quest + talk objective",
       "ok": true,
-      "ms": 982,
+      "ms": 1029,
       "detail": "mq01 complete, mq02 accepted"
     },
     {
       "name": "05 travel through portal to field",
       "ok": true,
-      "ms": 823,
+      "ms": 906,
       "detail": "whisperwood"
     },
     {
       "name": "06 combat: attack monsters, skills, EXP, level, loot, gold",
       "ok": true,
-      "ms": 11284,
-      "detail": "kills=5 level 2→2 gold 550→588"
+      "ms": 11403,
+      "detail": "kills=5 level 2→2 gold 550→584"
     },
     {
       "name": "07 inventory + equipment UI",
       "ok": true,
-      "ms": 310,
+      "ms": 284,
       "detail": "equipped staff"
     },
     {
       "name": "08 refinement at blacksmith (+5)",
       "ok": true,
-      "ms": 96,
+      "ms": 151,
       "detail": "+5"
     },
     {
       "name": "09 gems + monster card + skill stone",
       "ok": true,
-      "ms": 134,
+      "ms": 107,
       "detail": "gem socketed, card inserted, stone inscribed+slotted"
     },
     {
       "name": "10 capture + hatch pet, summon, feed, farm offline settle",
       "ok": true,
-      "ms": 2893,
+      "ms": 3907,
       "detail": "pets=2"
     },
     {
       "name": "11 mount unlock + ride",
       "ok": true,
-      "ms": 442,
+      "ms": 460,
       "detail": "riding ok"
     },
     {
       "name": "12 gathering + crafting",
       "ok": true,
-      "ms": 113,
+      "ms": 73,
       "detail": "gathered herb, crafted potion"
     },
     {
       "name": "13 marketplace list + buy + buy order + auction bid + exchange",
       "ok": true,
-      "ms": 4706,
-      "detail": "bought listing, listed item, buy order, exchange filled (crystal=0), ledger balanced"
+      "ms": 4725,
+      "detail": "bought listing, listed item, buy order, bid placed, exchange filled (crystal=0), ledger balanced"
     },
     {
       "name": "14 direct trade with simulated player",
       "ok": true,
-      "ms": 17,
+      "ms": 18,
       "detail": "trade settled"
     },
     {
       "name": "15 party + guild + friend + mail + marriage",
       "ok": true,
-      "ms": 34,
+      "ms": 36,
       "detail": "party, friend, guild, mail, marriage ok"
     },
     {
       "name": "16 dungeon run (waves + boss) with reward once",
       "ok": true,
-      "ms": 1721,
+      "ms": 1625,
       "detail": "cleared daily_exp_1"
     },
     {
       "name": "17 world boss spawn + contribution settlement",
       "ok": true,
-      "ms": 2808,
+      "ms": 2855,
       "detail": "boss coins 30"
     },
     {
       "name": "18 PvP arena 1v1 vs AI (simulated) + rating",
       "ok": true,
-      "ms": 519,
-      "detail": "win=true rating=1019"
+      "ms": 522,
+      "detail": "win=true rating=1014"
     },
     {
       "name": "19 Hearthcards duel vs AI to completion",
       "ok": true,
-      "ms": 1164,
+      "ms": 977,
       "detail": "winner=0"
     },
     {
       "name": "20 events: login, missions, pass, gacha (simulated currency)",
       "ok": true,
-      "ms": 15,
+      "ms": 18,
       "detail": "login, pass, 10x wish ok; payments disabled"
     },
     {
       "name": "21 all menu windows open without errors",
       "ok": true,
-      "ms": 4789,
+      "ms": 5051,
       "detail": "22 windows"
     },
     {
       "name": "28 projectiles in flight + durability wear + repair button",
       "ok": true,
-      "ms": 716,
+      "ms": 751,
       "detail": "projectile seen; repaired 2 items to 100%"
     },
     {
       "name": "29 party bots follow into dungeon + friend presence + card challenge",
       "ok": true,
-      "ms": 464,
+      "ms": 539,
       "detail": "Nyx40 followed into and out of the dungeon; presence + challenge ok"
     },
     {
       "name": "30 gem refine, cosmetic aura, focused craft, regional food & runes, farm visit",
       "ok": true,
-      "ms": 617,
-      "detail": "gem +1, aura ✦3, focused craft, regional food bonus=false, visited Faye92's farm"
+      "ms": 635,
+      "detail": "gem +1, aura ✦3, focused craft, regional food bonus=true, visited Faye92's farm"
     },
     {
       "name": "31 arena modes: Lantern Siege 2v2 via UI, Ember Rush, MVP, season",
       "ok": true,
-      "ms": 8804,
-      "detail": "siege 2v2 won (MVP=false, Rook74); rush crystals=1; season rollover {\"pvp\":\"Bronze\",\"tcg\":\"11\"}"
+      "ms": 9043,
+      "detail": "siege 2v2 won (MVP=false, Rook48); rush crystals=1; season rollover {\"pvp\":\"Bronze\",\"tcg\":\"11\"}"
     },
     {
       "name": "32 market: filters, wishlist alert, auto-bid, sales collection, history, candles",
       "ok": true,
-      "ms": 2294,
-      "detail": "9 common listings shown; wishlist alert; auto-bid leads at 281 (max 2588); collected 47G; history buy,xbuy,sell"
+      "ms": 2412,
+      "detail": "6 common listings shown; wishlist alert; auto-bid leads at 11409 (max 104946); collected 48G; history buy,xbuy,sell"
+    },
+    {
+      "name": "33 liveops: memberships, banners, event countdown, rankings, TCG tutorial/exchange/cosmetics",
+      "ok": true,
+      "ms": 2520,
+      "detail": "membership buy+claim; gem banner ×10 (pity {\"standard\":10,\"gems\":10}); ranking rows 13; tutorial won=true; exchange → tc_fire_striker; bound starter protected; cosmetics applied"
     },
     {
       "name": "22 developer System Registry view",
       "ok": true,
-      "ms": 398,
+      "ms": 417,
       "detail": "581 registry rows"
     },
     {
       "name": "23 save → reload → continue keeps progress",
       "ok": true,
-      "ms": 1084,
+      "ms": 1142,
       "detail": "level 60 restored"
     },
     {
       "name": "24 export save produces valid file",
       "ok": true,
-      "ms": 7,
-      "detail": "72691 bytes"
+      "ms": 8,
+      "detail": "79767 bytes"
     },
     {
       "name": "25 mobile viewport renders HUD + joystick",
       "ok": true,
-      "ms": 1199,
+      "ms": 1282,
       "detail": "joystick visible"
     },
     {
       "name": "26 Thai language switch",
       "ok": true,
-      "ms": 352,
+      "ms": 386,
       "detail": "thai ok"
     },
     {
       "name": "27 performance: frame rate in town",
       "ok": true,
-      "ms": 2019,
+      "ms": 2022,
       "detail": "61 fps (headless, software rendering)"
     }
   ],

@@ -11,14 +11,14 @@ import { EconomyError } from './economy.js';
 import { ITEMS, type Slot } from './items.js';
 import { TILE } from './mapgen.js';
 import { MarketService, guildCan, guildLevelExp } from './market.js';
-import { type PlayerService, type Result, walletId, npcQuests } from './player.js';
-import { uid } from './rng.js';
-import { STARTER_DECKS, aiChooseAction, applyAction, newMatch, viewFor, type TcgAction, type TcgState } from './tcg.js';
+import { type PlayerService, type Result, walletId, npcQuests, playerCP } from './player.js';
+import { Rng, uid } from './rng.js';
+import { TCG_CARDS, STARTER_DECKS, aiChooseAction, applyAction, newMatch, viewFor, type TcgAction, type TcgState } from './tcg.js';
 import type { World } from './world.js';
 import { applyStatus } from './effects.js';
 
 export interface Session {
-  tcg?: { state: TcgState; mode: 'ai' | 'tower' | 'ranked' | 'casual'; oppName: string; oppRating: number; settled: boolean } | null;
+  tcg?: { state: TcgState; mode: 'ai' | 'tower' | 'ranked' | 'casual' | 'tutorial'; oppName: string; oppRating: number; settled: boolean } | null;
   trade?: ReturnType<MarketService['openTrade']> | null; tradePartner?: string;
   duel?: { opp: string; startedAt: number } | null; arena?: { mode: string; settled: boolean; prevMap: string; prevX: number; prevY: number } | null;
   prevMap?: { map: string; x: number; y: number } | null; visit?: FarmVisit | null; lastCmdAt?: number; cmdCount?: number;
@@ -136,22 +136,30 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   tcgStart: (c, a) => {
     if (c.session.tcg && c.session.tcg.state.winner === null) return fail('MATCH_IN_PROGRESS');
     const deck = c.svc.p.tcg.decks.find((d) => d.id === c.svc.p.tcg.activeDeck); if (!deck) return fail('NO_DECK');
-    const mode = (a.mode ?? 'ai') as 'ai' | 'tower' | 'ranked' | 'casual'; const floor = c.svc.p.tcg.tower + 1;
+    const mode = (a.mode ?? 'ai') as 'ai' | 'tower' | 'ranked' | 'casual' | 'tutorial'; const floor = c.svc.p.tcg.tower + 1;
     const decks = Object.values(STARTER_DECKS); const opp = decks[(mode === 'tower' ? floor : c.svc.rng.int(0, 6)) % decks.length]!;
     const seed = c.svc.rng.int(1, 2 ** 30); const state = newMatch(deck.cards, opp.cards, seed);
     if (mode === 'tower') { state.sides[1].hero += floor * 2; state.sides[1].maxMana = Math.min(3, Math.floor(floor / 3)); }
-    c.session.tcg = { state, mode, oppName: mode === 'tower' ? `Tower Floor ${floor}` : `${opp.name.en} AI`, oppRating: 900 + c.svc.rng.int(0, 300), settled: false };
-    runAi(c); return ok(viewFor(state, 0));
+    if (mode === 'tutorial') state.sides[1].hero = 10; // gentle practice opponent
+    c.session.tcg = { state, mode, oppName: mode === 'tower' ? `Tower Floor ${floor}` : mode === 'tutorial' ? 'Tutor Pip (practice)' : `${opp.name.en} AI`, oppRating: 900 + c.svc.rng.int(0, 300), settled: false };
+    runAi(c); return ok({ ...viewFor(state, 0), hint: mode === 'tutorial' ? tcgHint(state) : undefined });
   },
   tcgAction: (c, a) => {
     const m = c.session.tcg; if (!m) return fail('NO_MATCH'); const err = applyAction(m.state, 0, a.action as TcgAction); if (err) return fail(err);
-    runAi(c); return ok(viewFor(m.state, 0));
+    runAi(c); return ok({ ...viewFor(m.state, 0), hint: m.mode === 'tutorial' ? tcgHint(m.state) : undefined });
   },
   tcgChallenge: (c, a) => { const t = c.world.entities.get(String(a.target)); if (!t || t.kind !== 'bot') return fail('INVALID_TARGET', 'Select a player to challenge'); const r = COMMANDS.tcgStart!(c, { mode: 'casual' }); if (r.ok && c.session.tcg) c.session.tcg.oppName = `${t.name} [sim]`; return r; },
   friendsStatus: (c) => ok(c.svc.p.friends.map((f) => { const e = [...c.world.entities.values()].find((x) => (x.kind === 'bot' || x.kind === 'player') && x.name === f.name); return { name: f.name, online: !!e, map: e ? c.world.mapId : null, simulated: e?.kind === 'bot' }; })),
-  tcgView: (c) => (c.session.tcg ? ok(viewFor(c.session.tcg.state, 0)) : fail('NO_MATCH')),
+  tcgView: (c) => (c.session.tcg ? ok({ ...viewFor(c.session.tcg.state, 0), hint: c.session.tcg.mode === 'tutorial' ? tcgHint(c.session.tcg.state) : undefined }) : fail('NO_MATCH')),
+  tcgExchange: (c, a) => c.svc.exchangeCards(Array.isArray(a.cards) ? a.cards.map(String) : []),
+  tcgCosmetic: (c, a) => c.svc.tcgCosmetic(String(a.id), !!a.buy),
+  // --- memberships (§47, simulated Crystal) ---
+  buyMembership: (c, a) => c.svc.buyMembership(String(a.id)),
+  claimMembership: (c, a) => c.svc.claimMembership(String(a.id)),
+  // Local leaderboards: you + simulated players (labelled). Server mode serves /api/rankings instead.
+  rankings: (c, a) => ok(localRankings(c, String(a.kind ?? 'level'))),
   // --- gacha / pass / events / missions ---
-  gacha: (c, a) => (CONFIG.featureFlags.paidRandomRewards || c.mode === 'local' || a.ticket ? c.svc.gachaDraw(a.times === 10 ? 10 : 1, !!a.ticket) : fail('FEATURE_DISABLED')),
+  gacha: (c, a) => (CONFIG.featureFlags.paidRandomRewards || c.mode === 'local' || a.ticket ? c.svc.gachaDraw(a.times === 10 ? 10 : 1, !!a.ticket, String(a.banner ?? 'standard')) : fail('FEATURE_DISABLED')),
   buyPass: (c) => c.svc.buyPremiumPass(),
   claimPass: (c, a) => c.svc.claimPass(Number(a.level), !!a.premium),
   claimLogin: (c) => c.svc.claimLogin(),
@@ -241,6 +249,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
       case 'gold': s.earn('gold', Number(a.n) || 100000, 'dev_grant'); return ok();
       case 'crystal': s.earn('crystal', Number(a.n) || 10000, 'dev_grant'); return ok();
       case 'currency': s.earn(a.c, Number(a.n) || 1000, 'dev_grant'); return ok();
+      case 'tcgcards': { const ids = Object.values(TCG_CARDS).filter((x) => x.rarity === (a.rarity ?? 'common') && !x.id.startsWith('tok_')).slice(0, 3).map((x) => x.id); for (const id of ids) s.p.tcg.collection[id] = (s.p.tcg.collection[id] ?? 0) + 3; return ok(ids); } // unbound test copies
       case 'item': if (!ITEMS[a.id]) return fail('UNKNOWN_ITEM'); s.addItem(a.id, Number(a.n) || 1, { rollOptions: true }); return ok();
       case 'materials': for (const id of ['refine_ore', 'refine_ore_hi', 'enchant_stone', 'ward_scroll', 'stone_dust', 'star_dust', 'gem_dust', 'iron_ore', 'oak_log', 'herb_green', 'herb_blue', 'slime_gel', 'berry', 'wheat', 'fish_carp', 'soft_fur', 'cloth', 'capture_net', 'pet_food', 'pet_egg', 'gacha_ticket', 'card_pack', 'boss_heart', 'wisp_dust', 'ember_core', 'pine_log', 'copper_ore', 'silver_ore', 'beetle_shell', 'fish_trout', 'frost_shard', 'herb_gold', 'tool_pickaxe', 'tool_rod', 'deco_lantern', 'deco_flowers', 'wedding_ring', 'gem_ruby_1', 'gem_sapphire_1', 'skill_stone']) s.addItem(id, ['tool_pickaxe', 'tool_rod', 'wedding_ring'].includes(id) ? 1 : 20); return ok();
       case 'skills': for (const sk of CLASSES[s.p.classId]!.skills) s.p.skillRanks[sk.id] = Math.max(s.p.skillRanks[sk.id] ?? 0, 1); s.p.hotbar = CLASSES[s.p.classId]!.skills.filter((x) => x.type !== 'passive').slice(0, 8).map((x) => x.id); c.world.refreshPlayer(c.entityId); return ok();
@@ -265,6 +274,22 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
 };
 
 function wrapEco(fn: () => unknown): Result { try { return ok(fn()); } catch (e) { if (e instanceof EconomyError) return fail(e.code, e.message); throw e; } }
+/** Tutorial coach: one next-step hint from the current state (side 0). */
+export function tcgHint(s: TcgState): { en: string; th: string } {
+  if (s.winner !== null) return s.winner === 0 ? { en: 'You won! Tutorial reward granted on the first win.', th: 'ชนะแล้ว! รับรางวัลบทเรียนเมื่อชนะครั้งแรก' } : { en: 'You lost — try again, the tutor is gentle.', th: 'แพ้ ลองใหม่ได้' };
+  const me = s.sides[0]; const playable = me.hand.filter((h) => (TCG_CARDS[h]?.cost ?? 99) <= me.mana);
+  if (playable.length) return { en: `You have ${me.mana} mana: play a card that costs ${me.mana} or less (glowing in hand).`, th: `มีมานา ${me.mana}: ลงการ์ดที่ราคาไม่เกิน ${me.mana}` };
+  if (me.board.some((u) => u.canAttack && u.atk > 0)) return { en: 'Your ready creatures can attack: pick one, then target an enemy creature or the hero.', th: 'ยูนิตที่พร้อมโจมตีได้แล้ว: เลือกยูนิต แล้วเลือกเป้าหมาย' };
+  return { en: 'Nothing else to do — press End Turn. Mana grows by 1 every turn.', th: 'ไม่มีอะไรทำแล้ว กดจบเทิร์น มานาจะเพิ่มทุกเทิร์น' };
+}
+function localRankings(c: CommandContext, kind: string) {
+  const p = c.svc.p; const r = new Rng(dayHash(kind)); const names = ['Mirabel', 'Kestrel', 'Oakley', 'Juniper', 'Rowan', 'Sable', 'Wren', 'Thistle', 'Bramble', 'Fennick', 'Lark', 'Tamsin'];
+  const mine = kind === 'cp' ? playerCP(p) : kind === 'pvp' ? p.pvp.rating : kind === 'tcg' ? p.tcg.rating : kind === 'pet' ? Math.max(0, ...p.pets.map((x) => x.level)) : kind === 'life' ? Object.values(p.professions ?? {}).reduce((s, x) => s + (x?.lvl ?? 0), 0) + Object.values(p.gathering).reduce((s, x) => s + x.lvl, 0) : kind === 'mastery' ? p.mastery : kind.startsWith('class:') ? (p.classId === kind.slice(6) ? p.level : 0) : p.level;
+  const base = Math.max(10, mine); const rows = names.map((n) => ({ name: `${n} [sim]`, value: Math.max(1, Math.round(base * (0.55 + r.next() * 0.8))), simulated: true }));
+  if (!kind.startsWith('class:') || p.classId === kind.slice(6)) rows.push({ name: p.name, value: mine, simulated: false });
+  return rows.sort((a, b) => b.value - a.value).map((x, i) => ({ rank: i + 1, ...x }));
+}
+function dayHash(s: string) { let h = Math.floor(Date.now() / 86400_000); for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h || 1; }
 function runAi(c: CommandContext) {
   const m = c.session.tcg!; let guard = 0;
   while (m.state.winner === null && m.state.active === 1 && guard++ < 60) applyAction(m.state, 1, aiChooseAction(m.state, 1));
