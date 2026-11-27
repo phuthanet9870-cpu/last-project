@@ -34,7 +34,7 @@ export type Fx =
   | { t: 'death'; id: string; x: number; y: number }
   | { t: 'level'; id: string; level: number }
   | { t: 'telegraph'; id: string; x: number; y: number; r: number; ms: number }
-  | { t: 'chat'; ch: string; from: string; msg: string }
+  | { t: 'chat'; ch: string; from: string; msg: string; x?: number; y?: number }
   | { t: 'notice'; msg: string; to?: string }
   | { t: 'status'; id: string; s: string };
 
@@ -99,7 +99,11 @@ export class World {
     const s = svc.petStats(pet); const sp = PETS[pet.species]!;
     this.entities.set(`pet_${entityId}`, this.baseEntity(`pet_${entityId}`, 'pet', e.x - 20, e.y + 10, pet.name, pet.level, { ownerId: entityId, defId: pet.species, hp: s.hp, maxHp: s.hp, summonAtk: s.atk, appearance: { color: sp.color, sprite: sp.sprite } }));
   }
+  /** Cached derived stats for movement/regen (not used for damage); refreshed on refreshPlayer or after 500ms. */
+  private stCache = new Map<string, { at: number; d: ReturnType<typeof playerStats>['derived'] }>();
+  cachedDerived(e: Entity) { const now = this.now(); const c = this.stCache.get(e.id); if (c && now - c.at < 500) return c.d; const d = playerStats(this.services.get(e.id)!.p, statusModifiers(e.effects)).derived; this.stCache.set(e.id, { at: now, d }); return d; }
   refreshPlayer(entityId: string) {
+    this.stCache.delete(entityId);
     const e = this.entities.get(entityId); const svc = this.services.get(entityId); if (!e || !svc) return;
     const st = playerStats(svc.p, statusModifiers(e.effects)).derived; e.maxHp = st.maxHp; e.maxMp = st.maxMp; e.hp = Math.min(e.hp, e.maxHp); e.mp = Math.min(e.mp, e.maxMp); e.level = svc.p.level; e.title = svc.p.title; e.riding = svc.p.riding; e.mount = svc.p.activeMount; e.classId = svc.p.classId; e.guild = svc.p.guild?.name;
   }
@@ -287,7 +291,7 @@ export class World {
     return null;
   }
   respawn(playerId: string) { const e = this.entities.get(playerId); if (!e || !e.dead) return; e.dead = false; e.hp = Math.floor(e.maxHp * 0.5); e.mp = Math.floor(e.maxMp * 0.5); e.x = this.map.def.spawn[0] * TILE + 16; e.y = this.map.def.spawn[1] * TILE + 16; e.effects = []; applyStatus(e.effects, 'invuln', e.id, 3000, 0); }
-  chat(fromId: string, ch: string, msg: string) { const e = this.entities.get(fromId); const clean = msg.replace(/[<>]/g, '').slice(0, 160); if (!e || !clean.trim()) return; this.fx.push({ t: 'chat', ch, from: e.name, msg: clean }); }
+  chat(fromId: string, ch: string, msg: string) { const e = this.entities.get(fromId); const clean = msg.replace(/[<>]/g, '').slice(0, 160); if (!e || !clean.trim()) return; this.fx.push(ch === 'local' ? { t: 'chat', ch, from: e.name, msg: clean, x: Math.round(e.x), y: Math.round(e.y) } : { t: 'chat', ch, from: e.name, msg: clean }); }
 
   // ---------------- dungeon (§28) ----------------
   startDungeon(dungeonId: string, runId: string, participants: string[]) {
@@ -349,6 +353,7 @@ export class World {
 
   // ---------------- tick ----------------
   tick(dtMs: number) {
+    this.gridAt = -1;
     const now = this.now(); dtMs = Math.min(dtMs, 250); const dt = dtMs / 1000; this.lastTick = now;
     for (const e of [...this.entities.values()]) {
       if (e.expiresAt && now > e.expiresAt) { this.entities.delete(e.id); continue; }
@@ -360,7 +365,7 @@ export class World {
       if (r.heal) e.hp = Math.min(e.maxHp, e.hp + r.heal);
       if (r.expired.length && e.kind === 'player') this.refreshPlayer(e.id);
       // regen
-      if (e.kind === 'player') { const d = playerStats(this.services.get(e.id)!.p).derived; e.hp = Math.min(e.maxHp, e.hp + d.hpRegen * dt * 0.5); e.mp = Math.min(e.maxMp, e.mp + d.mpRegen * dt * 0.8); }
+      if (e.kind === 'player') { const d = this.cachedDerived(e); e.hp = Math.min(e.maxHp, e.hp + d.hpRegen * dt * 0.5); e.mp = Math.min(e.maxMp, e.mp + d.mpRegen * dt * 0.8); }
       else if (e.kind === 'bot') { e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.01 * dt); e.mp = Math.min(e.maxMp, e.mp + 5 * dt); }
       if (e.kind === 'player') this.movePlayer(e, dt);
       else if (e.kind === 'monster') this.monsterAI(e, dt, now);
@@ -376,7 +381,7 @@ export class World {
   }
   private respawnMonster(e: Entity) { const d = MONSTERS[e.defId!]!; const [x, y] = this.randomFreePoint(); Object.assign(e, { dead: false, hp: d.maxHp, maxHp: d.maxHp, x, y, effects: [], targetId: null, contrib: {} }); e.ai = { state: 'idle', homeX: x, homeY: y, nextAct: this.now() + 1000, threat: {}, skillCd: {}, phase: 0 }; }
   speedOf(e: Entity): number {
-    let base = 120; if (e.kind === 'player') base = playerStats(this.services.get(e.id)!.p, statusModifiers(e.effects)).derived.moveSpeed; else if (e.kind === 'monster') base = MONSTERS[e.defId!]!.moveSpeed; else if (e.kind === 'pet' || e.kind === 'summon') base = 150;
+    let base = 120; if (e.kind === 'player') base = this.cachedDerived(e).moveSpeed; else if (e.kind === 'monster') base = MONSTERS[e.defId!]!.moveSpeed; else if (e.kind === 'pet' || e.kind === 'summon') base = 150;
     if (hasCC(e.effects, 'stun', 'freeze', 'sleep', 'root')) return 0;
     return base * (1 - slowPct(e.effects) / 100);
   }
@@ -472,14 +477,32 @@ export class World {
     if (e.path?.length) { const [tx, ty] = e.path[0]!; const px = tx * TILE + 16, py = ty * TILE + 16; const d = Math.hypot(px - e.x, py - e.y); if (d < 6) e.path.shift(); else this.step(e, (px - e.x) / d, (py - e.y) / d, dt * 0.8); } else e.moving = false;
   }
 
-  /** Area-of-interest snapshot for network sync (§57/§59). */
+  /** Spatial hash (§59): rebuilt once per call-site tick; cell 256px. */
+  private grid = new Map<number, Entity[]>(); private gridAt = -1; static CELL = 256;
+  buildGrid() { const now = this.now(); if (this.gridAt === now) return; this.gridAt = now; this.grid.clear(); for (const e of this.entities.values()) { const k = Math.floor(e.x / World.CELL) * 65536 + Math.floor(e.y / World.CELL); let b = this.grid.get(k); if (!b) { b = []; this.grid.set(k, b); } b.push(e); } }
+  nearby(x: number, y: number, r: number): Entity[] { this.buildGrid(); const out: Entity[] = []; const c0 = Math.floor((x - r) / World.CELL), c1 = Math.floor((x + r) / World.CELL), r0 = Math.floor((y - r) / World.CELL), r1 = Math.floor((y + r) / World.CELL); for (let cx = c0; cx <= c1; cx++) for (let cy = r0; cy <= r1; cy++) for (const e of this.grid.get(cx * 65536 + cy) ?? []) if (Math.abs(e.x - x) <= r && Math.abs(e.y - y) <= r) out.push(e); return out; }
+  /** Area-of-interest snapshot for network sync (§57/§59): grid query, monsters visible a bit further. */
   snapshotFor(entityId: string, radius = 900) {
-    const me = this.entities.get(entityId); const out: any[] = [];
-    for (const e of this.entities.values()) { if (me && dist(me, e) > radius && e.kind !== 'monster') continue; if (me && dist(me, e) > radius * 1.5) continue; out.push(publicEntity(e)); }
+    const me = this.entities.get(entityId); if (!me) return [...this.entities.values()].map(publicEntity);
+    return this.nearby(me.x, me.y, radius * 1.5).filter((e) => e.kind === 'monster' || dist(me, e) <= radius).map(publicEntity);
+  }
+  /** Visibility cap: at most `maxPlayers` nearest other players (bounds per-client cost to O(k) in crowded towns); always includes self and party members. */
+  aoiIds(entityId: string, radius = 900, maxPlayers = 40): string[] {
+    const me = this.entities.get(entityId); if (!me) return [];
+    const r2 = radius * radius; const party = new Set(me.partyId ? this.parties.get(me.partyId) ?? [] : []); const out: string[] = []; const players: { id: string; d: number }[] = [];
+    for (const e of this.nearby(me.x, me.y, radius * 1.5)) {
+      const dx = e.x - me.x, dy = e.y - me.y, d = dx * dx + dy * dy;
+      if (e.kind === 'player' && e.id !== me.id) { if (d <= r2) players.push({ id: e.id, d: party.has(e.id) ? -1 : d }); } else if (e.kind === 'monster' || d <= r2) out.push(e.id);
+    }
+    if (players.length > maxPlayers) players.sort((p, q) => p.d - q.d);
+    for (let i = 0; i < Math.min(maxPlayers, players.length); i++) out.push(players[i]!.id);
     return out;
   }
+
   drainFx(): Fx[] { const f = this.fx; this.fx = []; return f; }
 }
+/** Fields that change often; static fields (name, appearance, class…) are sent once per entity per client. */
+export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot'] as const;
 export function publicEntity(e: Entity) {
   return { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y), d: e.dir, m: e.moving, n: e.name, l: e.level, hp: Math.ceil(e.hp), mhp: e.maxHp, mp: Math.floor(e.mp), mmp: e.maxMp, dead: e.dead, def: e.defId, own: e.ownerId, cls: e.classId, app: e.appearance, fx: e.effects.map((x) => x.id), t: e.title, r: e.riding, mt: e.mount, tg: e.targetId, g: e.gauge, team: e.team, gu: e.guild, tele: e.ai?.telegraph ? { x: e.ai.telegraph.x, y: e.ai.telegraph.y, r: e.ai.telegraph.r, at: e.ai.telegraph.at } : undefined, loot: e.loot?.length };
 }

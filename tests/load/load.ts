@@ -16,12 +16,12 @@ const tiers = process.argv.slice(2).map(Number).filter(Boolean); const out: any[
 for (const n of tiers.length ? tiers : [20, 50]) {
   const tag = Math.random().toString(36).slice(2, 5); const t0 = Date.now(); const cs = [];
   for (let i = 0; i < n; i++) cs.push(await client(i, tag));
-  await sleep(10_000); const samples: number[] = [];
-  for (let k = 0; k < 10; k++) { const h: any = await (await fetch(`${BASE}/api/health`)).json(); samples.push(h.tickMsP95); await sleep(1000); }
+  await sleep(10_000); const samples: number[] = []; const avgs: number[] = [];
+  for (let k = 0; k < 10; k++) { const h: any = await (await fetch(`${BASE}/api/health`)).json(); samples.push(h.tickMsP95); avgs.push(h.tickMsAvg ?? 0); await sleep(1000); }
   const bytes = cs.reduce((s, c) => s + c.bytes(), 0); const secs = (Date.now() - t0) / 1000;
-  const row = { clients: n, tickP95msMax: Math.max(...samples).toFixed(2), tickP95msMedian: samples.sort((a, b) => a - b)[5]!.toFixed(2), downKBpsPerClient: (bytes / secs / n / 1024).toFixed(1), rssMB: Math.round(process.memoryUsage().rss / 1e6) + ' (test process)' };
+  const row = { clients: n, tickP95msMax: Math.max(...samples).toFixed(2), tickP95msMedian: samples.sort((a, b) => a - b)[5]!.toFixed(2), tickAvgMs: (avgs.reduce((a, b) => a + b, 0) / avgs.length).toFixed(2), downKBpsPerClient: (bytes / secs / n / 1024).toFixed(1), rssMB: Math.round(process.memoryUsage().rss / 1e6) + ' (test process)' };
   console.log(row); out.push(row);
   for (const c of cs) { clearInterval(c.timer); c.ws.close(); } await sleep(2000);
 }
-mkdirSync('tests/load', { recursive: true }); writeFileSync('tests/load/last-run.json', JSON.stringify({ when: new Date().toISOString(), note: 'single process on the dev container, all clients in the same town map, movement+chat workload only (no combat)', results: out }, null, 2));
+mkdirSync('tests/load', { recursive: true }); writeFileSync('tests/load/last-run.json', JSON.stringify({ when: new Date().toISOString(), note: 'server + load generator share one 4-core dev container (CPU contention inflates tick times); all clients in the same town map; movement+chat workload only (no combat); visibility cap 40 nearest players', results: out }, null, 2));
 process.exit(0);

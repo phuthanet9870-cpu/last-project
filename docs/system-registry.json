@@ -1,9 +1,9 @@
 {
- "generated": "2026-11-27T08:44:05.754Z",
+ "generated": "2026-11-27T09:25:15.944Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 282,
-  "PARTIAL": 92,
+  "COMPLETE": 283,
+  "PARTIAL": 91,
   "NOT_STARTED": 97,
   "BLOCKED": 8,
   "TESTING": 94,
@@ -3871,7 +3871,7 @@
    "name": "Player Synchronization",
    "section": "Backend",
    "status": "PARTIAL",
-   "evidence": "10 Hz snapshots + client interpolation; no client-side prediction/reconciliation",
+   "evidence": "10 Hz delta snapshots + client interpolation (load-tested 250 players); no client-side prediction/reconciliation",
    "mode": "artifact+online"
   },
   {
@@ -3902,8 +3902,8 @@
    "id": "B11",
    "name": "Spatial Partitioning",
    "section": "Backend",
-   "status": "PARTIAL",
-   "evidence": "radius AOI filter; no spatial hash",
+   "status": "COMPLETE",
+   "evidence": "256px spatial grid + 40-player visibility cap; tests/load/load.ts 250 clients p95 46 ms",
    "mode": "artifact+online"
   },
   {
@@ -4575,7 +4575,7 @@
    "name": "Server tick, scalability and persistence",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "20 Hz tick, periodic + critical saves; single process",
+   "evidence": "20 Hz tick, delta snapshots, spatial AOI, staggered sync (250 players/map validated); single process",
    "mode": "artifact+online"
   },
   {

@@ -31,7 +31,7 @@ export async function startServer(opts: { port?: number; quiet?: boolean } = {})
   const admin = (req: any) => { const a = auth(req); if (a.role !== 'admin' && a.role !== 'moderator') throw new AuthError(403, 'Forbidden'); return a; };
 
   // ---- health ----
-  app.get('/api/health', async () => ({ ok: true, db: (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1, redis: !!redis && redis.status === 'ready', online: game.conns.size, tickMsP95: game.stats.tickMsP95 }));
+  app.get('/api/health', async () => ({ ok: true, db: (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1, redis: !!redis && redis.status === 'ready', online: game.conns.size, tickMsP95: game.stats.tickMsP95, tickMsAvg: game.stats.tickMsAvg, bytesOut: game.stats.bytesOut }));
   // ---- auth (§05) ----
   app.post('/api/auth/register', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`reg:${req.ip}`, Number(process.env.REGISTER_LIMIT_PER_HOUR ?? 10), 3600))) throw new AuthError(429, 'Too many registrations'); return register(b.username, b.password); });
   app.post('/api/auth/login', async (req) => { const b: any = req.body ?? {}; if (!(await limit(`login:${req.ip}`, 20, 60))) throw new AuthError(429, 'Too many login attempts'); return login(b.username, b.password, req.ip); });

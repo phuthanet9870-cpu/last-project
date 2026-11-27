@@ -1,120 +1,120 @@
 {
-  "when": "2026-11-27T08:43:52.935Z",
+  "when": "2026-11-27T09:24:50.773Z",
   "passed": 27,
   "total": 27,
   "results": [
     {
       "name": "01 open game start screen",
       "ok": true,
-      "ms": 224,
+      "ms": 206,
       "detail": ""
     },
     {
       "name": "02 guest/local mode + character creation + class selection",
       "ok": true,
-      "ms": 1514,
+      "ms": 1435,
       "detail": "class=dawn_priest"
     },
     {
       "name": "03 character movement + collision + camera follow",
       "ok": true,
-      "ms": 6731,
-      "detail": "x 912→996.0000000000001→362.0279999999949"
+      "ms": 6748,
+      "detail": "x 912→996→362.0279999999943"
     },
     {
       "name": "04 NPC interaction + accept quest + talk objective",
       "ok": true,
-      "ms": 1144,
+      "ms": 964,
       "detail": "mq01 complete, mq02 accepted"
     },
     {
       "name": "05 travel through portal to field",
       "ok": true,
-      "ms": 817,
+      "ms": 854,
       "detail": "whisperwood"
     },
     {
       "name": "06 combat: attack monsters, skills, EXP, level, loot, gold",
       "ok": true,
-      "ms": 12336,
-      "detail": "kills=5 level 2→2 gold 550→587"
+      "ms": 10615,
+      "detail": "kills=5 level 2→2 gold 550→583"
     },
     {
       "name": "07 inventory + equipment UI",
       "ok": true,
-      "ms": 163,
+      "ms": 201,
       "detail": "equipped staff"
     },
     {
       "name": "08 refinement at blacksmith (+5)",
       "ok": true,
-      "ms": 35,
+      "ms": 66,
       "detail": "+5"
     },
     {
       "name": "09 gems + monster card + skill stone",
       "ok": true,
-      "ms": 32,
+      "ms": 156,
       "detail": "gem socketed, card inserted, stone inscribed+slotted"
     },
     {
       "name": "10 capture + hatch pet, summon, feed, farm offline settle",
       "ok": true,
-      "ms": 3971,
+      "ms": 3859,
       "detail": "pets=2"
     },
     {
       "name": "11 mount unlock + ride",
       "ok": true,
-      "ms": 447,
+      "ms": 433,
       "detail": "riding ok"
     },
     {
       "name": "12 gathering + crafting",
       "ok": true,
-      "ms": 120,
+      "ms": 123,
       "detail": "gathered herb, crafted potion"
     },
     {
       "name": "13 marketplace list + buy + buy order + auction bid + exchange",
       "ok": true,
-      "ms": 4704,
+      "ms": 4740,
       "detail": "bought listing, listed item, buy order, bid placed, exchange filled (crystal=1505), ledger balanced"
     },
     {
       "name": "14 direct trade with simulated player",
       "ok": true,
-      "ms": 42,
+      "ms": 21,
       "detail": "trade settled"
     },
     {
       "name": "15 party + guild + friend + mail + marriage",
       "ok": true,
-      "ms": 52,
+      "ms": 42,
       "detail": "party, friend, guild, mail, marriage ok"
     },
     {
       "name": "16 dungeon run (waves + boss) with reward once",
       "ok": true,
-      "ms": 1714,
+      "ms": 1686,
       "detail": "cleared daily_exp_1"
     },
     {
       "name": "17 world boss spawn + contribution settlement",
       "ok": true,
-      "ms": 3404,
+      "ms": 2665,
       "detail": "boss coins 20"
     },
     {
       "name": "18 PvP arena 1v1 vs AI (simulated) + rating",
       "ok": true,
-      "ms": 522,
-      "detail": "win=true rating=1017"
+      "ms": 516,
+      "detail": "win=true rating=1015"
     },
     {
       "name": "19 Hearthcards duel vs AI to completion",
       "ok": true,
-      "ms": 1106,
+      "ms": 917,
       "detail": "winner=0"
     },
     {
@@ -126,44 +126,44 @@
     {
       "name": "21 all menu windows open without errors",
       "ok": true,
-      "ms": 5200,
+      "ms": 4816,
       "detail": "22 windows"
     },
     {
       "name": "22 developer System Registry view",
       "ok": true,
-      "ms": 472,
+      "ms": 402,
       "detail": "581 registry rows"
     },
     {
       "name": "23 save → reload → continue keeps progress",
       "ok": true,
-      "ms": 1142,
+      "ms": 1129,
       "detail": "level 60 restored"
     },
     {
       "name": "24 export save produces valid file",
       "ok": true,
-      "ms": 8,
-      "detail": "67338 bytes"
+      "ms": 6,
+      "detail": "69211 bytes"
     },
     {
       "name": "25 mobile viewport renders HUD + joystick",
       "ok": true,
-      "ms": 1294,
+      "ms": 1286,
       "detail": "joystick visible"
     },
     {
       "name": "26 Thai language switch",
       "ok": true,
-      "ms": 398,
+      "ms": 360,
       "detail": "thai ok"
     },
     {
       "name": "27 performance: frame rate in town",
       "ok": true,
-      "ms": 2011,
-      "detail": "59 fps (headless, software rendering)"
+      "ms": 2012,
+      "detail": "61 fps (headless, software rendering)"
     }
   ],
   "errors": []

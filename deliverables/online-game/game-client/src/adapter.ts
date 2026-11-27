@@ -95,7 +95,7 @@ export function newLocalCharacter(name: string, classId: string, appearance: App
 /** Online adapter: authoritative server; client only renders snapshots and sends intents. */
 export class RemoteAdapter implements Adapter {
   mode = 'online' as const; dev = false; p!: PlayerState; mapId = 'emberglen'; myId = ''; ping = 0; private ws!: WebSocket; private pending = new Map<number, (r: Result) => void>(); private seq = 0;
-  private ents: PubEntity[] = []; private fx: Fx[] = []; private marketSnap: any = { listings: [], buyOrders: [], auctions: [], book: { bids: [], asks: [] }, priceHistory: {}, exchangeHistory: [] }; private tcgSnap: any = null; private extra: any = {};
+  private ents: PubEntity[] = []; private entMap = new Map<string, any>(); private fx: Fx[] = []; private marketSnap: any = { listings: [], buyOrders: [], auctions: [], book: { bids: [], asks: [] }, priceHistory: {}, exchangeHistory: [] }; private tcgSnap: any = null; private extra: any = {};
   onMapChange?: (m: string) => void; private timeOffset = 0;
   static async connect(url: string, token: string, characterId: string): Promise<RemoteAdapter> {
     const a = new RemoteAdapter(); await new Promise<void>((res, rej) => {
@@ -108,7 +108,13 @@ export class RemoteAdapter implements Adapter {
   }
   private onMessage(m: any) {
     if (m.type === 'welcome' || m.type === 'state') { const p = JSON.parse(m.player); p.wallet = Ledger.deserialize(p.wallet); this.p = p; if (m.myId) this.myId = m.myId; if (m.mapId && m.mapId !== this.mapId) { this.mapId = m.mapId; this.onMapChange?.(m.mapId); } if (m.serverTime) this.timeOffset = m.serverTime - Date.now(); }
-    if (m.type === 'snap') { this.ents = m.entities; this.fx.push(...m.fx); if (m.extra) this.extra = m.extra; if (m.mapId && m.mapId !== this.mapId) { this.mapId = m.mapId; this.onMapChange?.(m.mapId); } }
+    if (m.type === 'fx') this.fx.push(...m.fx);
+    if (m.type === 'snap') { // delta snapshot: new entities arrive in full, changed ones carry only dynamic fields, rm lists departures
+      if (m.full) this.entMap.clear();
+      for (const u of m.upd ?? []) { const cur = this.entMap.get(u.id); if (cur) Object.assign(cur, u); else this.entMap.set(u.id, u); }
+      for (const id of m.rm ?? []) this.entMap.delete(id);
+      if (m.entities) for (const u of m.entities) this.entMap.set(u.id, u);
+      this.ents = [...this.entMap.values()]; if (m.fx) this.fx.push(...m.fx); if (m.extra) this.extra = m.extra; if (m.mapId && m.mapId !== this.mapId) { this.mapId = m.mapId; this.onMapChange?.(m.mapId); } }
     if (m.type === 'market') this.marketSnap = reviveBig(m.market);
     if (m.type === 'tcg') this.tcgSnap = m.tcg;
     if (m.type === 'trade') { const t = m.trade; const mine = t.offer[this.p.id]; const other = Object.entries(t.offer as Record<string, any>).find(([k]) => k !== this.p.id)?.[1]; this.fx.push({ t: 'notice', msg: `Trade: you offer ${mine?.items.length ?? 0} item(s) + ${String(mine?.gold ?? 0).replace('n', '')}G · partner offers ${other?.items.length ?? 0} item(s) + ${String(other?.gold ?? 0).replace('n', '')}G · locked ${Object.keys(t.lock).length}/2 · confirmed ${Object.keys(t.confirm).length}/2` }); }

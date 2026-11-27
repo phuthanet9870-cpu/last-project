@@ -5,14 +5,14 @@
 import type { WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
 import {
-  CONFIG as GAME, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
+  CONFIG as GAME, DYNAMIC_KEYS, publicEntity, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
   type Currency, type PlayerState, type Result, type Session,
 } from '../../../packages/game-core/src/index.js';
 import { pool, tx } from './db.js';
 import { CONFIG } from './env.js';
 import type { Redis } from 'ioredis';
 
-interface Conn { ws: WebSocket; accountId: string; role: string; charId: string; svc: PlayerService; world: World; session: Session; lastSnap: number; dirty: boolean; muted: boolean; lastPersist: number }
+interface Conn { phase: number; aoi?: { ids: string[]; at: number; inst: string }; known: Map<string, string>; mapSent: string; ws: WebSocket; accountId: string; role: string; charId: string; svc: PlayerService; world: World; session: Session; lastSnap: number; dirty: boolean; muted: boolean; lastPersist: number }
 interface Invite { kind: 'party' | 'trade' | 'duel' | 'guild'; from: string; at: number; data?: any }
 interface Trade { id: string; a: string; b: string; offer: Record<string, { items: string[]; gold: bigint }>; lock: Record<string, boolean>; confirm: Record<string, boolean>; done: boolean }
 const ok = (data?: unknown, msg?: string): Result => ({ ok: true, data, msg });
@@ -22,7 +22,7 @@ const SERVER_ONLY = new Set(['dev']);
 
 export class GameServer {
   ledger = new Ledger(); market: MarketService; worlds = new Map<string, World>(); conns = new Map<string, Conn>(); invites = new Map<string, Invite>(); trades = new Map<string, Trade>();
-  arenaQueue: string[] = []; matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
+  arenaQueue: string[] = []; matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
   private timer?: NodeJS.Timeout; private rng = new Rng(Date.now() & 0xffffff); private chatOut: [string, string, string | null, string | null, string][] = [];
   constructor(public redis: Redis | null) { this.ledger.trackPending = true; this.market = new MarketService(this.ledger, new Rng(7)); }
 
@@ -36,7 +36,7 @@ export class GameServer {
     if (!w) { w = new World({ mapId, instanceId: key, rng: new Rng(MAPS[mapId]!.seed * 131 + key.length), bots: 0, worldBossIntervalMs: Number(process.env.WORLD_BOSS_INTERVAL_MS ?? 10 * 60_000) }); this.worlds.set(key, w); }
     return w;
   }
-  start() { const dt = 1000 / CONFIG.tickHz; let last = performance.now(); this.timer = setInterval(() => { const t0 = performance.now(); this.tick(t0 - last); last = t0; const took = performance.now() - t0; const s = this.stats.tickSamples; s.push(took); if (s.length > 200) s.shift(); this.stats.ticks++; if (this.stats.ticks % 20 === 0) this.stats.tickMsP95 = [...s].sort((a, b) => a - b)[Math.floor(s.length * 0.95)] ?? 0; }, dt); }
+  start() { const dt = 1000 / CONFIG.tickHz; let last = performance.now(); this.timer = setInterval(() => { const t0 = performance.now(); this.tick(t0 - last); last = t0; const took = performance.now() - t0; const s = this.stats.tickSamples; s.push(took); if (s.length > 200) s.shift(); this.stats.ticks++; if (this.stats.ticks % 20 === 0) this.stats.tickMsAvg = s.reduce((a, b) => a + b, 0) / s.length; if (this.stats.ticks % 20 === 0) this.stats.tickMsP95 = [...s].sort((a, b) => a - b)[Math.floor(s.length * 0.95)] ?? 0; }, dt); }
   stop() { if (this.timer) clearInterval(this.timer); }
 
   // ---------------- connections ----------------
@@ -50,7 +50,7 @@ export class GameServer {
     const map = MAPS[p.map] && !MAPS[p.map]!.instanced ? p.map : p.savedMap ?? 'emberglen';
     const world = this.world(map); const e = world.addPlayer(svc, MAPS[p.map]?.instanced ? undefined : { x: p.x, y: p.y });
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [accountId])).rowCount! > 0;
-    const c: Conn = { ws, accountId, role, charId, svc, world, session: {}, lastSnap: 0, dirty: true, muted, lastPersist: Date.now() };
+    const c: Conn = { phase: this.conns.size % 2, known: new Map(), mapSent: '', ws, accountId, role, charId, svc, world, session: {}, lastSnap: 0, dirty: true, muted, lastPersist: Date.now() };
     this.conns.set(charId, c);
     await this.redis?.sadd('hb:online', charId).catch(() => undefined); await this.redis?.set(`hb:presence:${charId}`, map, 'EX', 120).catch(() => undefined);
     this.send(c, { type: 'welcome', myId: e.id, mapId: map, player: this.playerJson(c), serverTime: Date.now(), protocolVersion: 1 });
@@ -69,7 +69,8 @@ export class GameServer {
   playerJson(c: Conn): string { return serializePlayer({ ...c.svc.p, wallet: this.walletView(c) as any }); }
   /** Client only receives its own wallet rows (no other accounts' balances leak). */
   walletView(c: Conn): Ledger { const v = new Ledger(); const a = walletId(c.svc.p); for (const cur of ['gold', 'crystal', 'arena_token', 'boss_coin', 'card_dust', 'star_dust', 'guild_token', 'event_token'] as Currency[]) { const b = this.ledger.bal(a, cur); const vb = v.bal(a, cur); vb.available = b.available; vb.reserved = b.reserved; } return v; }
-  send(c: Conn, m: unknown) { if (c.ws.readyState === 1) c.ws.send(JSON.stringify(m, (_k, v) => (typeof v === 'bigint' ? `${v}n` : v))); }
+  send(c: Conn, m: unknown, plain = false) { if (c.ws.readyState !== 1) return; const s = plain ? JSON.stringify(m) : JSON.stringify(m, (_k, v) => (typeof v === 'bigint' ? `${v}n` : v)); this.stats.bytesOut += s.length; c.ws.send(s); }
+  sendFx(c: Conn, fx: unknown[]) { if (fx.length) this.send(c, { type: 'fx', fx }, true); }
 
   // ---------------- command handling ----------------
   async handle(c: Conn, raw: string) {
@@ -108,10 +109,10 @@ export class GameServer {
     switch (cmd) {
       // ---- chat (world/whisper are cross-map) ----
       case 'chat': { if (c.muted) return fail('MUTED', 'You are muted by a moderator'); const ch = String(a.ch ?? 'local'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160).trim(); if (!msg) return fail('EMPTY');
-        if (ch === 'world' || ch === 'trade' || ch === 'help') for (const x of this.conns.values()) { if (!x.svc.p.blocked.includes(c.svc.p.name) && x.world !== c.world) this.send(x, { type: 'snap', entities: [], fx: [{ t: 'chat', ch, from: c.svc.p.name, msg }] }); }
-        if (ch === 'party') { const e = c.world.entities.get(me); const m = e?.partyId ? c.world.parties.get(e.partyId) ?? [] : []; for (const id of m) { const t = this.conns.get(id.replace('pl_', '')); if (t) this.send(t, { type: 'snap', entities: [], fx: [{ t: 'chat', ch, from: c.svc.p.name, msg }] }); } this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
+        if (ch === 'world' || ch === 'trade' || ch === 'help') for (const x of this.conns.values()) { if (!x.svc.p.blocked.includes(c.svc.p.name) && x.world !== c.world) this.sendFx(x, [{ t: 'chat', ch, from: c.svc.p.name, msg }]); }
+        if (ch === 'party') { const e = c.world.entities.get(me); const m = e?.partyId ? c.world.parties.get(e.partyId) ?? [] : []; for (const id of m) { const t = this.conns.get(id.replace('pl_', '')); if (t) this.sendFx(t, [{ t: 'chat', ch, from: c.svc.p.name, msg }]); } this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
         c.world.chat(me, ch, msg); this.chatOut.push([ch, msg, c.charId, null, c.svc.p.name]); return ok(); }
-      case 'whisper': { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.to ?? '').toLowerCase()); if (!t) return fail('PLAYER_OFFLINE'); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160); this.send(t, { type: 'snap', entities: [], fx: [{ t: 'chat', ch: 'whisper', from: c.svc.p.name, msg }] }); this.chatOut.push(['whisper', msg, c.charId, t.charId, c.svc.p.name]); return ok(); }
+      case 'whisper': { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.to ?? '').toLowerCase()); if (!t) return fail('PLAYER_OFFLINE'); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); const msg = String(a.msg ?? '').replace(/[<>]/g, '').slice(0, 160); this.sendFx(t, [{ t: 'chat', ch: 'whisper', from: c.svc.p.name, msg }]); this.chatOut.push(['whisper', msg, c.charId, t.charId, c.svc.p.name]); return ok(); }
       // ---- party with consent ----
       case 'partyInvite': { const t = this.target(c, a.target); if (!t) return executeCommand(this.ctx(c), cmd, a); if (t.svc.p.blocked.includes(c.svc.p.name)) return fail('BLOCKED'); this.invites.set(t.charId, { kind: 'party', from: c.charId, at: Date.now() }); this.notice(t, `${c.svc.p.name} invites you to a party. Type /accept party or click Accept.`); return ok({ pending: true }); }
       case 'partyAccept': { const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'party' || Date.now() - inv.at > 60_000) return fail('NO_INVITE'); this.invites.delete(c.charId); const from = this.conns.get(inv.from); if (!from || from.world !== c.world) return fail('INVITER_GONE'); const r = executeCommand({ ...this.ctx(from), mode: 'server' }, 'partyInvite', { target: me }); if (r.ok) { this.notice(from, `${c.svc.p.name} joined your party`); } return r; }
@@ -141,7 +142,7 @@ export class GameServer {
       default: return executeCommand(this.ctx(c), cmd, a);
     }
   }
-  notice(c: Conn, msg: string) { this.send(c, { type: 'snap', entities: [], fx: [{ t: 'notice', msg }] }); }
+  notice(c: Conn, msg: string) { this.sendFx(c, [{ t: 'notice', msg }]); }
   private tradeOf(charId: string) { return [...this.trades.values()].find((t) => !t.done && (t.a === charId || t.b === charId)); }
   private tradeUpdate(tr: Trade) { for (const id of [tr.a, tr.b]) { const x = this.conns.get(id); if (x) this.send(x, { type: 'trade', trade: { id: tr.id, a: tr.a, b: tr.b, offer: tr.offer, lock: tr.lock, confirm: tr.confirm } }); } }
   private cancelTradesOf(charId: string) { for (const t of this.trades.values()) if (!t.done && (t.a === charId || t.b === charId)) { t.done = true; for (const id of [t.a, t.b]) { const x = this.conns.get(id); if (x && id !== charId) this.notice(x, 'Trade cancelled'); } } }
@@ -215,11 +216,22 @@ export class GameServer {
     this.settleMatches();
     const now = Date.now();
     const fxByWorld = new Map<World, ReturnType<World['drainFx']>>(); for (const w of this.worlds.values()) fxByWorld.set(w, w.drainFx());
+    // per-world public entity cache: built once per tick, shared by all connections (O(n) serialization instead of O(n²))
+    const cache = new Map<World, Map<string, { full: any; dyn: string }>>();
+    const pub = (w: World) => { let m = cache.get(w); if (!m) { m = new Map(); for (const e of w.entities.values()) { const full = publicEntity(e); const dyn = JSON.stringify(DYNAMIC_KEYS.map((k) => (full as any)[k])); m.set(e.id, { full, dyn }); } cache.set(w, m); } return m; };
     for (const c of this.conns.values()) {
-      const fx = (fxByWorld.get(c.world) ?? []).filter((f) => f.t !== 'notice' || !f.to || f.to === `pl_${c.charId}`).filter((f) => f.t !== 'chat' || !c.svc.p.blocked.includes(f.from));
-      if (now - c.lastSnap >= 1000 / CONFIG.snapshotHz || fx.length) {
-        c.lastSnap = now; const e = c.world.entities.get(`pl_${c.charId}`);
-        this.send(c, { type: 'snap', mapId: c.world.mapId, entities: c.world.snapshotFor(`pl_${c.charId}`), fx, extra: { cds: e?.cds, party: e?.partyId ? c.world.parties.get(e.partyId) : [], dungeon: c.world.dungeon, boss: { boss: c.world.boss && !c.world.boss.settled ? c.world.boss : null, nextAt: c.world.nextBossAt, last: c.world.boss }, arena: c.world.arena } });
+      const meE = c.world.entities.get(`pl_${c.charId}`); // spatial fx filter: positional effects and local chat only reach players within 1300px
+      const fx = (fxByWorld.get(c.world) ?? []).filter((f) => f.t !== 'notice' || !f.to || f.to === `pl_${c.charId}`).filter((f) => f.t !== 'chat' || !c.svc.p.blocked.includes(f.from)).filter((f: any) => !meE || f.x === undefined || f.t === 'notice' || Math.abs(f.x - meE.x) + Math.abs(f.y - meE.y) < 1300);
+      this.sendFx(c, fx);
+      if ((this.stats.ticks + c.phase) % Math.round(CONFIG.tickHz / CONFIG.snapshotHz) === 0) { // staggered: half the clients on even ticks, half on odd → no burst every other tick
+        c.lastSnap = now; const myId = `pl_${c.charId}`; const e = c.world.entities.get(myId); const m = pub(c.world);
+        const full = c.mapSent !== c.world.instanceId; if (full) { c.known.clear(); c.mapSent = c.world.instanceId; }
+        const upd: any[] = []; const seen = new Set<string>();
+        if (!c.aoi || now - c.aoi.at > 300 || c.aoi.inst !== c.world.instanceId) c.aoi = { ids: c.world.aoiIds(myId), at: now, inst: c.world.instanceId }; // visibility set refreshed every 300ms; positions still sent at 10 Hz
+        for (const id of c.aoi.ids) { const p = m.get(id); if (!p) continue; seen.add(id); const prev = c.known.get(id); if (prev === undefined) { upd.push(p.full); c.known.set(id, p.dyn); } else if (prev !== p.dyn) { const d: any = { id }; DYNAMIC_KEYS.forEach((k) => { d[k] = (p.full as any)[k]; }); upd.push(d); c.known.set(id, p.dyn); } }
+        const rm: string[] = []; for (const id of c.known.keys()) if (!seen.has(id)) { rm.push(id); c.known.delete(id); }
+        const extra = { cds: e?.cds, party: e?.partyId ? c.world.parties.get(e.partyId) : [], dungeon: c.world.dungeon, boss: { boss: c.world.boss && !c.world.boss.settled ? c.world.boss : null, nextAt: c.world.nextBossAt, last: c.world.boss }, arena: c.world.arena };
+        if (upd.length || rm.length || full || this.stats.ticks % 10 === 0) this.send(c, { type: 'snap', mapId: c.world.mapId, full, upd, rm, extra }, true);
       }
       if (c.dirty && now - c.lastSnap < 60) { c.dirty = false; this.send(c, { type: 'state', player: this.playerJson(c), mapId: c.world.mapId, myId: `pl_${c.charId}` }); }
       if (now - c.lastPersist > CONFIG.saveIntervalMs) { c.lastPersist = now; this.persist([c]).catch(() => { this.stats.persistErrors++; }); }

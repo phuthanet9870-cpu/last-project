@@ -24,7 +24,7 @@
 `pnpm typecheck` ✔ · `pnpm lint` ✔ (0 errors) · `pnpm test` 36/36 · `pnpm test:e2e` 27/27 · `pnpm test:multiplayer` 13/13 · online browser E2E 3/3 · worker `--once` ✔ · `pnpm game:start` ✔ · load 20/50/100.
 
 ## Next dependency-ready tasks (in order)
-1. Delta snapshots + spatial hash AOI (KNOWN_ISSUES #1), re-run load at 100/250.
+1. ~~Delta snapshots + spatial hash AOI~~ DONE v0.2.0 (250 players/map p95 46 ms).
 2. Normalize item ownership tables; move market matching into DB transactions with row locks (enables multi-process).
 3. Online versions of SIMULATED systems: marriage consent flow, friend presence (Redis TTL), TCG PvP duels, guild storage.
 4. Party dungeon instances; arena 2v2/3v3 matchmaking for real players; seasons.
