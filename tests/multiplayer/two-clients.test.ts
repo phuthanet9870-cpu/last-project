@@ -6,6 +6,7 @@ import WebSocket from 'ws';
 import { aiChooseAction } from '../../packages/game-core/src/index.js';
 import pg from 'pg';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 const BASE = process.env.SERVER ?? 'http://localhost:2567'; const WSURL = BASE.replace(/^http/, 'ws') + '/ws';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://hb:hb_dev_pw@localhost:5432/hearthbound' });
 const results: { name: string; ok: boolean; detail: string }[] = [];
@@ -180,6 +181,13 @@ await step('guild: shared DB storage, member/officer permissions, announcement, 
   const ch = await A2.cmd('guildWarChallenge', { guild: gB }); assert(ch.ok, JSON.stringify(ch)); const acc = await B.cmd('guildWarAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(500); assert(A2.mapId === 'arena' && B.mapId === 'arena', `maps ${A2.mapId}/${B.mapId}`);
   let row: any = null; for (let i = 0; i < 40; i++) { await sleep(250); row = (await db.query('SELECT winner, score FROM guild_wars WHERE match_id=$1', [acc.data.match])).rows[0]; if (row?.winner) break; } assert(row?.winner, `war settled ${JSON.stringify(row)}`);
   await A2.cmd('leaveInstance'); await B.cmd('leaveInstance'); return `storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner ${row.winner === A2.state.guild?.id ? gA : gB} score ${JSON.stringify(row.score)}`;
+});
+await step('worker: weekly champion = most PvP rating gained in the last 7 days (not all-time rating)', async () => {
+  const period = `mp-${tag}`; const out = execFileSync('npx', ['tsx', 'apps/worker/src/main.ts', '--once', '--job', 'weeklyChampion', '--period', period], { encoding: 'utf8' });
+  const row = (await db.query('SELECT character_id, value FROM weekly_champions WHERE week=$1', [period])).rows[0]; assert(row, `no champion row: ${out}`);
+  const gains = (await db.query(`SELECT d.key AS id, sum(d.value::int) AS g FROM pvp_matches m CROSS JOIN LATERAL jsonb_each_text(m.rating_delta) d WHERE m.finished_at > now() - interval '7 days' GROUP BY d.key`)).rows; const max = Math.max(...gains.map((x) => Number(x.g)));
+  assert(Number(row.value) === max && max > 0, `champion gain ${row.value} vs max ${max}`); const top = (await db.query('SELECT max(pvp_rating) AS r FROM characters')).rows[0].r;
+  return `champion gained +${row.value} this week (highest all-time rating on the server: ${top})`;
 });
 const passed = results.filter((r) => r.ok).length; mkdirSync('tests/multiplayer', { recursive: true });
 writeFileSync('tests/multiplayer/last-run.json', JSON.stringify({ when: new Date().toISOString(), server: BASE, durationMs: Date.now() - t0, passed, total: results.length, results }, null, 2));

@@ -1,9 +1,9 @@
 {
-  "when": "2026-11-27T14:29:24.522Z",
+  "when": "2026-11-27T14:55:34.802Z",
   "server": "http://localhost:2567",
-  "durationMs": 94499,
-  "passed": 23,
-  "total": 23,
+  "durationMs": 94254,
+  "passed": 24,
+  "total": 24,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwz2sxoi1226p, ch_mwz2sxs5bda5z"
+      "detail": "ch_mwz3qlhm1ewkd, ch_mwz3qlhvb8v54"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -78,7 +78,7 @@
     {
       "name": "Hearthcards PvP duel between the two players to completion",
       "ok": true,
-      "detail": "A sees winner 0, B sees 1 (perspective-correct); 2 results recorded"
+      "detail": "A sees winner 1, B sees 0 (perspective-correct); 2 results recorded"
     },
     {
       "name": "party dungeon: party enters the same instance together",
@@ -103,7 +103,7 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwz2sxoi1226p\":16,\"ch_mwz2sxs5bda5z\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwz3qlhm1ewkd\":16,\"ch_mwz3qlhvb8v54\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
@@ -113,12 +113,17 @@
     {
       "name": "Hearthcards card trade (bound cards refused), rankings API kinds, weekly champion title",
       "ok": true,
-      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:23; title_weekly → B"
+      "detail": "card tc_fire_striker A→B for 50G; bound card refused; rankings level:100 cp:100 pvp:100 tcg:100 pet:100 life:100 mastery:100 class:dawn_priest:24; title_weekly → B"
     },
     {
       "name": "guild: shared DB storage, member/officer permissions, announcement, guild war between two real guilds",
       "ok": true,
-      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lan0wi7x score [0,0]"
+      "detail": "storage deposit→list→denied→promote→withdraw; announcement sanitised; war winner Lantksl7 score [0,0]"
+    },
+    {
+      "name": "worker: weekly champion = most PvP rating gained in the last 7 days (not all-time rating)",
+      "ok": true,
+      "detail": "champion gained +16 this week (highest all-time rating on the server: 1016)"
     }
   ]
 }

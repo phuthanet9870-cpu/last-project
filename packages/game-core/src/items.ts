@@ -103,6 +103,7 @@ const MATS: [string, string, string, string, string, Rarity?][] = [
   ['herb_green', 'Greenleaf', 'ใบเขียว', 'herb', '#50c050'], ['herb_blue', 'Bluebell', 'ระฆังฟ้า', 'herb', '#5080e0'], ['herb_gold', 'Sunpetal', 'กลีบสุริยา', 'herb', '#f0d040', 'uncommon'],
   ['fish_carp', 'River Carp', 'ปลาตะเพียน', 'fish', '#c0a060'], ['fish_trout', 'Silver Trout', 'ปลาเทราต์', 'fish', '#c0d0e0'], ['fish_koi', 'Lantern Koi', 'ปลาคาร์ปโคมไฟ', 'fish', '#ff8040', 'rare'],
   ['berry', 'Wild Berry', 'เบอร์รีป่า', 'berry', '#c03060'], ['wheat', 'Wheat', 'ข้าวสาลี', 'wheat', '#e0c060'], ['cloth', 'Linen Cloth', 'ผ้าลินิน', 'cloth', '#e0e0d0'],
+  ['coral_shard', 'Coral Shard', 'เศษปะการัง', 'crystal', '#ff9a8a', 'uncommon'], ['brine_pearl', 'Brine Pearl', 'ไข่มุกน้ำเค็ม', 'gem', '#e0f0ff', 'rare'], ['star_fragment', 'Star Fragment', 'เศษดาว', 'crystal', '#d0c0ff', 'rare'], ['magma_core', 'Magma Core', 'แกนแมกมา', 'ore', '#ff6020', 'epic'],
   ['refine_ore', 'Lumen Ore', 'แร่ลูเมน', 'ore', '#80ffe0', 'uncommon'], ['refine_ore_hi', 'Radiant Ore', 'แร่เปล่งประกาย', 'ore', '#ffff80', 'rare'], ['stone_dust', 'Stone Dust', 'ผงศิลา', 'dust', '#b0a090'], ['star_dust', 'Star Dust', 'ผงดาว', 'dust', '#ffe0ff', 'uncommon'],
   ['card_dust', 'Card Dust', 'ผงการ์ด', 'dust', '#80c0ff'], ['gem_dust', 'Gem Dust', 'ผงอัญมณี', 'dust', '#ff80ff'],
 ];

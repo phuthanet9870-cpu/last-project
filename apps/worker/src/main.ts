@@ -19,7 +19,7 @@ async function once(kind: string, period: string, fn: () => Promise<unknown>) {
   try { const result = await fn(); await pool.query(`UPDATE scheduled_jobs SET status='done', result=$2 WHERE job_key=$1`, [key, JSON.stringify(result ?? {})]); return { key, result }; }
   catch (e: any) { await pool.query(`DELETE FROM scheduled_jobs WHERE job_key=$1`, [key]); throw e; } // allow BullMQ retry
 }
-export const JOBS: Record<string, () => Promise<unknown>> = {
+export const JOBS: Record<string, (period?: string) => Promise<unknown>> = {
   dailyReset: () => once('daily_reset', bangkokDay(), async () => ({ note: 'Daily counters reset lazily per character on next login using Asia/Bangkok day keys (PlayerService.resetDailyIfNeeded).', day: bangkokDay() })),
   reconcileLedger: () => once('reconcile', new Date().toISOString().slice(0, 13), async () => {
     const unbalanced = (await pool.query('SELECT tx_id, currency, sum(amount)::text AS s FROM currency_ledger GROUP BY tx_id, currency HAVING sum(amount)<>0 LIMIT 50')).rows;
@@ -28,17 +28,19 @@ export const JOBS: Record<string, () => Promise<unknown>> = {
     return { unbalanced: unbalanced.length, mismatch: mismatch.length };
   }),
   chatRetention: () => once('chat_retention', bangkokDay(), async () => ({ deleted: (await pool.query(`DELETE FROM chat_messages WHERE at < now() - interval '30 days'`)).rowCount })),
-  weeklyChampion: () => once('weekly_champion', isoWeek(), async () => {
-    // Highest PvP rating with at least one PvP win this week's state; ties broken by name. Server grants title_weekly on its next sync.
-    const r = await pool.query(`SELECT id, name, pvp_rating FROM characters WHERE deleted_at IS NULL AND COALESCE((state->'pvp'->>'wins')::int,0) > 0 ORDER BY pvp_rating DESC, name LIMIT 1`);
+  weeklyChampion: (period = isoWeek()) => once('weekly_champion', period, async () => {
+    // Most rating GAINED in rated PvP matches finished during the last 7 days (sum of per-match deltas), not all-time rating. Ties: more matches, then name.
+    const r = await pool.query(`SELECT d.key AS id, c.name, sum(d.value::int) AS gain, count(*) AS games FROM pvp_matches m CROSS JOIN LATERAL jsonb_each_text(m.rating_delta) d JOIN characters c ON c.id = d.key AND c.deleted_at IS NULL
+      WHERE m.finished_at > now() - interval '7 days' AND m.rating_delta IS NOT NULL GROUP BY d.key, c.name HAVING sum(d.value::int) > 0 ORDER BY gain DESC, games DESC, c.name LIMIT 1`);
     const top = r.rows[0]; if (!top) return { champion: null };
-    await pool.query(`INSERT INTO weekly_champions(week,kind,character_id,name,value) VALUES ($1,'pvp',$2,$3,$4) ON CONFLICT (week, kind) DO NOTHING`, [isoWeek(), top.id, top.name, top.pvp_rating]);
-    return { champion: top.name, rating: top.pvp_rating };
+    await pool.query(`INSERT INTO weekly_champions(week,kind,character_id,name,value) VALUES ($1,'pvp',$2,$3,$4) ON CONFLICT (week, kind) DO NOTHING`, [period, top.id, top.name, top.gain]);
+    return { champion: top.name, gain: Number(top.gain), games: Number(top.games) };
   }),
   sessionCleanup: () => once('session_cleanup', bangkokDay(), async () => ({ deleted: (await pool.query(`DELETE FROM account_sessions WHERE expires_at < now() - interval '7 days'`)).rowCount })),
 };
-if (process.argv.includes('--once')) { // run all jobs once (used by tests / cron fallback without Redis)
-  for (const [n, f] of Object.entries(JOBS)) console.log(n, JSON.stringify(await f()));
+if (process.argv.includes('--once')) { // run all jobs once (used by tests / cron fallback without Redis); `--job name [--period p]` runs one job for an explicit period (tests/backfill)
+  const ji = process.argv.indexOf('--job'), pi = process.argv.indexOf('--period'); const only = ji > 0 ? process.argv[ji + 1] : null; const period = pi > 0 ? process.argv[pi + 1] : undefined;
+  for (const [n, f] of Object.entries(JOBS)) if (!only || n === only) console.log(n, JSON.stringify(await f(period)));
   await pool.end(); process.exit(0);
 }
 const q = new Queue('hearthbound', { connection });

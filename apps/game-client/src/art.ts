@@ -27,9 +27,10 @@ const TILE_COL: Record<number, [string, string, string]> = {
   0: ['#6cb04a', '#5a9c3e', '#82c45a'], 1: ['#4f8a3a', '#447a32', '#5e9c44'], 2: ['#c8a46a', '#b48e58', '#d8b880'], 3: ['#3f8fd0', '#3480c0', '#5aa8e0'], 4: ['#e8d49a', '#d8c080', '#f4e4b4'],
   5: ['#eef4fa', '#dce6f0', '#ffffff'], 6: ['#6a6470', '#5a5460', '#7a7480'], 7: ['#3a3440', '#2a2430', '#4a4450'], 8: ['#a87850', '#946640', '#b88a60'], 9: ['#b8a890', '#a49478', '#c8bca8'],
   10: ['#7a5232', '#684428', '#8a6040'], 11: ['#bfe6f6', '#a8d8ee', '#dcf4ff'], 12: ['#8a7a6a', '#6e6052', '#a09080'], 13: ['#2c6aa8', '#245c94', '#3a7cbc'], 14: ['#9a6a3a', '#7a5028', '#b08050'],
+  15: ['#e04810', '#b02800', '#ffb040'], 16: ['#a89c8a', '#8c8070', '#c0b4a2'], 17: ['#4a4046', '#3a3238', '#5e5458'], 18: ['#f0c8a8', '#ff9a8a', '#fff0e0'],
 };
 export function tileCanvas(t: number, x: number, y: number, frame = 0): HTMLCanvasElement {
-  const v = Math.floor(hash(x, y) * 4); const animated = t === 3 || t === 13;
+  const v = Math.floor(hash(x, y) * 4); const animated = t === 3 || t === 13 || t === 15;
   return cached(`t${t}_${v}_${animated ? frame : 0}`, 16, 16, (c) => {
     const [a, b, hi] = TILE_COL[t] ?? TILE_COL[0]!;
     p(c, 0, 0, 16, 16, a);
@@ -43,6 +44,10 @@ export function tileCanvas(t: number, x: number, y: number, frame = 0): HTMLCanv
     if (t === 10) { for (let j = 1; j < 16; j += 4) p(c, 0, j, 16, 2, b); }
     if (t === 12) { p(c, 0, 0, 16, 3, hi); for (let k = 0; k < 6; k++) p(c, Math.floor(hash(k, v) * 14), 4 + Math.floor(hash(v, k) * 11), 2, 1, b); p(c, 0, 13, 16, 3, shade(a, -0.25)); }
     if (t === 5) { for (let k = 0; k < 3; k++) p(c, Math.floor(hash(k, v, 8) * 15), Math.floor(hash(v, k, 6) * 15), 1, 1, '#c8d8e8'); }
+    if (t === 15) { const f = frame % 3; for (let k = 0; k < 6; k++) { const wx = (Math.floor(hash(k, v, 2) * 13) + f * 2) % 14, wy = Math.floor(hash(v, k, 4) * 14) + 1; p(c, wx, wy, 3, 1, '#ffd060'); p(c, wx + 1, wy + 1, 1, 1, '#fff0a0'); } }
+    if (t === 16) { for (let j = 0; j < 16; j += 8) for (let i = 0; i < 16; i += 8) { p(c, i, j, 8, 1, shade(a, -0.18)); p(c, i, j, 1, 8, shade(a, -0.18)); } if (v === 2) { p(c, 3, 9, 5, 1, b); p(c, 7, 10, 1, 3, b); } }
+    if (t === 17) { for (let k = 0; k < 4; k++) p(c, Math.floor(hash(k, v, 8) * 15), Math.floor(hash(v, k, 6) * 15), 1, 1, '#ff7030'); }
+    if (t === 18) { for (let k = 0; k < 3; k++) { const gx = Math.floor(hash(k, v, 3) * 12) + 2, gy = Math.floor(hash(v, k, 5) * 12) + 2; p(c, gx, gy, 1, 3, '#ff7a6a'); p(c, gx - 1, gy, 3, 1, '#ff7a6a'); } }
     if (t === 11) { p(c, 2, 3, 5, 1, '#ffffff'); p(c, 9, 10, 4, 1, '#ffffff'); }
   });
 }

@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-27T14:31:28.309Z",
+ "generated": "2026-11-27T14:57:46.296Z",
  "total": 581,
  "counts": {
   "COMPLETE": 366,
@@ -3415,7 +3415,7 @@
    "name": "Weekly Title",
    "section": "Rankings",
    "status": "COMPLETE",
-   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"; worker weeklyChampion job — all-time PvP rating, not weekly gain",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards card trade\"; multiplayer: tests/multiplayer/two-clients.test.ts \"worker: weekly champion\" — most rating gained in the last 7 days",
    "mode": "artifact+online"
   },
   {
@@ -4231,7 +4231,7 @@
    "name": "Map and world engine",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "9 data-driven maps, day/night, weather, portals; no fog of war/world map screen",
+   "evidence": "15 data-driven maps (incl. Coral Coast Lv30+, Starfall Ruins Lv45+, Emberpeak Caldera Lv65+ with lava/ruin/coral tiles, Wedding Plaza), day/night, weather, portals; no fog of war/world map screen; no zones beyond Lv~90 (cap 120)",
    "mode": "artifact+online"
   },
   {
@@ -4247,7 +4247,7 @@
    "name": "NPC, dialogue, story and quests",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "20 NPCs, 23 quests; no branching dialogue/story scenes",
+   "evidence": "25 NPCs, 37 quests (main chain mq01–mq18 to Lv75, 16 side quests); no branching dialogue/story scenes",
    "mode": "artifact+online"
   },
   {
@@ -4327,7 +4327,7 @@
    "name": "Dungeons and raids",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "story + 50 daily dungeon floors, party instances online + bots in artifact; no raids",
+   "evidence": "3 story dungeons (Mossy Hollow, Tidal Grotto Lv35, Starfall Vault Lv55) + 50 daily floors, party instances online + bots in artifact; no raids (8+ players)",
    "mode": "artifact+online"
   },
   {
@@ -4487,7 +4487,7 @@
    "name": "Event framework and recurring rewards",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "login calendar, missions, chests, 3 rotating weekly events (EXP/drop/gold), countdown, event tokens + seasonal shop; no admin-scheduled events",
+   "evidence": "login calendar, missions, chests, 3 rotating weekly events (EXP/drop/gold) whose missions reset per occurrence, countdown, event tokens + seasonal shop; no admin-scheduled events",
    "mode": "artifact+online"
   },
   {

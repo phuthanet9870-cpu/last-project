@@ -135,7 +135,7 @@ describe('world simulation', () => {
     w.kill(m, e); expect(p.counters.kills).toBe(1); void err;
   });
   it('server-side movement respects collision (cannot walk through border cliffs)', () => { const { svc } = mk(); const w = new World({ mapId: 'emberglen', rng: new Rng(1) }); const e = w.addPlayer(svc); w.setInput(e.id, -1, 0); for (let i = 0; i < 400; i++) w.tick(50); expect(e.x).toBeGreaterThan(TILE); });
-  it('dungeon run grants completion reward exactly once', () => { const { svc, p } = mk(); svc.gainExp(1e5, 't'); expect(svc.startDungeon('mossy_hollow').ok).toBe(true); const r1 = svc.completeDungeon('mossy_hollow', 'run1'); const r2 = svc.completeDungeon('mossy_hollow', 'run1'); expect(r1.ok).toBe(true); expect(r2.ok).toBe(false); expect(p.dungeon.firstClears).toContain('mossy_hollow'); expect(Object.keys(DUNGEONS).length).toBe(51); });
+  it('dungeon run grants completion reward exactly once', () => { const { svc, p } = mk(); svc.gainExp(1e5, 't'); expect(svc.startDungeon('mossy_hollow').ok).toBe(true); const r1 = svc.completeDungeon('mossy_hollow', 'run1'); const r2 = svc.completeDungeon('mossy_hollow', 'run1'); expect(r1.ok).toBe(true); expect(r2.ok).toBe(false); expect(p.dungeon.firstClears).toContain('mossy_hollow'); expect(Object.keys(DUNGEONS).length).toBe(53); /* 2 story dungeons added in 0.10 */ });
 });
 
 describe('save/load', () => {
@@ -294,7 +294,7 @@ describe('LiveOps / rankings / TCG additions (v0.8)', () => {
   it('event rotation: weekly event with countdown; gold rush multiplies monster gold; missions grant event tokens (doubled by festival pass)', () => {
     const t = 3 * WEEK_MS + 1000; expect(eventEndsAt(t)).toBe(4 * WEEK_MS); expect(activeEventAt(t).id).toBe(activeEventAt(t + 1000).id); expect(activeEventAt(t).id).not.toBe(activeEventAt(t + WEEK_MS).id);
     const a = mk(); const b = mk(); const g0 = a.svc.gold(); a.svc.onKill('slime', 1, 0, 100, [], { exp: 1, drop: 1, gold: 1.5 }); b.svc.onKill('slime', 1, 0, 100, [], { exp: 1, drop: 1 }); expect(a.svc.gold() - g0).toBe(150n);
-    const { svc, p } = mk(); svc.earn('crystal', 1000, 't'); p.events.progress.evm_kill = 99; expect(svc.claimEventMission('ev_lantern_festival', 'evm_kill').ok).toBe(true); expect(svc.bal('event_token')).toBe(20n);
+    const { svc, p } = mk('blade_sentinel', WEEK_MS * 2901 + 1000); expect(activeEventAt(svc.now()).id).toBe('ev_lantern_festival'); svc.resetDailyIfNeeded(); svc.earn('crystal', 1000, 't'); p.events.progress.evm_kill = 99; expect(svc.claimEventMission('ev_lantern_festival', 'evm_kill').ok).toBe(true); expect(svc.bal('event_token')).toBe(20n);
     svc.buyMembership('festival'); p.events.progress.evm_craft = 9; svc.claimEventMission('ev_lantern_festival', 'evm_craft'); expect(svc.bal('event_token')).toBe(60n); expect(svc.countItem('deco_lantern')).toBe(6);
   });
   it('TCG: starter cards are bound (no dust/exchange), exchange 3 → 1 of next rarity, cosmetics cost dust', () => {
@@ -339,5 +339,21 @@ describe('wedding & guild additions (v0.9)', () => {
   it('wedding plaza is reachable from Emberglen and the planner is placed there', () => {
     const m = getMap('wedding_plaza'); expect(MAPS.emberglen!.portals.some((p) => p.to === 'wedding_plaza')).toBe(true); expect(m.objects.some((o) => o.kind === 'arch')).toBe(true);
     const path = findPath(m, MAPS.wedding_plaza!.spawn[0], MAPS.wedding_plaza!.spawn[1], 15, 6, 20000); expect(path && path.length > 0).toBe(true);
+  });
+});
+
+describe('content expansion (v0.10)', () => {
+  it('event missions reset when a new weekly event starts and only the running event can be claimed', () => {
+    let now = WEEK_MS * 2901 + 1000; const p = createCharacter({ accountId: 'a', name: 'Ev', classId: 'blade_sentinel', appearance: { body: 0, hair: 0, hairColor: '#000', skin: '#fc9', eyes: '#000' }, now }); const svc = new PlayerService(p, new Rng(1), () => now);
+    svc.resetDailyIfNeeded(); for (let i = 0; i < 30; i++) svc.bump('kills'); expect(svc.claimEventMission('ev_lantern_festival', 'evm_kill').ok).toBe(true); expect(svc.claimEventMission('ev_harvest_moon', 'evm_gather').err).toBe('EVENT_NOT_ACTIVE');
+    now += 3 * WEEK_MS; svc.resetDailyIfNeeded(); expect(activeEventAt(now).id).toBe('ev_lantern_festival'); expect(p.events.claimed).toEqual([]); expect(p.events.progress.evm_kill ?? 0).toBe(0);
+    for (let i = 0; i < 30; i++) svc.bump('kills'); expect(svc.claimEventMission('ev_lantern_festival', 'evm_kill').ok).toBe(true); // the returning event can be completed again
+  });
+  it('new zones chain Amber Hills → Coral Coast → Starfall Ruins → Emberpeak, with levels 32–86 monsters, quests and 2 story dungeons', () => {
+    expect(MAPS.amber_hills!.portals.some((x) => x.to === 'coral_coast')).toBe(true); expect(MAPS.coral_coast!.portals.some((x) => x.to === 'starfall_ruins')).toBe(true); expect(MAPS.starfall_ruins!.portals.some((x) => x.to === 'emberpeak')).toBe(true);
+    const lv = ['coral_coast', 'starfall_ruins', 'emberpeak'].flatMap((m) => MAPS[m]!.monsters.map((x) => MONSTERS[x.id]!.level)); expect(Math.min(...lv)).toBeLessThanOrEqual(33); expect(Math.max(...lv)).toBeGreaterThanOrEqual(86);
+    for (const id of ['mq11', 'mq12', 'mq13', 'mq14', 'mq15', 'mq16', 'mq17', 'mq18']) expect(QUESTS[id]).toBeDefined(); expect(QUESTS.mq18!.prereq).toBe('mq17');
+    for (const id of ['tidal_grotto', 'starfall_vault']) { expect(DUNGEONS[id]!.boss).toBeTruthy(); expect(MAPS[DUNGEONS[id]!.map]!.instanced).toBe(true); }
+    const lava = getMap('emberpeak').tiles.some((t) => t === 15); expect(lava).toBe(true);
   });
 });

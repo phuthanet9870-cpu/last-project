@@ -5,7 +5,7 @@
  */
 import { CONFIG, requiredExp, requiredJobExp, requiredMasteryExp, type Element } from './config.js';
 import { ALL_SKILLS, CLASSES, type SkillDef } from './classes.js';
-import { MEMBERSHIPS, TCG_COSMETICS, seasonalFeatured, ACHIEVEMENTS, CARD_SET_BONUS, EGG_POOL, LOGIN_CALENDAR, MISSIONS_DAILY, ACTIVITY_CHESTS, MONSTER_CARDS, MOUNTS, PASS, PETS, QUESTS, RECIPES, SHOPS, TITLES, NPCS, EVENTS, GACHA_BANNERS, DUNGEONS, type Objective, type Profession } from './content.js';
+import { MEMBERSHIPS, TCG_COSMETICS, seasonalFeatured, activeEventAt, WEEK_MS, ACHIEVEMENTS, CARD_SET_BONUS, EGG_POOL, LOGIN_CALENDAR, MISSIONS_DAILY, ACTIVITY_CHESTS, MONSTER_CARDS, MOUNTS, PASS, PETS, QUESTS, RECIPES, SHOPS, TITLES, NPCS, EVENTS, GACHA_BANNERS, DUNGEONS, type Objective, type Profession } from './content.js';
 import { EconomyError, Ledger, feeOf, type Currency } from './economy.js';
 import { EQUIP_SLOTS, ITEMS, OPTION_POOL, RARITIES, SET_BONUS, type ItemInstance, type Rarity, type Slot } from './items.js';
 import { Rng, uid } from './rng.js';
@@ -37,7 +37,7 @@ export interface PlayerState {
   pass: { level: number; exp: number; premium: boolean; claimedFree: number[]; claimedPremium: number[] };
   login: { lastDay: string; streak: number; claimed: number };
   missions: { day: string; progress: Record<string, number>; claimed: string[]; points: number; chests: number[] };
-  events: { progress: Record<string, number>; claimed: string[] };
+  events: { progress: Record<string, number>; claimed: string[]; week?: number }; // week = event occurrence (progress + claims reset when a new weekly event starts)
   mail: Mail[]; friends: { name: string; note: string; since: number }[]; blocked: string[];
   guild: { id: string; name: string; role: 'leader' | 'officer' | 'member'; contribution: number; level: number; exp: number; storage: ItemInstance[]; log: string[] } | null;
   marriage: { partner: string; since: number; anniversary: number; stage?: 'engaged' | 'married'; engagedAt?: number } | null; // stage missing = married (pre-0.9 saves)
@@ -435,7 +435,7 @@ export class PlayerService {
     this.p.counters[counter] = (this.p.counters[counter] ?? 0) + n;
     this.resetDailyIfNeeded();
     if (MISSIONS_DAILY.some((m) => m.counter === counter)) this.p.missions.progress[counter] = (this.p.missions.progress[counter] ?? 0) + n;
-    for (const ev of EVENTS) for (const m of ev.missions) if (m.counter === counter) this.p.events.progress[m.id] = (this.p.events.progress[m.id] ?? 0) + n;
+    this.syncEventWeek(); const active = activeEventAt(this.now()); for (const m of active.missions) if (m.counter === counter) this.p.events.progress[m.id] = (this.p.events.progress[m.id] ?? 0) + n; // only the running event counts
     this.checkAchievements();
   }
   checkAchievements() {
@@ -446,8 +446,10 @@ export class PlayerService {
     }
   }
   setTitle(t: string | null): Result { if (t && !this.p.titles.includes(t)) return fail('LOCKED'); this.p.title = t; this.clampVitals(); return ok(); }
+  /** Event missions belong to one occurrence of a weekly event: a new week starts fresh, so returning events can be completed again. */
+  syncEventWeek() { const wk = Math.floor(this.now() / WEEK_MS); if (this.p.events.week !== wk) this.p.events = { progress: {}, claimed: [], week: wk }; }
   resetDailyIfNeeded() {
-    this.checkSeasons();
+    this.checkSeasons(); this.syncEventWeek();
     const day = dayKey(this.now());
     if (this.p.missions.day !== day) this.p.missions = { day, progress: {}, claimed: [], points: 0, chests: [] };
     if (this.p.dungeon.day !== day) this.p.dungeon = { ...this.p.dungeon, runs: {}, day };
@@ -507,7 +509,7 @@ export class PlayerService {
     const reward = LOGIN_CALENDAR[this.p.login.claimed % LOGIN_CALENDAR.length]!; this.p.login.claimed++; this.addItem(reward.itemId, reward.qty); this.earn('gold', 200 * Math.min(7, this.p.login.streak), 'login'); this.earn('crystal_free', 20, 'login_free_crystal');
     return ok({ reward, streak: this.p.login.streak });
   }
-  claimEventMission(evId: string, mId: string): Result { const ev = EVENTS.find((e) => e.id === evId); const m = ev?.missions.find((x) => x.id === mId); if (!m) return fail('INVALID'); if (this.p.events.claimed.includes(mId)) return fail('ALREADY_CLAIMED'); if ((this.p.events.progress[mId] ?? 0) < m.target) return fail('INCOMPLETE'); this.p.events.claimed.push(mId); const fest = this.hasMembership('festival') ? 2 : 1; this.addItem(m.reward.itemId, m.reward.qty * fest); this.earn('event_token', 20 * fest, 'event_mission'); return ok({ festival: fest === 2 }); }
+  claimEventMission(evId: string, mId: string): Result { this.syncEventWeek(); if (activeEventAt(this.now()).id !== evId) return fail('EVENT_NOT_ACTIVE'); const ev = EVENTS.find((e) => e.id === evId); const m = ev?.missions.find((x) => x.id === mId); if (!m) return fail('INVALID'); if (this.p.events.claimed.includes(mId)) return fail('ALREADY_CLAIMED'); if ((this.p.events.progress[mId] ?? 0) < m.target) return fail('INCOMPLETE'); this.p.events.claimed.push(mId); const fest = this.hasMembership('festival') ? 2 : 1; this.addItem(m.reward.itemId, m.reward.qty * fest); this.earn('event_token', 20 * fest, 'event_mission'); return ok({ festival: fest === 2 }); }
   // ---- pass (§47) ----
   gainPassExp(n: number) { this.p.pass.exp += n; while (this.p.pass.level < PASS.levels && this.p.pass.exp >= PASS.expPerLevel) { this.p.pass.exp -= PASS.expPerLevel; this.p.pass.level++; } }
   claimPass(level: number, premium: boolean): Result {
