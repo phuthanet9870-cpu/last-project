@@ -184,3 +184,12 @@ describe('combat additions (v0.3)', () => {
   });
   it('hits wear durability down', () => { const { w, e } = setup('blade_sentinel'); const m = w.spawnMonster('forest_slime', e.x + 30, e.y); const svc = w.services.get(e.id)!; for (let i = 0; i < 5; i++) w.dealDamage(e, m, 1, false, false, 'neutral'); expect(svc.p.equipment.main!.durability).toBeLessThan(100); });
 });
+
+import { perspective, absoluteAction } from '../src/index.js';
+describe('TCG PvP perspective', () => {
+  it('side 1 sees itself as side 0 with opponent hand hidden; actions translate back', () => {
+    const d = Object.values(STARTER_DECKS)[0]!.cards; const s = newMatch(d, d, 11); const v1: any = perspective(s, 1);
+    expect(Array.isArray(v1.sides[0].hand)).toBe(true); expect(typeof v1.sides[1].hand).toBe('number'); expect(v1.active).toBe(1 - s.active);
+    expect(absoluteAction({ type: 'attack', attacker: 3, target: { side: 1, unit: 'hero' } }, 1)).toEqual({ type: 'attack', attacker: 3, target: { side: 0, unit: 'hero' } });
+  });
+});

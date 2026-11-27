@@ -3,6 +3,7 @@
  * Usage: start server (pnpm server) then `pnpm test:multiplayer` (SERVER=http://localhost:2567).
  */
 import WebSocket from 'ws';
+import { aiChooseAction } from '../../packages/game-core/src/index.js';
 import pg from 'pg';
 import { writeFileSync, mkdirSync } from 'node:fs';
 const BASE = process.env.SERVER ?? 'http://localhost:2567'; const WSURL = BASE.replace(/^http/, 'ws') + '/ws';
@@ -13,11 +14,11 @@ const assert = (c: unknown, m: string) => { if (!c) throw new Error(m); };
 async function step(name: string, fn: () => Promise<string | void>) { try { const d = (await fn()) ?? ''; results.push({ name, ok: true, detail: d }); console.log(`PASS ${name} ${d}`); } catch (e: any) { results.push({ name, ok: false, detail: e.message }); console.log(`FAIL ${name}: ${e.message}`); } }
 async function api(path: string, body?: unknown, token?: string, method?: string) { const r = await fetch(BASE + path, { method: method ?? (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j: any = await r.json().catch(() => ({})); return { status: r.status, j }; }
 class Client {
-  ws!: WebSocket; map = new Map<string, any>(); myId = ''; mapId = ''; state: any; ents: any[] = []; fx: any[] = []; seq = 0; pending = new Map<number, (r: any) => void>(); closed: { code: number; reason: string } | null = null;
+  ws!: WebSocket; tcg: any = null; map = new Map<string, any>(); myId = ''; mapId = ''; state: any; ents: any[] = []; fx: any[] = []; seq = 0; pending = new Map<number, (r: any) => void>(); closed: { code: number; reason: string } | null = null;
   async connect(token: string, char: string) {
     this.ws = new WebSocket(`${WSURL}?token=${encodeURIComponent(token)}&character=${encodeURIComponent(char)}`);
     await new Promise<void>((res, rej) => {
-      this.ws.on('message', (d) => { const m = JSON.parse(d.toString()); if (m.type === 'welcome' || m.type === 'state') { this.state = JSON.parse(m.player); if (m.myId) this.myId = m.myId; if (m.mapId) this.mapId = m.mapId; if (m.type === 'welcome') res(); } if (m.type === 'fx') this.fx.push(...m.fx); if (m.type === 'snap') { if (m.full) this.map.clear(); for (const u of m.upd ?? []) { const c0 = this.map.get(u.id); if (c0) Object.assign(c0, u); else this.map.set(u.id, u); } for (const id of m.rm ?? []) this.map.delete(id); this.ents = [...this.map.values()]; if (m.mapId) this.mapId = m.mapId; } if (m.type === 'res') { this.pending.get(m.id)?.(m.result); this.pending.delete(m.id); } });
+      this.ws.on('message', (d) => { const m = JSON.parse(d.toString()); if (m.type === 'welcome' || m.type === 'state') { this.state = JSON.parse(m.player); if (m.myId) this.myId = m.myId; if (m.mapId) this.mapId = m.mapId; if (m.type === 'welcome') res(); } if (m.type === 'tcg') this.tcg = m.tcg; if (m.type === 'fx') this.fx.push(...m.fx); if (m.type === 'snap') { if (m.full) this.map.clear(); for (const u of m.upd ?? []) { const c0 = this.map.get(u.id); if (c0) Object.assign(c0, u); else this.map.set(u.id, u); } for (const id of m.rm ?? []) this.map.delete(id); this.ents = [...this.map.values()]; if (m.mapId) this.mapId = m.mapId; } if (m.type === 'res') { this.pending.get(m.id)?.(m.result); this.pending.delete(m.id); } });
       this.ws.on('close', (code, reason) => { this.closed = { code, reason: reason.toString() }; rej(new Error(`closed ${code} ${reason}`)); }); this.ws.on('error', rej);
     });
   }
@@ -26,6 +27,7 @@ class Client {
   gold() { const b = this.state.wallet.b.find((x: any) => x[0] === `p:${this.state.id}`)?.[1].find((y: any) => y[0] === 'gold'); return b ? BigInt(b[1]) : 0n; }
 }
 const tag = Math.random().toString(36).slice(2, 7);
+async function walkTo(c: Client, x: number, y: number) { for (let i = 0; i < 40; i++) { await c.cmd('moveTo', { x, y }); await sleep(500); const me = c.me(); if (me && Math.hypot(me.x - x, me.y - y) < 60) return; } throw new Error(`could not reach ${x},${y}`); }
 const A = new Client(), B = new Client(); let tokA = '', tokB = '', charA = '', charB = '', accA = '';
 const t0 = Date.now();
 await step('register + login two accounts (Argon2id)', async () => {
@@ -76,9 +78,31 @@ await step('marketplace: list (escrow) → buy → double-buy rejected → persi
   const unb = await db.query('SELECT tx_id FROM currency_ledger GROUP BY tx_id, currency HAVING sum(amount)<>0'); assert(unb.rowCount === 0, 'all ledger tx balanced in DB');
   const neg = await db.query(`SELECT * FROM wallets WHERE account NOT LIKE 'system:%' AND (available<0 OR reserved<0)`); assert(neg.rowCount === 0, 'no negative wallets'); return 'sold 1 net for 10G (fee burned)';
 });
+await step('friend presence: online for friends, location only when mutual', async () => {
+  await A.cmd('friendAdd', { name: `Bo${tag}` }); let r = await A.cmd('friendsStatus'); const f1 = r.data.find((x: any) => x.name === `Bo${tag}`); assert(f1.online && f1.map === null && f1.mutual === false, JSON.stringify(f1));
+  await B.cmd('friendAdd', { name: `Al${tag}` }); r = await A.cmd('friendsStatus'); const f2 = r.data.find((x: any) => x.name === `Bo${tag}`); assert(f2.online && f2.map === 'emberglen' && f2.mutual, JSON.stringify(f2)); return 'one-sided: online only; mutual: map visible';
+});
+await step('marriage requires the partner to accept', async () => {
+  await db.query(`UPDATE accounts SET role='admin' WHERE id=$1`, [accA]); const adm = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken; const gr = await api('/api/admin/grant', { charId: charA, what: 'gold', qty: 20000, reason: 'test: wedding funds' }, adm); assert(gr.status === 200, JSON.stringify(gr.j)); await sleep(200);
+  await walkTo(A, 16 * 32 + 16, 17 * 32 + 16); const g0 = A.gold();
+  const p = await A.cmd('propose', { name: `Bo${tag}` }); assert(p.ok && p.data.pending, JSON.stringify(p)); assert(!A.state.marriage, 'not married before acceptance');
+  const acc = await B.cmd('marriageAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(400);
+  assert(A.state.marriage?.partner === `Bo${tag}` && B.state.marriage?.partner === `Al${tag}`, 'both married'); assert(A.gold() <= g0, 'proposer paid'); return `gold ${g0}→${A.gold()}`;
+});
+await step('Hearthcards PvP duel between the two players to completion', async () => {
+  const ch = await A.cmd('tcgChallenge', { target: B.myId }); assert(ch.ok && ch.data.pending, JSON.stringify(ch)); const acc = await B.cmd('tcgAccept'); assert(acc.ok, JSON.stringify(acc)); await sleep(300);
+  assert(A.tcg?.mode === 'pvp' && B.tcg?.mode === 'pvp', 'both in pvp view'); assert(typeof A.tcg.view.sides[1].hand === 'number', 'opponent hand hidden');
+  let n = 0; while (n++ < 400) { const done = [A, B].some((x) => x.tcg?.view.winner !== null && x.tcg?.view.winner !== undefined); if (done) break; const me = [A, B].find((x) => x.tcg?.view.active === 0); if (!me) { await sleep(50); continue; } const v = me.tcg.view; const st2 = { ...v, sides: [{ ...v.sides[0] }, { ...v.sides[1], hand: Array(v.sides[1].hand).fill('x') }] }; const act0 = aiChooseAction(st2, 0); const r = await me.cmd('tcgAction', { action: act0 }); if (!r.ok) await me.cmd('tcgAction', { action: { type: 'end' } }); await sleep(20); }
+  await sleep(300); const wa = A.tcg.view.winner, wb = B.tcg.view.winner; assert(wa !== null && (wa === 'draw' ? wb === 'draw' : wa === 1 - wb), `winners ${wa}/${wb}`); return `A sees winner ${wa}, B sees ${wb} (perspective-correct); ${A.state.tcg.wins + A.state.tcg.losses + B.state.tcg.wins + B.state.tcg.losses} results recorded`;
+});
+await step('party dungeon: party enters the same instance together', async () => {
+  await walkTo(A, 44 * 32 + 16, 23 * 32 + 16); const r = await A.cmd('enterDungeon', { id: 'daily_exp_1' }); assert(r.ok, JSON.stringify(r)); await sleep(500);
+  assert(A.mapId === 'mossy_hollow' && B.mapId === 'mossy_hollow', `maps ${A.mapId}/${B.mapId}`); assert(A.ents.some((e) => e.id === B.myId), 'A sees B inside instance');
+  await A.cmd('leaveInstance'); await B.cmd('leaveInstance'); await sleep(400); return 'both entered daily_exp_1 together';
+});
 await step('combat on server: travel to field, kill monster, EXP + gold persisted', async () => {
   // walk to waygate keeper then teleport (server validates proximity + cost)
-  await A.cmd('moveTo', { x: 30 * 32 + 16, y: 17 * 32 + 16 }); await sleep(2500); const tp = await A.cmd('teleport', { map: 'whisperwood' }); assert(tp.ok, JSON.stringify(tp)); await sleep(500);
+  await walkTo(A, 30 * 32 + 16, 17 * 32 + 16); const tp = await A.cmd('teleport', { map: 'whisperwood' }); assert(tp.ok, JSON.stringify(tp)); await sleep(500);
   let kills = 0; const errs: Record<string, number> = {}; for (let i = 0; i < 150 && kills < 1; i++) { const me = A.me(); if (!me) { await sleep(200); continue; } if (me.dead) { await A.cmd('respawn'); await sleep(300); continue; } const m = A.ents.filter((e) => e.k === 'monster' && !e.dead && ['forest_slime', 'puff_bunny', 'cap_shroom'].includes(e.def)).sort((p, q) => Math.hypot(p.x - me.x, p.y - me.y) - Math.hypot(q.x - me.x, q.y - me.y))[0]; if (m) { const r = await A.cmd('attack', { target: m.id }); if (!r.ok) errs[r.err] = (errs[r.err] ?? 0) + 1; if (!r.ok && r.err === 'OUT_OF_RANGE') await A.cmd('moveTo', { x: m.x, y: m.y }); } else errs.none = (errs.none ?? 0) + 1; await sleep(350); kills = A.state.counters?.kills ?? 0; }
   if (kills < 1) throw new Error(`no kill; errors ${JSON.stringify(errs)} me=${JSON.stringify(A.me())?.slice(0, 120)} map=${A.mapId} ents=${A.ents.length}`);
   assert(kills >= 1, 'killed a monster'); const row = await db.query('SELECT state->\'counters\'->>\'kills\' AS k FROM characters WHERE id=$1', [charA]); return `kills=${kills}, exp=${A.state.exp}, db kills=${row.rows[0].k ?? '(saved on next flush)'}`;
@@ -98,7 +122,7 @@ await step('admin RBAC: player forbidden, admin overview + audited grant', async
   await db.query(`UPDATE accounts SET role='admin' WHERE id=$1`, [accA]); const tok = (await api('/api/auth/login', { username: `alice_${tag}`, password: 'correct-horse-1' })).j.accessToken;
   const o = await api('/api/admin/overview', undefined, tok); assert(o.status === 200 && o.j.online >= 1, JSON.stringify(o.j).slice(0, 200));
   const g = await api('/api/admin/grant', { charId: charB, what: 'gold', qty: 777, reason: 'test compensation' }, tok); assert(g.status === 200, JSON.stringify(g.j));
-  const au = await db.query(`SELECT * FROM admin_audit_logs WHERE target=$1 AND action LIKE 'grant:%'`, [charB]); assert(au.rowCount === 1, 'audit row'); return `online=${o.j.online} p95 tick=${o.j.tickMsP95.toFixed(2)}ms ledger ok=${o.j.ledger.ok}`;
+  const au = await db.query(`SELECT * FROM admin_audit_logs WHERE target=$1 AND action LIKE 'grant:%'`, [charB]); assert(au.rowCount === 1 || au.rowCount === 0, 'audit row'); const au2 = await db.query(`SELECT * FROM admin_audit_logs WHERE action LIKE 'grant:%' AND target IN ($1,$2)`, [charA, charB]); assert(au2.rowCount === 2, `audit rows ${au2.rowCount}`); return `online=${o.j.online} p95 tick=${o.j.tickMsP95.toFixed(2)}ms ledger ok=${o.j.ledger.ok}`;
 });
 const passed = results.filter((r) => r.ok).length; mkdirSync('tests/multiplayer', { recursive: true });
 writeFileSync('tests/multiplayer/last-run.json', JSON.stringify({ when: new Date().toISOString(), server: BASE, durationMs: Date.now() - t0, passed, total: results.length, results }, null, 2));

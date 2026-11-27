@@ -249,3 +249,15 @@ export function openPack(rng: Rng, pity: number): { cards: string[]; pity: numbe
   }
   return { cards, pity: gotEpic ? 0 : pity + 1 };
 }
+
+/** PvP perspective: every client sees itself as side 0 (so the same duel UI works for both players). */
+export function perspective(s: TcgState, side: 0 | 1) {
+  const v: any = viewFor(s, side); if (side === 0) return v;
+  const flip = (x: any) => (x === 0 ? 1 : x === 1 ? 0 : x);
+  return { ...v, sides: [v.sides[1], v.sides[0]], active: flip(v.active), winner: flip(v.winner), log: v.log.map((l: any) => ({ ...l, p: flip(l.p) })) };
+}
+/** Translate an action expressed from a side-1 player's perspective back to absolute sides. */
+export function absoluteAction(a: TcgAction, side: 0 | 1): TcgAction {
+  if (side === 0) return a; const f = (t?: TcgTarget) => (t ? { ...t, side: (1 - t.side) as 0 | 1 } : t);
+  if (a.type === 'play') return { ...a, target: f(a.target) }; if (a.type === 'attack') return { ...a, target: f(a.target)! }; return a;
+}

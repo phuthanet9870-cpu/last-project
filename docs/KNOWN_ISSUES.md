@@ -8,7 +8,7 @@
 ## Severity: Medium
 4. **Content is templated.** 468 skills come from 4 role kits × element/role transforms — distinct numbers and effects, but not 468 hand-designed abilities. Content counts are far below §01 targets (9 maps, 28 monsters, ~200 item definitions, 12 pets, 4 mounts, 92 TCG cards, 23 quests).
 5. **Art is original procedural placeholder pixel art.** 4-direction character sprites (8-direction movement maps diagonals to side sprites). No equipment overlays. Production art needs an artist.
-6. **Online feature gaps** (artifact has them simulated): marriage, friend presence, buy-order fills by real players beyond the shared book, TCG PvP, guild storage/war, party dungeons.
+6. **Online feature gaps:** engagement/wedding ceremony, ranked TCG vs real players (friendly PvP duels work), guild storage/war, real buy-order fills beyond the shared book.
 7. **Full player state is re-sent** to its owner after state-changing commands (≈20–60 KB). Acceptable for prototype, wasteful at scale.
 8. **Docker Compose unverified** (no Docker daemon in the build environment).
 9. **RNG**: seeded sfc32 held server-side; not a CSPRNG — must be replaced before any paid random rewards.

@@ -132,6 +132,8 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
     const m = c.session.tcg; if (!m) return fail('NO_MATCH'); const err = applyAction(m.state, 0, a.action as TcgAction); if (err) return fail(err);
     runAi(c); return ok(viewFor(m.state, 0));
   },
+  tcgChallenge: (c, a) => { const t = c.world.entities.get(String(a.target)); if (!t || t.kind !== 'bot') return fail('INVALID_TARGET', 'Select a player to challenge'); const r = COMMANDS.tcgStart!(c, { mode: 'casual' }); if (r.ok && c.session.tcg) c.session.tcg.oppName = `${t.name} [sim]`; return r; },
+  friendsStatus: (c) => ok(c.svc.p.friends.map((f) => { const e = [...c.world.entities.values()].find((x) => (x.kind === 'bot' || x.kind === 'player') && x.name === f.name); return { name: f.name, online: !!e, map: e ? c.world.mapId : null, simulated: e?.kind === 'bot' }; })),
   tcgView: (c) => (c.session.tcg ? ok(viewFor(c.session.tcg.state, 0)) : fail('NO_MATCH')),
   // --- gacha / pass / events / missions ---
   gacha: (c, a) => (CONFIG.featureFlags.paidRandomRewards || c.mode === 'local' || a.ticket ? c.svc.gachaDraw(a.times === 10 ? 10 : 1, !!a.ticket) : fail('FEATURE_DISABLED')),

@@ -1,9 +1,9 @@
 {
-  "when": "2026-11-27T10:08:22.468Z",
+  "when": "2026-11-27T10:16:28.870Z",
   "server": "http://localhost:2567",
-  "durationMs": 28170,
-  "passed": 13,
-  "total": 13,
+  "durationMs": 55855,
+  "passed": 17,
+  "total": 17,
   "results": [
     {
       "name": "register + login two accounts (Argon2id)",
@@ -13,7 +13,7 @@
     {
       "name": "create characters (unique names, slot validation)",
       "ok": true,
-      "detail": "ch_mwytinxy1icsts, ch_mwytio1l1sjug0"
+      "detail": "ch_mwytshvo1gdvu, ch_mwytshw0bkin9"
     },
     {
       "name": "unauthorized WebSocket + foreign character rejected",
@@ -28,7 +28,7 @@
     {
       "name": "server-authoritative movement replicated (collision-checked)",
       "ok": true,
-      "detail": "912→1009"
+      "detail": "912→1008"
     },
     {
       "name": "chat local + world + whisper delivered; malformed packet rejected",
@@ -51,9 +51,29 @@
       "detail": "sold 1 net for 10G (fee burned)"
     },
     {
+      "name": "friend presence: online for friends, location only when mutual",
+      "ok": true,
+      "detail": "one-sided: online only; mutual: map visible"
+    },
+    {
+      "name": "marriage requires the partner to accept",
+      "ok": true,
+      "detail": "gold 20610→10610"
+    },
+    {
+      "name": "Hearthcards PvP duel between the two players to completion",
+      "ok": true,
+      "detail": "A sees winner 1, B sees 0 (perspective-correct); 2 results recorded"
+    },
+    {
+      "name": "party dungeon: party enters the same instance together",
+      "ok": true,
+      "detail": "both entered daily_exp_1 together"
+    },
+    {
       "name": "combat on server: travel to field, kill monster, EXP + gold persisted",
       "ok": true,
-      "detail": "kills=1, exp=28, db kills=1"
+      "detail": "kills=1, exp=29, db kills=1"
     },
     {
       "name": "disconnect → reconnect restores persisted state",
@@ -63,12 +83,12 @@
     {
       "name": "ranked arena 1v1 between the two real players",
       "ok": true,
-      "detail": "winner team 0, deltas {\"ch_mwytinxy1icsts\":16,\"ch_mwytio1l1sjug0\":-16}, B rating 1000→984"
+      "detail": "winner team 0, deltas {\"ch_mwytshvo1gdvu\":16,\"ch_mwytshw0bkin9\":-16}, B rating 1000→984"
     },
     {
       "name": "admin RBAC: player forbidden, admin overview + audited grant",
       "ok": true,
-      "detail": "online=2 p95 tick=0.48ms ledger ok=true"
+      "detail": "online=2 p95 tick=0.46ms ledger ok=true"
     }
   ]
 }

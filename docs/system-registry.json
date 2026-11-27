@@ -1,13 +1,13 @@
 {
- "generated": "2026-11-27T10:08:36.094Z",
+ "generated": "2026-11-27T10:17:51.967Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 288,
+  "COMPLETE": 295,
   "PARTIAL": 89,
-  "NOT_STARTED": 92,
+  "NOT_STARTED": 89,
   "BLOCKED": 8,
   "TESTING": 96,
-  "SIMULATED": 8
+  "SIMULATED": 4
  },
  "systems": [
   {
@@ -1814,9 +1814,9 @@
    "id": "L226",
    "name": "Dungeon Party",
    "section": "Dungeons",
-   "status": "SIMULATED",
-   "evidence": "party bots can follow into world; dungeon instances are solo in artifact & server",
-   "mode": "artifact only (simulated others)"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"party dungeon\"; e2e: tests/e2e/artifact.e2e.mjs step 29 (party bots follow in artifact)",
+   "mode": "artifact+online"
   },
   {
    "id": "L227",
@@ -2654,9 +2654,9 @@
    "id": "L331",
    "name": "Friend Online Status",
    "section": "Social",
-   "status": "NOT_STARTED",
-   "evidence": "online status for friends",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"friend presence\" (location only for mutual friends)",
+   "mode": "artifact+online"
   },
   {
    "id": "L332",
@@ -2694,9 +2694,9 @@
    "id": "L336",
    "name": "Party Dungeon",
    "section": "Social",
-   "status": "NOT_STARTED",
-   "evidence": "party dungeon instances",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"party dungeon\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L337",
@@ -2758,9 +2758,9 @@
    "id": "L344",
    "name": "Marriage Proposal",
    "section": "Social",
-   "status": "SIMULATED",
-   "evidence": "artifact: simulated friend accepts; online returns NOT_AVAILABLE",
-   "mode": "artifact only (simulated others)"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"marriage requires the partner to accept\" (artifact partner simulated)",
+   "mode": "artifact+online"
   },
   {
    "id": "L345",
@@ -2790,17 +2790,17 @@
    "id": "L348",
    "name": "Marriage Requirements",
    "section": "Social",
-   "status": "SIMULATED",
-   "evidence": "friendship + ring requirements",
-   "mode": "artifact only (simulated others)"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"marriage\": mutual friends, officiant, ring or 10,000G",
+   "mode": "artifact+online"
   },
   {
    "id": "L349",
    "name": "Marriage Status",
    "section": "Social",
-   "status": "SIMULATED",
-   "evidence": "marriage status + title + EXP bonus",
-   "mode": "artifact only (simulated others)"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"marriage\"",
+   "mode": "artifact+online"
   },
   {
    "id": "L350",
@@ -2910,9 +2910,9 @@
    "id": "L363",
    "name": "Friendly Duel",
    "section": "TCG",
-   "status": "NOT_STARTED",
-   "evidence": "friendly duel vs real player",
-   "mode": "-"
+   "status": "COMPLETE",
+   "evidence": "multiplayer: tests/multiplayer/two-clients.test.ts \"Hearthcards PvP duel\"; e2e: tests/e2e/artifact.e2e.mjs step 29 (artifact: vs simulated player AI)",
+   "mode": "artifact+online"
   },
   {
    "id": "L364",
@@ -4327,7 +4327,7 @@
    "name": "Dungeons and raids",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "story + 50 daily dungeons solo; no party instances/raids",
+   "evidence": "story + 50 daily dungeon floors, party instances online + bots in artifact; no raids",
    "mode": "artifact+online"
   },
   {
@@ -4415,7 +4415,7 @@
    "name": "Chat and friend system",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "local/world/party/whisper chat, block, report; no mute UI for players, no presence",
+   "evidence": "chat channels, block, report, friend presence with privacy; no player mute UI",
    "mode": "artifact+online"
   },
   {
@@ -4431,7 +4431,7 @@
    "name": "Mail and marriage",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "mail + claim; artifact marriage simulated",
+   "evidence": "mail + claim; marriage with consent online; no engagement/ceremony/plaza",
    "mode": "artifact+online"
   },
   {
