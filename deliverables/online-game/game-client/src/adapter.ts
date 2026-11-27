@@ -39,6 +39,7 @@ export class LocalAdapter implements Adapter {
     this.svc.resetDailyIfNeeded();
   }
   get p() { return this.svc.p; } get mapId() { return this.world.mapId; } get myId() { return `pl_${this.svc.p.id}`; }
+  visitView() { return this.world.mapId === 'pet_farm' ? this.session.visit ?? null : null; }
   activeEvent() { const wk = Math.floor(Date.now() / (7 * 86400_000)); return EVENTS[wk % EVENTS.length] ?? null; }
   private getWorld(mapId: string, fresh: boolean): World {
     const ev = this.activeEvent(); const em = { exp: ev?.expMult ?? 1, drop: ev?.dropMult ?? 1 };
@@ -47,7 +48,7 @@ export class LocalAdapter implements Adapter {
     return w;
   }
   private enter(mapId: string, at?: { x: number; y: number }, opts: { dungeon?: string; arena?: string } = {}) {
-    const def = MAPS[mapId]!; const prev = this.world;
+    const def = MAPS[mapId]!; const prev = this.world; if (mapId !== 'pet_farm') this.session.visit = null;
     // party bots (simulated) follow the player across maps, including into dungeon instances; not into arenas
     let carried: any[] = []; let pid: string | null = null;
     if (prev && !opts.arena) { const me0 = prev.entities.get(this.myId); pid = me0?.partyId ?? null; if (pid) { carried = (prev.parties.get(pid) ?? []).map((id) => prev.entities.get(id)).filter((e): e is NonNullable<typeof e> => !!e && e.kind === 'bot'); for (const b of carried) prev.entities.delete(b.id); prev.parties.delete(pid); } }
@@ -132,6 +133,7 @@ export class RemoteAdapter implements Adapter {
   bal(c: Currency) { return this.p.wallet.available(`p:${this.p.id}`, c); }
   market() { return this.marketSnap; } tcg() { return this.tcgSnap; }
   dungeonInfo() { return this.extra.dungeon ?? null; } bossInfo() { return this.extra.boss ?? { boss: null, nextAt: 0 }; } arenaInfo() { return this.extra.arena ?? null; }
+  visitView() { return this.mapId === 'pet_farm' ? this.extra.visit ?? null : null; }
   partyMembers() { const ids: string[] = this.extra.party ?? []; return this.ents.filter((e) => ids.includes(e.id)); }
   save() { return true; } serverTime() { return Date.now() + this.timeOffset; } activeEvent() { return EVENTS[0] ?? null; }
 }

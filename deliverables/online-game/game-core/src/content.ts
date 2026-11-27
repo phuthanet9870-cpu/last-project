@@ -123,10 +123,11 @@ export const NPCS: Record<string, NpcDef> = Object.fromEntries(([
 ] as const).map(([id, en, th, ten, tth, roles, map, x, y, pal, lines, shop]) => [id, { id, name: { en, th }, title: { en: ten, th: tth }, roles: [...roles], map, x, y, palette: [...pal] as [string, string, string], lines: [{ en: lines[0], th: lines[1] }], shop } as NpcDef]));
 
 // ---------------- Shops (§34) ----------------
-export const SHOPS: Record<string, { currency: 'gold' | 'arena_token' | 'boss_coin' | 'card_dust'; items: { itemId: string; price: number; dailyLimit?: number }[] }> = {
-  general: { currency: 'gold', items: ['repair_kit', 'potion_hp_s', 'potion_hp_m', 'potion_mp_s', 'potion_mp_m', 'food_stew', 'scroll_return', 'scroll_haste', 'tool_pickaxe', 'tool_axe', 'tool_rod', 'tool_sickle', 'capture_net', 'dungeon_ticket', 'cloth'].map((itemId) => ({ itemId, price: 0 })) },
+export const SHOPS: Record<string, { currency: 'gold' | 'arena_token' | 'boss_coin' | 'card_dust' | 'stable_seal'; items: { itemId: string; price: number; dailyLimit?: number }[] }> = {
+  general: { currency: 'gold', items: ['repair_kit', 'potion_hp_s', 'potion_hp_m', 'potion_mp_s', 'potion_mp_m', 'food_stew', 'scroll_return', 'scroll_haste', 'tool_pickaxe', 'tool_axe', 'tool_rod', 'tool_sickle', 'capture_net', 'dungeon_ticket', 'cloth', 'blessing_scroll'].map((itemId) => ({ itemId, price: 0 })) },
   weapons: { currency: 'gold', items: ['wood_sword', 'wood_greatsword', 'wood_spear', 'wood_dagger', 'wood_bow', 'wood_staff', 'wood_tome', 'wood_knuckle', 'wood_gun', 'wood_lute', 'wood_cards', 'wood_whip', 'wood_body', 'wood_head', 'wood_boots', 'wood_off', 'iron_sword', 'iron_bow', 'iron_staff', 'iron_body', 'refine_ore'].map((itemId) => ({ itemId, price: 0 })) },
-  pets: { currency: 'gold', items: [{ itemId: 'pet_food', price: 0 }, { itemId: 'pet_food_fine', price: 0 }, { itemId: 'capture_net', price: 0 }, { itemId: 'pet_egg', price: 0, dailyLimit: 3 }] },
+  stable: { currency: 'stable_seal', items: [{ itemId: 'mount_key_owl', price: 60 }, { itemId: 'mount_key_ram', price: 120 }, { itemId: 'mount_key_lizard', price: 40 }] },
+  pets: { currency: 'gold', items: [{ itemId: 'food_forest', price: 0 }, { itemId: 'food_hills', price: 0 }, { itemId: 'food_snow', price: 0 }, { itemId: 'pet_food', price: 0 }, { itemId: 'pet_food_fine', price: 0 }, { itemId: 'capture_net', price: 0 }, { itemId: 'pet_egg', price: 0, dailyLimit: 3 }] },
   mounts: { currency: 'gold', items: [{ itemId: 'mount_key_pony', price: 2000 }, { itemId: 'mount_key_lizard', price: 8000 }] },
   arena: { currency: 'arena_token', items: [{ itemId: 'potion_hp_m', price: 2 }, { itemId: 'enchant_stone', price: 10 }, { itemId: 'amber_dagger', price: 40 }, { itemId: 'mount_key_owl', price: 120 }, { itemId: 'ward_scroll', price: 60 }] },
   boss: { currency: 'boss_coin', items: [{ itemId: 'refine_ore_hi', price: 5 }, { itemId: 'gacha_ticket', price: 20 }, { itemId: 'mount_key_ram', price: 150 }, { itemId: 'wings_ember', price: 200 }] },
@@ -189,6 +190,12 @@ export const RECIPES: Record<string, RecipeDef> = Object.fromEntries([
   r('rc_gun', 'engineering', 2, [['iron_ore', 4], ['ember_core', 1], ['pine_log', 2]], 220, ['iron_gun', 1], 0.85),
   r('rc_enchant', 'enchanting', 1, [['wisp_dust', 2], ['stone_dust', 3]], 60, ['enchant_stone', 1]),
   r('rc_skillstone', 'runecrafting', 2, [['stone_dust', 10], ['star_dust', 2]], 300, ['skill_stone', 1], 0.8),
+  r('rc_food_forest', 'cooking', 2, [['berry', 2], ['herb_green', 1]], 10, ['food_forest', 3]),
+  r('rc_food_hills', 'cooking', 2, [['soft_fur', 1], ['wheat', 2]], 10, ['food_hills', 3]),
+  r('rc_food_snow', 'cooking', 3, [['fish_trout', 1], ['frost_shard', 1]], 15, ['food_snow', 3]),
+  r('rc_rune_fang', 'runecrafting', 2, [['wolf_fang', 4], ['star_dust', 1]], 400, ['rune_fang', 1], 0.8),
+  r('rc_rune_shell', 'runecrafting', 2, [['beetle_shell', 4], ['star_dust', 1]], 400, ['rune_shell', 1], 0.8),
+  r('rc_rune_wind', 'runecrafting', 2, [['bat_wing', 4], ['star_dust', 1]], 400, ['rune_wind', 1], 0.8),
   r('rc_lantern', 'woodworking', 1, [['cloth', 2], ['oak_log', 1]], 40, ['deco_lantern', 1]),
 ].map((x) => [x.id, x]));
 

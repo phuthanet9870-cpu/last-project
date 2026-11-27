@@ -27,7 +27,7 @@ export interface Entity {
   cds: Record<string, number>; gcdUntil: number; castUntil: number; attackAt: number; gauge: number;
   loot?: { itemId: string; qty: number; owner: string; until: number }[]; expiresAt?: number; riding?: boolean; mount?: string | null;
   pvp?: boolean; team?: number; botProfile?: { classId: string; chatAt: number; wanderAt: number; aggressive: boolean }; summonAtk?: number; partyId?: string | null; contrib?: Record<string, number>;
-  hidden?: boolean; fixed?: boolean;
+  hidden?: boolean; fixed?: boolean; cosm?: number;
   proj?: { src: string; targetId: string | null; tx: number; ty: number; speed: number; homing: boolean; hitR: number; onHit: (v: Entity) => void };
 }
 export type Fx =
@@ -100,7 +100,7 @@ export class World {
     for (const x of [...this.entities.values()]) if (x.kind === 'pet' && x.ownerId === entityId) this.entities.delete(x.id);
     const pet = svc.p.pets.find((p) => p.uid === svc.p.activePet); if (!pet) return;
     const s = svc.petStats(pet); const sp = PETS[pet.species]!;
-    this.entities.set(`pet_${entityId}`, this.baseEntity(`pet_${entityId}`, 'pet', e.x - 20, e.y + 10, pet.name, pet.level, { ownerId: entityId, defId: pet.species, hp: s.hp, maxHp: s.hp, summonAtk: s.atk, appearance: { color: sp.color, sprite: sp.sprite } }));
+    this.entities.set(`pet_${entityId}`, this.baseEntity(`pet_${entityId}`, 'pet', e.x - 20, e.y + 10, pet.name, pet.level, { ownerId: entityId, defId: pet.species, hp: s.hp, maxHp: s.hp, summonAtk: s.atk, speedMult: s.cdMult, appearance: { color: sp.color, sprite: sp.sprite } }));
   }
   /** Cached derived stats for movement/regen (not used for damage); refreshed on refreshPlayer or after 500ms. */
   private stCache = new Map<string, { at: number; d: ReturnType<typeof playerStats>['derived'] }>();
@@ -108,6 +108,7 @@ export class World {
   refreshPlayer(entityId: string) {
     this.stCache.delete(entityId);
     const e = this.entities.get(entityId); const svc = this.services.get(entityId); if (!e || !svc) return;
+    e.cosm = Math.max(svc.p.equipment.costume?.cosmetic ?? 0, svc.p.equipment.wings?.cosmetic ?? 0);
     const st = playerStats(svc.p, statusModifiers(e.effects)).derived; e.maxHp = st.maxHp; e.maxMp = st.maxMp; e.hp = Math.min(e.hp, e.maxHp); e.mp = Math.min(e.mp, e.maxMp); e.level = svc.p.level; e.title = svc.p.title; e.riding = svc.p.riding; e.mount = svc.p.activeMount; e.classId = svc.p.classId; e.guild = svc.p.guild?.name;
   }
   setInput(entityId: string, dx: number, dy: number) { const e = this.entities.get(entityId); if (!e || !e.input) return; const l = Math.hypot(dx, dy); e.input.dx = l > 0 ? dx / l : 0; e.input.dy = l > 0 ? dy / l : 0; if (l > 0) e.path = undefined; }
@@ -504,7 +505,7 @@ export class World {
       const dd = dist(e, target);
       if (dd > 50) this.step(e, (target.x - e.x) / dd, (target.y - e.y) / dd, dt);
       else { e.moving = false; if (now >= e.attackAt) { e.attackAt = now + 1400; const st = this.combatStats(e); const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(target), power: 1, dmgType: 'phys', element: st.element }); this.dealDamage(e, target, h.damage, h.crit, h.miss, st.element); } }
-      if (e.kind === 'pet') { const sp = PETS[e.defId!]!; if ((e.cds['pskill'] ?? 0) < now) { e.cds['pskill'] = now + sp.skill.cdMs; if (sp.skill.heal) this.heal(e, owner, Math.floor(owner.maxHp * 0.08 * sp.skill.power)); else if (sp.skill.buff) applyStatus(owner.effects, sp.skill.buff, e.id, 6000, 0); else if (dd < 80) { const st = this.combatStats(e); const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(target), power: sp.skill.power, dmgType: 'mag', element: sp.element }); this.dealDamage(e, target, h.damage, h.crit, false, sp.element); } } }
+      if (e.kind === 'pet') { const sp = PETS[e.defId!]!; if ((e.cds['pskill'] ?? 0) < now) { e.cds['pskill'] = now + sp.skill.cdMs * (e.speedMult ?? 1); if (sp.skill.heal) this.heal(e, owner, Math.floor(owner.maxHp * 0.08 * sp.skill.power)); else if (sp.skill.buff) applyStatus(owner.effects, sp.skill.buff, e.id, 6000, 0); else if (dd < 80) { const st = this.combatStats(e); const h = computeHit(this.rng, { attacker: st, defender: this.combatStats(target), power: sp.skill.power, dmgType: 'mag', element: sp.element }); this.dealDamage(e, target, h.damage, h.crit, false, sp.element); } } }
       return;
     }
     if (dOwner > 50) this.step(e, (owner.x - e.x) / dOwner, (owner.y - e.y) / dOwner, dt * (dOwner > 150 ? 1.4 : 1)); else e.moving = false;
@@ -554,7 +555,7 @@ export class World {
   drainFx(): Fx[] { const f = this.fx; this.fx = []; return f; }
 }
 /** Fields that change often; static fields (name, appearance, class…) are sent once per entity per client. */
-export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot'] as const;
+export const DYNAMIC_KEYS = ['x', 'y', 'd', 'm', 'l', 'hp', 'mhp', 'mp', 'mmp', 'dead', 'fx', 't', 'r', 'mt', 'tg', 'g', 'team', 'gu', 'tele', 'loot', 'cosm'] as const;
 export function publicEntity(e: Entity) {
-  return { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y), d: e.dir, m: e.moving, n: e.name, l: e.level, hp: Math.ceil(e.hp), mhp: e.maxHp, mp: Math.floor(e.mp), mmp: e.maxMp, dead: e.dead, def: e.defId, own: e.ownerId, cls: e.classId, app: e.appearance, fx: e.effects.map((x) => x.id), t: e.title, r: e.riding, mt: e.mount, tg: e.targetId, g: e.gauge, team: e.team, gu: e.guild, tele: e.ai?.telegraph ? { x: e.ai.telegraph.x, y: e.ai.telegraph.y, r: e.ai.telegraph.r, at: e.ai.telegraph.at } : undefined, loot: e.loot?.length };
+  return { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y), d: e.dir, m: e.moving, n: e.name, l: e.level, hp: Math.ceil(e.hp), mhp: e.maxHp, mp: Math.floor(e.mp), mmp: e.maxMp, dead: e.dead, def: e.defId, own: e.ownerId, cls: e.classId, app: e.appearance, fx: e.effects.map((x) => x.id), t: e.title, r: e.riding, mt: e.mount, tg: e.targetId, g: e.gauge, team: e.team, gu: e.guild, cosm: e.cosm, tele: e.ai?.telegraph ? { x: e.ai.telegraph.x, y: e.ai.telegraph.y, r: e.ai.telegraph.r, at: e.ai.telegraph.at } : undefined, loot: e.loot?.length };
 }

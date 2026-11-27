@@ -95,17 +95,20 @@ export class GameServer {
       findPlayerByName: (name: string) => { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === name.toLowerCase()); return t ? { svc: t.svc, entityId: `pl_${t.charId}` } : null; } };
   }
   changeMap(c: Conn, mapId: string, x?: number, y?: number, o: { dungeon?: string; arena?: string } = {}): Result {
-    const def = MAPS[mapId]; if (!def) return fail('INVALID_MAP');
+    const def = MAPS[mapId]; if (!def) return fail('INVALID_MAP'); if (mapId !== 'pet_farm') c.session.visit = null;
     const id = `pl_${c.charId}`; const old = c.world.entities.get(id); if (old && !MAPS[c.world.mapId]!.instanced) c.session.prevMap = { map: c.world.mapId, x: old.x, y: old.y };
+    const prevWorld = c.world; const keepParty = old?.partyId ?? null; // party membership belongs to the player, not the map: carry it across worlds
+    if (keepParty) { const lst = c.world.parties.get(keepParty); if (lst) { const i = lst.indexOf(id); if (i >= 0) lst.splice(i, 1); if (!lst.length) c.world.parties.delete(keepParty); } }
     this.cancelTradesOf(c.charId); c.world.removePlayer(id);
     const key = def.instanced ? `${mapId}:${o.arena ?? c.charId}:${Date.now().toString(36)}` : mapId; const w = this.world(mapId, key);
     c.svc.p.riding = c.svc.p.riding && !def.instanced; w.addPlayer(c.svc, x !== undefined && y !== undefined ? { x, y } : { x: def.spawn[0] * TILE + 16, y: def.spawn[1] * TILE + 16 }); c.world = w;
     if (!def.instanced) c.svc.p.savedMap = mapId;
+    if (keepParty && !o.dungeon) { const ne = w.entities.get(id); if (ne) { ne.partyId = keepParty; const lst = w.parties.get(keepParty) ?? []; if (!lst.includes(id)) lst.push(id); w.parties.set(keepParty, lst); } }
     const participants = [id];
     if (o.dungeon) { // party dungeon (§28): online party members on the same map enter the same instance (each pays their own daily entry)
-      const oldPartyId = old?.partyId; const members = oldPartyId ? [...this.conns.values()].filter((m) => m !== c && m.world.parties.get(oldPartyId)?.includes(`pl_${m.charId}`)) : [];
+      const oldPartyId = keepParty; const members = oldPartyId ? [...this.conns.values()].filter((m) => m !== c && m.world.entities.get(`pl_${m.charId}`)?.partyId === oldPartyId && m.world === prevWorld) : [];
       for (const m of members) { const ok2 = m.svc.startDungeon(o.dungeon); if (!ok2.ok) { this.notice(m, `Could not join party dungeon: ${ok2.msg}`); continue; } const mid = `pl_${m.charId}`; this.cancelTradesOf(m.charId); m.world.removePlayer(mid); w.addPlayer(m.svc, { x: def.spawn[0] * TILE + 16 + 24 * participants.length, y: def.spawn[1] * TILE + 16 }); m.world = w; participants.push(mid); this.send(m, { type: 'state', player: this.playerJson(m), mapId, myId: mid }); }
-      if (participants.length > 1) { const pidN = `party_${randomBytes(4).toString('hex')}`; w.parties.set(pidN, participants); for (const pidE of participants) { const e2 = w.entities.get(pidE); if (e2) e2.partyId = pidN; } }
+      if (participants.length > 1 || keepParty) { const pidN = keepParty ?? `party_${randomBytes(4).toString('hex')}`; w.parties.set(pidN, participants); for (const pidE of participants) { const e2 = w.entities.get(pidE); if (e2) e2.partyId = pidN; } }
       w.startDungeon(o.dungeon, `run_${randomBytes(6).toString('hex')}`, participants);
     }
     if (o.arena === 'queue') { /* handled by matchmaker */ }
@@ -147,6 +150,19 @@ export class GameServer {
       case 'guildLeave': { if (c.svc.p.guild) await pool.query('DELETE FROM guild_members WHERE character_id=$1', [c.charId]); return executeCommand(this.ctx(c), cmd, a); }
       case 'report': { await pool.query('INSERT INTO player_reports(id,reporter,target_name,reason) VALUES ($1,$2,$3,$4)', [`rpt_${randomBytes(6).toString('hex')}`, c.charId, String(a.name).slice(0, 20), String(a.reason).slice(0, 60)]); return ok(); }
       case 'marketView': return ok();
+      // ---- friend farm visit (§26): only if the owner lists you as a friend; likes persist to the owner (online or offline) ----
+      case 'visitFarm': {
+        const name = String(a.name ?? ''); if (!c.svc.p.friends.some((f) => f.name.toLowerCase() === name.toLowerCase())) return fail('NOT_FRIENDS');
+        const online = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === name.toLowerCase()); const ownerState: any = online ? online.svc.p : (await pool.query('SELECT state FROM characters WHERE lower(name)=lower($1) AND world_id=$2 AND deleted_at IS NULL', [name, CONFIG.worldId])).rows[0]?.state;
+        if (!ownerState) return fail('NOT_FOUND'); if (!(ownerState.friends ?? []).some((f: any) => f.name.toLowerCase() === c.svc.p.name.toLowerCase())) return fail('NO_PERMISSION', `${name} has not added you as a friend`);
+        c.session.visit = { owner: ownerState.name, simulated: false, likes: ownerState.farm?.likes ?? 0, pets: (ownerState.pets ?? []).filter((p: any) => p.onFarm).map((p: any) => ({ species: p.species, level: p.level })), decorations: ownerState.farm?.decorations ?? [] };
+        return this.changeMap(c, 'pet_farm');
+      }
+      case 'likeFarm': {
+        const r = executeCommand(this.ctx(c), 'likeFarm', {}); if (!r.ok) return r; const owner = c.session.visit!.owner; const online = [...this.conns.values()].find((x) => x.svc.p.name === owner);
+        if (online) { online.svc.p.farm.likes++; online.dirty = true; this.notice(online, `${c.svc.p.name} liked your farm!`); } else await pool.query(`UPDATE characters SET state = jsonb_set(state, '{farm,likes}', to_jsonb(COALESCE((state->'farm'->>'likes')::int, 0) + 1)) WHERE name=$1 AND world_id=$2`, [owner, CONFIG.worldId]);
+        return r;
+      }
       // ---- friend presence (§39): online for any friend; map only when the friendship is mutual (privacy) ----
       case 'friendsStatus': return ok(c.svc.p.friends.map((f) => { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === f.name.toLowerCase()); const mutual = !!t && t.svc.p.friends.some((g) => g.name.toLowerCase() === c.svc.p.name.toLowerCase()) && !t.svc.p.blocked.includes(c.svc.p.name); return { name: f.name, online: !!t && !t.svc.p.blocked.includes(c.svc.p.name), map: mutual ? t!.world.mapId : null, mutual, simulated: false }; }));
       // ---- marriage with consent (§41) ----
@@ -286,7 +302,7 @@ export class GameServer {
         if (!c.aoi || now - c.aoi.at > 300 || c.aoi.inst !== c.world.instanceId) c.aoi = { ids: c.world.aoiIds(myId), at: now, inst: c.world.instanceId }; // visibility set refreshed every 300ms; positions still sent at 10 Hz
         for (const id of c.aoi.ids) { const p = m.get(id); if (!p) continue; seen.add(id); const prev = c.known.get(id); if (prev === undefined) { upd.push(p.full); c.known.set(id, p.dyn); } else if (prev !== p.dyn) { const d: any = { id }; DYNAMIC_KEYS.forEach((k) => { d[k] = (p.full as any)[k]; }); upd.push(d); c.known.set(id, p.dyn); } }
         const rm: string[] = []; for (const id of c.known.keys()) if (!seen.has(id)) { rm.push(id); c.known.delete(id); }
-        const extra = { cds: e?.cds, party: e?.partyId ? c.world.parties.get(e.partyId) : [], dungeon: c.world.dungeon, boss: { boss: c.world.boss && !c.world.boss.settled ? c.world.boss : null, nextAt: c.world.nextBossAt, last: c.world.boss }, arena: c.world.arena };
+        const extra = { cds: e?.cds, party: e?.partyId ? c.world.parties.get(e.partyId) : [], dungeon: c.world.dungeon, boss: { boss: c.world.boss && !c.world.boss.settled ? c.world.boss : null, nextAt: c.world.nextBossAt, last: c.world.boss }, arena: c.world.arena, visit: c.session.visit ?? null };
         if (upd.length || rm.length || full || this.stats.ticks % 10 === 0) this.send(c, { type: 'snap', mapId: c.world.mapId, full, upd, rm, extra }, true);
       }
       if (c.dirty && now - c.lastSnap < 60) { c.dirty = false; this.send(c, { type: 'state', player: this.playerJson(c), mapId: c.world.mapId, myId: `pl_${c.charId}` }); }

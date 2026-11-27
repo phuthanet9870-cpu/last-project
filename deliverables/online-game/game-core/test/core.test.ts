@@ -193,3 +193,32 @@ describe('TCG PvP perspective', () => {
     expect(absoluteAction({ type: 'attack', attacker: 3, target: { side: 1, unit: 'hero' } }, 1)).toEqual({ type: 'attack', attacker: 3, target: { side: 0, unit: 'hero' } });
   });
 });
+
+describe('items & pets additions (v0.5)', () => {
+  it('gem refining raises the socketed gem bonus and never destroys it', () => {
+    const { svc, p } = mk(); svc.earn('gold', 1e7, 't'); svc.addItem('gem_dust', 500); const w = p.equipment.main!; w.refine = 5; const [g] = svc.addItem('gem_ruby_1'); svc.socketGem(w.uid, g!.uid);
+    const str0 = playerStats(p).primary.str; for (let i = 0; i < 60 && (w.gemRefine?.[0] ?? 0) < 10; i++) svc.refineGem(w.uid, 0);
+    expect(w.gemRefine![0]).toBe(10); expect(w.sockets[0]).toBe('gem_ruby_1'); expect(playerStats(p).primary.str).toBeGreaterThan(str0); expect(svc.refineGem(w.uid, 0).err).toBe('MAX_LEVEL');
+  });
+  it('cosmetic enhancement changes no stats', () => {
+    const { svc, p } = mk(); svc.addItem('star_dust', 100); const [c] = svc.addItem('costume_witch'); svc.gainExp(1e5, 't'); svc.equip(c!.uid); const before = JSON.stringify(playerStats(p).derived);
+    for (let i = 0; i < 5; i++) expect(svc.enhanceCosmetic(c!.uid).ok).toBe(true); expect(c!.cosmetic).toBe(5); expect(svc.enhanceCosmetic(c!.uid).err).toBe('MAX_LEVEL'); expect(JSON.stringify(playerStats(p).derived)).toBe(before);
+  });
+  it('focused crafting guarantees the chosen option and costs an enchant stone', () => {
+    const { svc, p } = mk(); svc.earn('gold', 1e6, 't'); svc.addItem('iron_ore', 50); svc.addItem('oak_log', 20); svc.addItem('enchant_stone', 5); let made = 0;
+    for (let i = 0; i < 5 && made === 0; i++) { const r = svc.craft('rc_iron_sword', 1, 'crit'); expect(r.ok).toBe(true); made = (r.data as any).made; }
+    const sw = p.inventory.filter((x) => x.defId === 'iron_sword').pop()!; expect(sw.options.some((o) => o.stat === 'crit')).toBe(true); expect(svc.craft('rc_iron_sword', 1, 'moveSpeed').err).toBe('INVALID_OPTION');
+  });
+  it('regional pet food doubles effect for matching elements; runes change pet stats', () => {
+    const { svc } = mk(); const pet = svc.addPet('pet_slime'); svc.addItem('food_forest', 2); svc.addItem('food_snow', 2); const r1 = svc.feedPet(pet.uid, 'food_forest'); expect(r1.data!.bonus).toBe(true); const r2 = svc.feedPet(pet.uid, 'food_snow'); expect(r2.data!.bonus).toBe(false);
+    const base = svc.petStats(pet).atk; svc.addItem('rune_fang', 1); svc.addItem('rune_wind', 1); svc.addItem('rune_shell', 1); expect(svc.petRune(pet.uid, 'rune_fang').ok).toBe(true); expect(svc.petStats(pet).atk).toBeGreaterThan(base);
+    expect(svc.petRune(pet.uid, 'rune_wind').ok).toBe(true); expect(svc.petRune(pet.uid, 'rune_shell').err).toBe('RUNE_SLOTS_FULL'); expect(svc.petRune(pet.uid, 'rune_fang', true).ok).toBe(true); expect(svc.countItem('rune_fang')).toBe(1);
+  });
+  it('duplicate mount → stable seals; warehouse expansion; blessing +10%; second card slot at +10; re-inscription', () => {
+    const { svc, p } = mk(); svc.earn('gold', 1e7, 't'); const [k1] = svc.addItem('mount_key_pony'); svc.unlockMount(k1!.uid); const [k2] = svc.addItem('mount_key_pony'); expect((svc.unlockMount(k2!.uid).data as any).duplicate).toBe(true); expect(svc.bal('stable_seal')).toBeGreaterThan(0n);
+    expect((svc.expandStorage().data as any).slots).toBe(140);
+    const w = p.equipment.main!; w.refine = 5; svc.addItem('refine_ore', 5); svc.addItem('blessing_scroll', 1); const pv = svc.refinePreview(w.uid)!; expect(pv.max).toBe(false); svc.refine(w.uid, false, true); expect(svc.countItem('blessing_scroll')).toBe(0);
+    w.refine = 10; p.monsterCards['mc_forest_slime'] = 2; p.monsterCards['mc_cave_spider'] = 2; const cards = Object.keys(p.monsterCards); let n = 0; for (const c of cards) for (let i = 0; i < 2; i++) if (svc.insertCard(w.uid, c).ok) n++; expect(n).toBeLessThanOrEqual(2); expect(w.cards.length).toBe(2);
+    svc.addItem('stone_dust', 20); const [st0] = svc.addItem('skill_stone'); svc.inscribeStone(st0!.uid, p.hotbar[0]!); const before = JSON.stringify(st0!.stone!.mods); let changed = false; for (let i = 0; i < 3; i++) { svc.reinscribeStone(st0!.uid); if (JSON.stringify(st0!.stone!.mods) !== before) changed = true; } expect(changed).toBe(true); expect(st0!.stone!.skillId).toBe(p.hotbar[0]);
+  });
+});

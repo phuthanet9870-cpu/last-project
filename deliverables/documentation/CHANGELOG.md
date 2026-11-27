@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 — 2026-11-27 — Task 4: items & pets
+- Gem refining +0–10 (+10% gem stat per level, failure keeps level), cosmetic enhancement +0–5 (visual aura only, no stats), focused crafting (guaranteed chosen option for 1 Enchant Stone), Emberlight Blessing (+10% refine), second monster-card slot at +10, skill stone re-inscription, warehouse expansion (120→300).
+- Pets: regional foods (double effect for matching elements), pet runes (Fang/Shell/Wind, 2 slots), friend farm visits with daily likes (online: real friend's farm, likes persist even if owner offline; artifact: simulated friends' farms).
+- Mounts: duplicate whistles → Stable Seals; Stable Seal shop.
+- Fix (found by test): server party membership was tied to the map and lost on map change; now carried with the player.
+- Tests: unit 48, E2E 30/30, multiplayer 18/18.
+
 ## 0.4.0 — 2026-11-27 — Task 3: real online versions of simulated systems
 - Party dungeons: online party members on the same map enter the leader's instance together (each uses their own daily entry, all receive rewards); in the artifact, party bots follow you across maps and into dungeons.
 - Marriage with consent: proposal → partner `marriageAccept`; mutual friendship, officiant proximity, ring or 10,000G; divorce clears both (also offline partner via DB).

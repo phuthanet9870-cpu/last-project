@@ -6,6 +6,7 @@
 import { CONFIG } from './config.js';
 import { CLASSES } from './classes.js';
 import { DUNGEONS, MAPS, MONSTERS, NPCS, PETS, QUESTS, MOUNTS } from './content.js';
+export interface FarmVisit { owner: string; simulated: boolean; likes: number; pets: { species: string; level: number }[]; decorations: { itemId: string; x: number; y: number; rot: number }[] }
 import { EconomyError } from './economy.js';
 import { ITEMS, type Slot } from './items.js';
 import { TILE } from './mapgen.js';
@@ -20,7 +21,7 @@ export interface Session {
   tcg?: { state: TcgState; mode: 'ai' | 'tower' | 'ranked' | 'casual'; oppName: string; oppRating: number; settled: boolean } | null;
   trade?: ReturnType<MarketService['openTrade']> | null; tradePartner?: string;
   duel?: { opp: string; startedAt: number } | null; arena?: { mode: string; settled: boolean; prevMap: string; prevX: number; prevY: number } | null;
-  prevMap?: { map: string; x: number; y: number } | null; lastCmdAt?: number; cmdCount?: number;
+  prevMap?: { map: string; x: number; y: number } | null; visit?: FarmVisit | null; lastCmdAt?: number; cmdCount?: number;
 }
 export interface CommandContext {
   svc: PlayerService; world: World; market: MarketService; entityId: string; session: Session; mode: 'local' | 'server'; dev: boolean;
@@ -76,7 +77,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   // --- enhancement ---
   repair: (c) => (near(c, 'blacksmith') ? (() => { const r = c.svc.repairAll(); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_BLACKSMITH', 'Visit Brunhild the blacksmith, or use a Tinker Kit')),
   refinePreview: (c, a) => ok(c.svc.refinePreview(String(a.uid))),
-  refine: (c, a) => (near(c, 'blacksmith') ? (() => { const r = c.svc.refine(String(a.uid), !!a.protect); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_BLACKSMITH', 'Visit Brunhild the blacksmith')),
+  refine: (c, a) => (near(c, 'blacksmith') ? (() => { const r = c.svc.refine(String(a.uid), !!a.protect, !!a.bless); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_BLACKSMITH', 'Visit Brunhild the blacksmith')),
   socket: (c, a) => (near(c, 'enchanter') ? c.svc.socketGem(String(a.item), String(a.gem)) : fail('NEED_ENCHANTER')),
   unsocket: (c, a) => (near(c, 'enchanter') ? c.svc.unsocketGem(String(a.item), Number(a.idx)) : fail('NEED_ENCHANTER')),
   fuseGem: (c, a) => (near(c, 'enchanter') ? c.svc.fuseGems(String(a.defId)) : fail('NEED_ENCHANTER')),
@@ -84,6 +85,20 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   insertCard: (c, a) => (near(c, 'enchanter') ? c.svc.insertCard(String(a.uid), String(a.card)) : fail('NEED_ENCHANTER')),
   inscribe: (c, a) => (near(c, 'enchanter') ? c.svc.inscribeStone(String(a.uid), String(a.skill)) : fail('NEED_ENCHANTER')),
   refineStone: (c, a) => (near(c, 'enchanter') ? c.svc.refineStone(String(a.uid)) : fail('NEED_ENCHANTER')),
+  refineGem: (c, a) => (near(c, 'enchanter') ? (() => { const r = c.svc.refineGem(String(a.uid), Number(a.idx)); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_ENCHANTER')),
+  enhanceCosmetic: (c, a) => (near(c, 'enchanter') ? (() => { const r = c.svc.enhanceCosmetic(String(a.uid), a.fodder ? String(a.fodder) : undefined); c.world.refreshPlayer(c.entityId); return r; })() : fail('NEED_ENCHANTER')),
+  reinscribe: (c, a) => (near(c, 'enchanter') ? c.svc.reinscribeStone(String(a.uid)) : fail('NEED_ENCHANTER')),
+  petRune: (c, a) => { const r = c.svc.petRune(String(a.pet), String(a.rune), !!a.remove); c.world.syncPet(c.entityId); c.world.refreshPlayer(c.entityId); return r; },
+  expandStorage: (c) => (near(c, 'storage') ? c.svc.expandStorage() : fail('NEED_STORAGE_NPC', 'Visit Oswin (warehouse)')),
+  visitFarm: (c, a) => {
+    // Artifact: visit a simulated friend's farm (generated from their name). Server overrides with the real friend's farm.
+    const f = c.svc.p.friends.find((x) => x.name === a.name); if (!f) return fail('NOT_FRIENDS', 'You can only visit friends’ farms');
+    let h = 0; for (const ch of f.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0; const pick = <T,>(arr: T[], i: number) => arr[(h >> (i % 24)) % arr.length]!;
+    const species = Object.keys(PETS); const decos = ['deco_lantern', 'deco_bench', 'deco_flowers', 'deco_fountain'];
+    c.session.visit = { owner: f.name, simulated: true, likes: h % 40, pets: Array.from({ length: 3 + (h % 4) }, (_, i) => ({ species: pick(species, i * 3), level: 1 + ((h >> i) % 30) })), decorations: Array.from({ length: 4 + (h % 5) }, (_, i) => ({ itemId: pick(decos, i * 5), x: 4 + i * 2, y: 15 + (i % 2) * 2, rot: i % 4 })) };
+    return c.changeMap('pet_farm');
+  },
+  likeFarm: (c) => { const v = c.session.visit; if (!v) return fail('NOT_VISITING'); const k = `like:${v.owner}:${new Date(c.world.now()).toISOString().slice(0, 10)}`; if (c.svc.p.counters[k]) return fail('ALREADY_LIKED', 'You already liked this farm today'); c.svc.p.counters[k] = 1; v.likes++; c.svc.earn('gold', 50, 'farm_like_reward'); return ok({ likes: v.likes }); },
   slotStone: (c, a) => { const it = c.svc.findInv(String(a.uid)); if (!it?.stone?.skillId) return fail('NOT_INSCRIBED'); if (!it.locked && c.svc.equippedStones().length >= 4) return fail('STONE_SLOTS_FULL'); it.locked = !it.locked; return ok({ slotted: it.locked }); },
   // --- quests & NPCs ---
   interact: (c, a) => { const n = NPCS[String(a.npc)]; const me = c.world.entities.get(c.entityId)!; if (!n || n.map !== c.world.mapId) return fail('INVALID'); if (!c.dev && Math.hypot(n.x * TILE + 16 - me.x, n.y * TILE + 16 - me.y) > 160) return fail('TOO_FAR'); c.svc.talkTo(n.id); return ok({ npc: n.id, quests: npcQuests(n.id) }); },
@@ -91,7 +106,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   abandonQuest: (c, a) => c.svc.abandonQuest(String(a.id)),
   completeQuest: (c, a) => { const q = QUESTS[String(a.id)]; if (!q) return fail('INVALID'); if (!c.dev && !near(c, 'quest') && !near(c, 'board') && !Object.values(NPCS).some((n) => n.id === q.giver && n.map === c.world.mapId)) return fail('RETURN_TO_GIVER', `Return to ${NPCS[q.giver]?.name.en}`); const r = c.svc.completeQuest(q.id, a.choice); c.world.refreshPlayer(c.entityId); return r; },
   buy: (c, a) => { const npc = Object.values(NPCS).find((n) => n.shop === a.shop); if (!c.dev && npc && !near(c, npc.roles[0]!) && !near(c, 'shop')) return fail('NEED_SHOP_NPC'); return c.svc.buy(String(a.shop), String(a.item), Number(a.qty) || 1); },
-  craft: (c, a) => (near(c, 'crafting') || c.world.mapId === 'house' ? c.svc.craft(String(a.recipe), Number(a.times) || 1) : fail('NEED_WORKSTATION', 'Visit Juno or use your house workbench')),
+  craft: (c, a) => (near(c, 'crafting') || c.world.mapId === 'house' ? c.svc.craft(String(a.recipe), Number(a.times) || 1, a.focus ? String(a.focus) : undefined) : fail('NEED_WORKSTATION', 'Visit Juno or use your house workbench')),
   // --- pets / farm / mounts / housing ---
   hatch: (c, a) => c.svc.hatchEgg(String(a.egg), c.dev && !!a.instant),
   feed: (c, a) => c.svc.feedPet(String(a.pet), a.food),
@@ -106,7 +121,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   feederUp: (c) => c.svc.upgradeFeeder(),
   farmExpand: (c) => c.svc.expandFarm(),
   farmLike: (c) => { c.svc.p.farm.likes++; return ok(); },
-  decorPlace: (c, a) => c.svc.placeDecoration(String(a.item), Number(a.x), Number(a.y), !!a.house),
+  decorPlace: (c, a) => c.session.visit ? fail('VISITING', 'You are visiting someone else’s farm') : c.svc.placeDecoration(String(a.item), Number(a.x), Number(a.y), !!a.house),
   decorRemove: (c, a) => c.svc.removeDecoration(Number(a.i), !!a.house),
   decorRotate: (c, a) => c.svc.rotateDecoration(Number(a.i), !!a.house),
   setMount: (c, a) => { const r = c.svc.setMount(a.id ?? null); c.world.refreshPlayer(c.entityId); return r; },
@@ -155,7 +170,7 @@ export const COMMANDS: Record<string, (ctx: CommandContext, a: Args) => Result> 
   },
   // --- travel / instances ---
   teleport: (c, a) => { if (!near(c, 'teleport') && !c.dev) return fail('NEED_WAYGATE', 'Talk to Quill (Waygate Keeper)'); const m = MAPS[String(a.map)]; if (!m || m.instanced) return fail('INVALID'); if (c.svc.p.level < m.levelReq && !c.dev) return fail('LEVEL_TOO_LOW'); if (!c.dev && !c.svc.spend('gold', 50, 'teleport')) return fail('NOT_ENOUGH_GOLD'); return c.changeMap(m.id); },
-  portal: (c, a) => { const me = c.world.entities.get(c.entityId)!; const p = MAPS[c.world.mapId]!.portals[Number(a.i)]; if (!p) return fail('INVALID'); if (Math.hypot(p.x * TILE + 16 - me.x, p.y * TILE + 16 - me.y) > 96 && !c.dev) return fail('TOO_FAR'); const dest = MAPS[p.to]!; if (c.svc.p.level < dest.levelReq && !c.dev) return fail('LEVEL_TOO_LOW', `Requires level ${dest.levelReq}`); if (p.to === 'mossy_hollow') return COMMANDS.enterDungeon!(c, { id: 'mossy_hollow' }); return c.changeMap(p.to, p.tx * TILE + 16, p.ty * TILE + 16); },
+  portal: (c, a) => { const me = c.world.entities.get(c.entityId)!; const p = MAPS[c.world.mapId]!.portals[Number(a.i)]; if (!p) return fail('INVALID'); if (Math.hypot(p.x * TILE + 16 - me.x, p.y * TILE + 16 - me.y) > 96 && !c.dev) return fail('TOO_FAR'); const dest = MAPS[p.to]!; if (c.svc.p.level < dest.levelReq && !c.dev) return fail('LEVEL_TOO_LOW', `Requires level ${dest.levelReq}`); if (p.to === 'mossy_hollow') return COMMANDS.enterDungeon!(c, { id: 'mossy_hollow' }); if (p.to === 'pet_farm') c.session.visit = null; return c.changeMap(p.to, p.tx * TILE + 16, p.ty * TILE + 16); },
   enterDungeon: (c, a) => { const d = DUNGEONS[String(a.id)]; if (!d) return fail('INVALID'); if (d.type === 'daily' && !near(c, 'dungeon') && !c.dev) return fail('NEED_WARDEN'); const r = c.svc.startDungeon(d.id); if (!r.ok) return r; return c.changeMap(d.map, undefined, undefined, { dungeon: d.id }); },
   leaveInstance: (c) => { const back = c.session.prevMap ?? { map: 'emberglen', x: 28 * TILE + 16, y: 24 * TILE + 16 }; c.session.prevMap = null; return c.changeMap(back.map, back.x, back.y); },
   arenaJoin: (c, a) => { if (!near(c, 'arena') && !c.dev) return fail('NEED_ARENA_MASTER'); return c.changeMap('arena', undefined, undefined, { arena: String(a.mode ?? '1v1') }); },
