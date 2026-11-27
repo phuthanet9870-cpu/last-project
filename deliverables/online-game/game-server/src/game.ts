@@ -5,15 +5,15 @@
 import type { WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
 import {
-  CONFIG as GAME, DYNAMIC_KEYS, publicEntity, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
+  CONFIG as GAME, DYNAMIC_KEYS, STARTER_DECKS, absoluteAction, applyAction, newMatch, perspective, validateDeck, type TcgAction, type TcgState, publicEntity, ITEMS, Ledger, MAPS, MarketService, PlayerService, Rng, TILE, World, executeCommand, serializePlayer, viewFor, walletId,
   type Currency, type PlayerState, type Result, type Session,
 } from '../../../packages/game-core/src/index.js';
 import { pool, tx } from './db.js';
 import { CONFIG } from './env.js';
 import type { Redis } from 'ioredis';
 
-interface Conn { phase: number; aoi?: { ids: string[]; at: number; inst: string }; known: Map<string, string>; mapSent: string; ws: WebSocket; accountId: string; role: string; charId: string; svc: PlayerService; world: World; session: Session; lastSnap: number; dirty: boolean; muted: boolean; lastPersist: number }
-interface Invite { kind: 'party' | 'trade' | 'duel' | 'guild'; from: string; at: number; data?: any }
+interface Conn { tcgPvp?: { id: string; side: 0 | 1 } | null; phase: number; aoi?: { ids: string[]; at: number; inst: string }; known: Map<string, string>; mapSent: string; ws: WebSocket; accountId: string; role: string; charId: string; svc: PlayerService; world: World; session: Session; lastSnap: number; dirty: boolean; muted: boolean; lastPersist: number }
+interface Invite { kind: 'party' | 'trade' | 'duel' | 'guild' | 'marriage' | 'tcg'; from: string; at: number; data?: any }
 interface Trade { id: string; a: string; b: string; offer: Record<string, { items: string[]; gold: bigint }>; lock: Record<string, boolean>; confirm: Record<string, boolean>; done: boolean }
 const ok = (data?: unknown, msg?: string): Result => ({ ok: true, data, msg });
 const fail = (err: string, msg?: string): Result => ({ ok: false, err, msg: msg ?? err });
@@ -22,6 +22,7 @@ const SERVER_ONLY = new Set(['dev']);
 
 export class GameServer {
   ledger = new Ledger(); market: MarketService; worlds = new Map<string, World>(); conns = new Map<string, Conn>(); invites = new Map<string, Invite>(); trades = new Map<string, Trade>();
+  tcgMatches = new Map<string, { id: string; state: TcgState; a: string; b: string; settled: boolean }>();
   arenaQueue: string[] = []; matches = new Map<string, { world: World; a: string[]; b: string[]; mode: string; rated: boolean; settled: boolean }>(); stats = { tickMsAvg: 0, bytesOut: 0, ticks: 0, tickMsP95: 0, tickSamples: [] as number[], cmds: 0, persistErrors: 0 };
   private timer?: NodeJS.Timeout; private rng = new Rng(Date.now() & 0xffffff); private chatOut: [string, string, string | null, string | null, string][] = [];
   constructor(public redis: Redis | null) { this.ledger.trackPending = true; this.market = new MarketService(this.ledger, new Rng(7)); }
@@ -52,6 +53,7 @@ export class GameServer {
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [accountId])).rowCount! > 0;
     const c: Conn = { phase: this.conns.size % 2, known: new Map(), mapSent: '', ws, accountId, role, charId, svc, world, session: {}, lastSnap: 0, dirty: true, muted, lastPersist: Date.now() };
     this.conns.set(charId, c);
+    svc.onEvent = () => { c.dirty = true; }; // any domain event (loot, gold, level, quest…) re-syncs the owner's state, even when it happens inside the tick
     await this.redis?.sadd('hb:online', charId).catch(() => undefined); await this.redis?.set(`hb:presence:${charId}`, map, 'EX', 120).catch(() => undefined);
     this.send(c, { type: 'welcome', myId: e.id, mapId: map, player: this.playerJson(c), serverTime: Date.now(), protocolVersion: 1 });
     if (off.minutes) svc.note(`Farm settled ${off.minutes} min while offline.`);
@@ -61,6 +63,7 @@ export class GameServer {
   async leave(charId: string) {
     const c = this.conns.get(charId); if (!c) return;
     this.cancelTradesOf(charId); this.arenaQueue = this.arenaQueue.filter((x) => x !== charId);
+    if (c.tcgPvp) { const m = this.tcgMatches.get(c.tcgPvp.id); if (m && m.state.winner === null) { applyAction(m.state, c.tcgPvp.side, { type: 'surrender' }); this.tcgPush(m); } }
     const e = c.world.entities.get(`pl_${charId}`); if (e?.partyId) { const m = c.world.parties.get(e.partyId); if (m) { m.splice(m.indexOf(e.id), 1); if (m.length <= 1) { for (const id of m) { const x = c.world.entities.get(id); if (x) x.partyId = null; } c.world.parties.delete(e.partyId); } } }
     c.world.removePlayer(`pl_${charId}`); this.conns.delete(charId);
     await this.persist([c]).catch((err) => { this.stats.persistErrors++; console.error('persist on leave failed', err); });
@@ -84,7 +87,7 @@ export class GameServer {
     if (r.ok && (ECON_CMDS.has(m.cmd) || this.ledger.pending.length > 0)) { try { await this.persist([...this.conns.values()].filter((x) => x.dirty || x === c)); } catch (e) { this.stats.persistErrors++; console.error('persist failed', e); r = fail('PERSIST_FAILED', 'Server could not save; please retry'); } }
     this.send(c, { type: 'res', id: m.id, result: r }); if (!['move', 'moveTo', 'target', 'ping', 'chat', 'whisper', 'marketView', 'tcgView'].includes(m.cmd)) c.dirty = true; // movement/chat don't change durable state → no full state resend
     if (['marketList', 'marketBuy', 'marketCancel', 'buyOrder', 'cancelBuyOrder', 'auctionCreate', 'auctionBid', 'auctionBuyNow', 'exchangePlace', 'exchangeCancel', 'marketView'].includes(m.cmd)) this.send(c, { type: 'market', market: this.market.serialize() });
-    if (m.cmd.startsWith('tcg')) this.send(c, { type: 'tcg', tcg: c.session.tcg ? { view: viewFor(c.session.tcg.state, 0), mode: c.session.tcg.mode, opp: c.session.tcg.oppName } : null });
+    if (m.cmd.startsWith('tcg') && !c.tcgPvp && c.session.tcg && !['tcgChallenge', 'tcgAccept'].includes(m.cmd)) this.send(c, { type: 'tcg', tcg: c.session.tcg ? { view: viewFor(c.session.tcg.state, 0), mode: c.session.tcg.mode, opp: c.session.tcg.oppName } : null });
   }
   private ctx(c: Conn) {
     return { svc: c.svc, world: c.world, market: this.market, entityId: `pl_${c.charId}`, session: c.session, mode: 'server' as const, dev: CONFIG.devCommands && c.role === 'admin',
@@ -98,7 +101,13 @@ export class GameServer {
     const key = def.instanced ? `${mapId}:${o.arena ?? c.charId}:${Date.now().toString(36)}` : mapId; const w = this.world(mapId, key);
     c.svc.p.riding = c.svc.p.riding && !def.instanced; w.addPlayer(c.svc, x !== undefined && y !== undefined ? { x, y } : { x: def.spawn[0] * TILE + 16, y: def.spawn[1] * TILE + 16 }); c.world = w;
     if (!def.instanced) c.svc.p.savedMap = mapId;
-    if (o.dungeon) w.startDungeon(o.dungeon, `run_${randomBytes(6).toString('hex')}`, [id]);
+    const participants = [id];
+    if (o.dungeon) { // party dungeon (§28): online party members on the same map enter the same instance (each pays their own daily entry)
+      const oldPartyId = old?.partyId; const members = oldPartyId ? [...this.conns.values()].filter((m) => m !== c && m.world.parties.get(oldPartyId)?.includes(`pl_${m.charId}`)) : [];
+      for (const m of members) { const ok2 = m.svc.startDungeon(o.dungeon); if (!ok2.ok) { this.notice(m, `Could not join party dungeon: ${ok2.msg}`); continue; } const mid = `pl_${m.charId}`; this.cancelTradesOf(m.charId); m.world.removePlayer(mid); w.addPlayer(m.svc, { x: def.spawn[0] * TILE + 16 + 24 * participants.length, y: def.spawn[1] * TILE + 16 }); m.world = w; participants.push(mid); this.send(m, { type: 'state', player: this.playerJson(m), mapId, myId: mid }); }
+      if (participants.length > 1) { const pidN = `party_${randomBytes(4).toString('hex')}`; w.parties.set(pidN, participants); for (const pidE of participants) { const e2 = w.entities.get(pidE); if (e2) e2.partyId = pidN; } }
+      w.startDungeon(o.dungeon, `run_${randomBytes(6).toString('hex')}`, participants);
+    }
     if (o.arena === 'queue') { /* handled by matchmaker */ }
     this.send(c, { type: 'state', player: this.playerJson(c), mapId, myId: id }); this.redis?.set(`hb:presence:${c.charId}`, mapId, 'EX', 120).catch(() => undefined);
     return ok();
@@ -138,8 +147,55 @@ export class GameServer {
       case 'guildLeave': { if (c.svc.p.guild) await pool.query('DELETE FROM guild_members WHERE character_id=$1', [c.charId]); return executeCommand(this.ctx(c), cmd, a); }
       case 'report': { await pool.query('INSERT INTO player_reports(id,reporter,target_name,reason) VALUES ($1,$2,$3,$4)', [`rpt_${randomBytes(6).toString('hex')}`, c.charId, String(a.name).slice(0, 20), String(a.reason).slice(0, 60)]); return ok(); }
       case 'marketView': return ok();
+      // ---- friend presence (§39): online for any friend; map only when the friendship is mutual (privacy) ----
+      case 'friendsStatus': return ok(c.svc.p.friends.map((f) => { const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === f.name.toLowerCase()); const mutual = !!t && t.svc.p.friends.some((g) => g.name.toLowerCase() === c.svc.p.name.toLowerCase()) && !t.svc.p.blocked.includes(c.svc.p.name); return { name: f.name, online: !!t && !t.svc.p.blocked.includes(c.svc.p.name), map: mutual ? t!.world.mapId : null, mutual, simulated: false }; }));
+      // ---- marriage with consent (§41) ----
+      case 'propose': {
+        if (c.svc.p.marriage) return fail('ALREADY_MARRIED'); const t = [...this.conns.values()].find((x) => x.svc.p.name.toLowerCase() === String(a.name ?? '').toLowerCase()); if (!t || t === c) return fail('PARTNER_OFFLINE', 'Your partner must be online');
+        if (t.svc.p.marriage) return fail('PARTNER_MARRIED'); const fa = c.svc.p.friends.find((f) => f.name === t.svc.p.name), fb = t.svc.p.friends.find((f) => f.name === c.svc.p.name); if (!fa || !fb) return fail('MUST_BE_MUTUAL_FRIENDS', 'You must both have each other as friends');
+        const minMs = Number(process.env.MARRIAGE_MIN_FRIEND_MS ?? 180000); if (Date.now() - Math.max(fa.since, fb.since) < minMs) return fail('FRIENDSHIP_TOO_NEW');
+        const nearOfficiant = c.world.mapId === 'emberglen' && Math.hypot(c.world.entities.get(me)!.x - (16 * TILE + 16), c.world.entities.get(me)!.y - (16 * TILE + 16)) < 200; if (!nearOfficiant) return fail('NEED_OFFICIANT', 'Stand near Officiant Sol in Emberglen');
+        if (c.svc.countItem('wedding_ring') < 1 && c.svc.gold() < 10000n) return fail('NEED_RING', 'Need a Hearthbound Ring or 10,000 Gold');
+        this.invites.set(t.charId, { kind: 'marriage', from: c.charId, at: Date.now() }); this.notice(t, `${c.svc.p.name} proposes marriage to you! (marriageAccept)`); return ok({ pending: true });
+      }
+      case 'marriageAccept': {
+        const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'marriage') return fail('NO_PROPOSAL'); this.invites.delete(c.charId); const p = this.conns.get(inv.from); if (!p) return fail('PROPOSER_OFFLINE'); if (p.svc.p.marriage || c.svc.p.marriage) return fail('ALREADY_MARRIED');
+        if (!p.svc.removeItem('wedding_ring', 1) && !p.svc.spend('gold', 10000, 'wedding')) return fail('PROPOSER_CANNOT_PAY');
+        const now = Date.now(); for (const [x, y] of [[p, c], [c, p]] as const) { x.svc.p.marriage = { partner: y.svc.p.name, since: now, anniversary: 0 }; if (!x.svc.p.titles.includes('title_hearthbound')) x.svc.p.titles.push('title_hearthbound'); x.dirty = true; x.world.refreshPlayer(`pl_${x.charId}`); }
+        await this.persist([p, c]); for (const x of [p, c]) x.world.fx.push({ t: 'notice', msg: `${p.svc.p.name} and ${c.svc.p.name} are now wed!` }); return ok();
+      }
+      case 'divorce': {
+        const m = c.svc.p.marriage; if (!m) return fail('NOT_MARRIED'); const r = executeCommand(this.ctx(c), 'divorce', {});
+        const t = [...this.conns.values()].find((x) => x.svc.p.name === m.partner);
+        if (t) { t.svc.p.marriage = null; t.svc.p.titles = t.svc.p.titles.filter((x) => x !== 'title_hearthbound'); if (t.svc.p.title === 'title_hearthbound') t.svc.p.title = null; t.dirty = true; this.notice(t, `${c.svc.p.name} ended your marriage.`); await this.persist([c, t]); }
+        else await pool.query(`UPDATE characters SET state = jsonb_set(jsonb_set(state, '{marriage}', 'null'), '{titles}', COALESCE((SELECT jsonb_agg(x) FROM jsonb_array_elements(state->'titles') x WHERE x <> '"title_hearthbound"'), '[]'::jsonb)) WHERE lower(name)=lower($1) AND world_id=$2`, [m.partner, CONFIG.worldId]);
+        return r;
+      }
+      // ---- Hearthcards PvP (§43): friendly duel between two real players, server-authoritative, hidden info per side ----
+      case 'tcgChallenge': { const t = this.target(c, a.target); if (!t) return fail('PLAYER_NOT_NEARBY'); if (c.tcgPvp || t.tcgPvp) return fail('ALREADY_DUELING'); this.invites.set(t.charId, { kind: 'tcg', from: c.charId, at: Date.now() }); this.notice(t, `${c.svc.p.name} challenges you to Hearthcards (tcgAccept).`); return ok({ pending: true }); }
+      case 'tcgAccept': {
+        const inv = this.invites.get(c.charId); if (!inv || inv.kind !== 'tcg') return fail('NO_CHALLENGE'); this.invites.delete(c.charId); const ch = this.conns.get(inv.from); if (!ch) return fail('CHALLENGER_OFFLINE');
+        const deckOf = (x: Conn) => x.svc.p.tcg.decks.find((d) => d.id === x.svc.p.tcg.activeDeck)?.cards ?? Object.values(STARTER_DECKS)[0]!.cards; const da = deckOf(ch), db = deckOf(c);
+        if (validateDeck(da, ch.svc.p.tcg.collection) || validateDeck(db, c.svc.p.tcg.collection)) return fail('ILLEGAL_DECK');
+        const m = { id: `tcg_${randomBytes(5).toString('hex')}`, state: newMatch(da, db, this.rng.int(1, 2 ** 30)), a: ch.charId, b: c.charId, settled: false }; this.tcgMatches.set(m.id, m);
+        ch.tcgPvp = { id: m.id, side: 0 }; c.tcgPvp = { id: m.id, side: 1 }; this.tcgPush(m); return ok({ id: m.id });
+      }
+      case 'tcgAction': case 'tcgView': {
+        if (!c.tcgPvp) return executeCommand(this.ctx(c), cmd, a); const m = this.tcgMatches.get(c.tcgPvp.id); if (!m) { c.tcgPvp = null; return fail('NO_MATCH'); }
+        if (cmd === 'tcgAction') { const err = applyAction(m.state, c.tcgPvp.side, absoluteAction(a.action as TcgAction, c.tcgPvp.side)); if (err) return fail(err); }
+        this.tcgPush(m); return ok(perspective(m.state, c.tcgPvp.side));
+      }
+      case 'tcgStart': if (c.tcgPvp) return fail('MATCH_IN_PROGRESS'); return executeCommand(this.ctx(c), cmd, a);
       case 'propose': return fail('NOT_AVAILABLE_ONLINE', 'Online marriage requires partner acceptance flow (not yet implemented server-side)');
       default: return executeCommand(this.ctx(c), cmd, a);
+    }
+  }
+  tcgPush(m: { id: string; state: TcgState; a: string; b: string; settled: boolean }) {
+    const A = this.conns.get(m.a), B = this.conns.get(m.b);
+    for (const [cn, side, opp] of [[A, 0, B], [B, 1, A]] as const) if (cn) this.send(cn, { type: 'tcg', tcg: { view: perspective(m.state, side), mode: 'pvp', opp: opp?.svc.p.name ?? 'Opponent' } }, true);
+    if (m.state.winner !== null && !m.settled) {
+      m.settled = true; const w = m.state.winner; if (A) A.svc.recordTcg(w === 0, 'casual', B?.svc.p.tcg.rating ?? 1000); if (B) B.svc.recordTcg(w === 1, 'casual', A?.svc.p.tcg.rating ?? 1000);
+      for (const x of [A, B]) if (x) { x.tcgPvp = null; x.dirty = true; } this.persist([A, B].filter(Boolean) as Conn[]).catch(() => undefined); this.tcgMatches.delete(m.id);
     }
   }
   notice(c: Conn, msg: string) { this.sendFx(c, [{ t: 'notice', msg }]); }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-11-27 — Task 3: real online versions of simulated systems
+- Party dungeons: online party members on the same map enter the leader's instance together (each uses their own daily entry, all receive rewards); in the artifact, party bots follow you across maps and into dungeons.
+- Marriage with consent: proposal → partner `marriageAccept`; mutual friendship, officiant proximity, ring or 10,000G; divorce clears both (also offline partner via DB).
+- Friend presence: online status for friends; current map shown only when the friendship is mutual.
+- Hearthcards PvP: friendly duels between real players, server-authoritative, each side sees itself as side 0 with opponent hand/deck hidden; disconnect = surrender.
+- Fix (found by test): in-tick rewards (loot/gold/level) did not re-sync the owner's state after v0.2.0; any domain event now marks state dirty.
+- Tests: unit 43, E2E 29/29, multiplayer 17/17.
+
 ## 0.3.0 — 2026-11-27 — Task 2: combat gaps
 - Real projectiles: player ranged attacks and single-target bolt/arrow skills travel and resolve on arrival (homing); monster ranged shots fly to the aimed point and can be dodged by moving.
 - Knockback (collision-checked, bosses immune, CC resist reduces) on Quake, Cataclysm, Blast, Nova, Executioner and boss stomps; Knockdown status (1.2 s).

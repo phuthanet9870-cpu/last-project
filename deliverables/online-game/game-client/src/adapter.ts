@@ -48,12 +48,16 @@ export class LocalAdapter implements Adapter {
   }
   private enter(mapId: string, at?: { x: number; y: number }, opts: { dungeon?: string; arena?: string } = {}) {
     const def = MAPS[mapId]!; const prev = this.world;
+    // party bots (simulated) follow the player across maps, including into dungeon instances; not into arenas
+    let carried: any[] = []; let pid: string | null = null;
+    if (prev && !opts.arena) { const me0 = prev.entities.get(this.myId); pid = me0?.partyId ?? null; if (pid) { carried = (prev.parties.get(pid) ?? []).map((id) => prev.entities.get(id)).filter((e): e is NonNullable<typeof e> => !!e && e.kind === 'bot'); for (const b of carried) prev.entities.delete(b.id); prev.parties.delete(pid); } }
     if (prev) { const e = prev.entities.get(this.myId); if (e && !MAPS[prev.mapId]!.instanced) this.session.prevMap = { map: prev.mapId, x: e.x, y: e.y }; prev.removePlayer(this.myId); }
     this.world = this.getWorld(mapId, def.instanced);
     const pos = at ?? { x: def.spawn[0] * TILE + 16, y: def.spawn[1] * TILE + 16 };
     this.svc.p.riding = this.svc.p.riding && (!def.instanced || def.biome === 'farm');
     const me = this.world.addPlayer(this.svc, pos);
     if (!def.instanced) this.svc.p.savedMap = mapId;
+    if (pid && carried.length) { me.partyId = pid; carried.forEach((b, i) => { b.x = pos.x + 30 * (i + 1); b.y = pos.y + 10; b.path = undefined; b.targetId = null; b.dead = false; b.hp = b.maxHp; b.partyId = pid; this.world.entities.set(b.id, b); }); this.world.parties.set(pid, [me.id, ...carried.map((b) => b.id)]); }
     if (opts.dungeon) this.world.startDungeon(opts.dungeon, `run_${Date.now()}`, [me.id]);
     if (opts.arena) {
       const n = opts.arena === '3v3' ? 3 : opts.arena === '2v2' ? 2 : 1; const lvl = this.svc.p.level; const mk = () => { const b = this.world.spawnBot(); b.level = lvl; b.maxHp = b.hp = Math.floor(me.maxHp * (0.8 + Math.random() * 0.3)); b.botProfile!.aggressive = true; return b.id; };

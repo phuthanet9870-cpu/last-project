@@ -182,7 +182,7 @@ function startGame(a: Adapter) {
     for (const f of fx) {
       if (f.t === 'chat') chatLine(hud, f.ch, f.from, f.msg);
       if (f.t === 'notice' && (!f.to || f.to === a.myId)) { toast(f.msg, f.msg.startsWith('+') ? 'gold' : 'info'); if (!f.to) chatLine(hud, 'system', 'System', f.msg);
-        const inv = /\((partyAccept|tradeAccept|duelAccept|guildAccept)\)|invites you to a party/.exec(f.msg); if (inv && a.mode === 'online') { const cmd = inv[1] ?? 'partyAccept'; confirmDialog(f.msg.replace(/\(.*?\)/, ''), () => act(cmd, {}, 'Accepted'), 'Accept'); } }
+        const inv = /\((partyAccept|tradeAccept|duelAccept|guildAccept|marriageAccept|tcgAccept)\)|invites you to a party/.exec(f.msg); if (inv && a.mode === 'online') { const cmd = inv[1] ?? 'partyAccept'; confirmDialog(f.msg.replace(/\(.*?\)/, ''), () => act(cmd, {}, 'Accepted'), 'Accept'); } }
       if (f.t === 'level' && f.id === a.myId) { audio.play('level'); toast(`Level up! ${a.p.level}`, 'gold'); refreshAll(); }
       if (f.t === 'dmg' && (f.src === a.myId || f.tgt === a.myId)) audio.play(f.crit ? 'crit' : 'hit');
       if (f.t === 'death' && f.id === a.myId) audio.play('death');
