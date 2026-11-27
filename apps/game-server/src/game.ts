@@ -47,7 +47,7 @@ export class GameServer {
     const prev = this.conns.get(charId); if (prev) { prev.ws.close(4001, 'Logged in elsewhere'); await this.leave(charId); } // single active session per character
     const p = row.state as PlayerState; p.wallet = this.ledger; // shared world ledger (balances loaded from wallets table)
     const svc = new PlayerService(p, new Rng(this.rng.int(1, 2 ** 30))); svc.rewardRng = new SecureRng(() => randomInt(0, 2 ** 32) / 2 ** 32); // gacha/packs: unpredictable server-side draws
-    const off = svc.settleFarm(); svc.resetDailyIfNeeded();
+    const off = svc.settleFarm(); svc.resetDailyIfNeeded(); const offAuto = svc.settleOfflineAuto();
     const map = MAPS[p.map] && !MAPS[p.map]!.instanced ? p.map : p.savedMap ?? 'emberglen';
     const world = this.world(map); const e = world.addPlayer(svc, MAPS[p.map]?.instanced ? undefined : { x: p.x, y: p.y });
     const muted = (await pool.query(`SELECT 1 FROM moderation_actions WHERE account_id=$1 AND action='mute' AND (expires_at IS NULL OR expires_at>now()) LIMIT 1`, [accountId])).rowCount! > 0;
@@ -56,7 +56,7 @@ export class GameServer {
     svc.onEvent = () => { c.dirty = true; }; this.applyChampion(c); await this.syncGuild(c).catch(() => undefined); // any domain event (loot, gold, level, quest…) re-syncs the owner's state, even when it happens inside the tick
     await this.redis?.sadd('hb:online', charId).catch(() => undefined); await this.redis?.set(`hb:presence:${charId}`, map, 'EX', 120).catch(() => undefined);
     this.send(c, { type: 'welcome', myId: e.id, mapId: map, player: this.playerJson(c), serverTime: Date.now(), protocolVersion: 1 });
-    if (off.minutes) svc.note(`Farm settled ${off.minutes} min while offline.`);
+    if (off.minutes) svc.note(`Farm settled ${off.minutes} min while offline.`); if (offAuto.ok && offAuto.data!.minutes) svc.note(`Offline auto-play: ${offAuto.data!.minutes} min → +${offAuto.data!.exp} EXP, +${offAuto.data!.gold} Gold`);
     world.fx.push({ t: 'notice', msg: `${p.name} entered ${MAPS[map]!.name.en}` });
     return c;
   }
@@ -403,7 +403,7 @@ export class GameServer {
       await tx(async (cl) => {
         for (const e of entries) await cl.query('INSERT INTO currency_ledger(tx_id,account,currency,amount,reason,world_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [e.txId, e.account, e.currency, e.amount.toString(), e.reason, CONFIG.worldId]);
         for (const acct of dirty) { const m = this.ledger.balances.get(acct); if (!m) continue; for (const [cur, b] of m) await cl.query('INSERT INTO wallets(account,currency,available,reserved,updated_at) VALUES ($1,$2,$3,$4,now()) ON CONFLICT (account,currency) DO UPDATE SET available=EXCLUDED.available, reserved=EXCLUDED.reserved, updated_at=now()', [acct, cur, b.available.toString(), b.reserved.toString()]); }
-        for (const c of conns) { const e = c.world.entities.get(`pl_${c.charId}`); if (e) c.world.persistVitals(e, c.svc); const p = c.svc.p; const st = { ...p, wallet: undefined }; await cl.query('UPDATE characters SET state=$2, level=$3, map_id=$4, pvp_rating=$5, combat_power=$6, updated_at=now() WHERE id=$1', [c.charId, JSON.stringify(st), p.level, p.map, p.pvp.rating, playerCP(p)]); c.lastPersist = Date.now(); }
+        for (const c of conns) { const e = c.world.entities.get(`pl_${c.charId}`); if (e) c.world.persistVitals(e, c.svc); c.svc.touchActive(); const p = c.svc.p; const st = { ...p, wallet: undefined }; await cl.query('UPDATE characters SET state=$2, level=$3, map_id=$4, pvp_rating=$5, combat_power=$6, updated_at=now() WHERE id=$1', [c.charId, JSON.stringify(st), p.level, p.map, p.pvp.rating, playerCP(p)]); c.lastPersist = Date.now(); }
         if (entries.some((e) => /market|auction|exchange|buy_order|sales_collection|crystal_hold/.test(e.reason)) || conns.length === 0) await cl.query('INSERT INTO market_state(world_id,data,version) VALUES ($1,$2,1) ON CONFLICT (world_id) DO UPDATE SET data=EXCLUDED.data, version=market_state.version+1, updated_at=now()', [CONFIG.worldId, JSON.stringify(this.market.serialize())]);
         if (extra) await extra(cl);
       });

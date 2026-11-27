@@ -37,7 +37,7 @@ export class LocalAdapter implements Adapter {
     const map = MAPS[player.map] && !MAPS[player.map]!.instanced ? player.map : player.savedMap ?? 'emberglen';
     this.enter(map, MAPS[player.map]?.instanced ? undefined : { x: player.x, y: player.y });
     const off = this.svc.settleFarm(); if (off.minutes > 0) this.svc.note(`While you were away (${off.minutes} min) your farm pets gained ${off.exp} EXP each.`);
-    this.svc.resetDailyIfNeeded();
+    this.svc.resetDailyIfNeeded(); const offA = this.svc.settleOfflineAuto(); if (offA.ok && offA.data!.minutes) this.svc.note(`Offline auto-play: ${offA.data!.minutes} min → +${offA.data!.exp} EXP, +${offA.data!.gold} Gold`);
   }
   get p() { return this.svc.p; } get mapId() { return this.world.mapId; } get myId() { return `pl_${this.svc.p.id}`; }
   visitView() { return this.world.mapId === 'pet_farm' ? this.session.visit ?? null : null; }
@@ -97,7 +97,7 @@ export class LocalAdapter implements Adapter {
   partyMembers() { const me = this.world.entities.get(this.myId); if (!me?.partyId) return []; return (this.world.parties.get(me.partyId) ?? []).map((id) => this.world.entities.get(id)).filter(Boolean).map((e) => publicEntity(e!)); }
   serverTime() { return Date.now(); }
   save(): boolean {
-    const st = safeStorage(); if (!st) return false; const e = this.world.entities.get(this.myId); if (e) this.world.persistVitals(e, this.svc);
+    const st = safeStorage(); if (!st) return false; const e = this.world.entities.get(this.myId); if (e) this.world.persistVitals(e, this.svc); this.svc.touchActive();
     try { st.setItem(`${SAVE_KEY}_${this.svc.p.id}`, JSON.stringify({ player: serializePlayer(this.svc.p), market: this.marketSvc.serialize(), savedAt: Date.now() })); const slots = listSlots().filter((s) => s.id !== this.svc.p.id); slots.unshift({ id: this.svc.p.id, name: this.svc.p.name, classId: this.svc.p.classId, level: this.svc.p.level, savedAt: Date.now() }); writeSlots(slots); return true; } catch { return false; }
   }
   exportSave() { const e = this.world.entities.get(this.myId); if (e) this.world.persistVitals(e, this.svc); return exportSaveString(this.svc.p, this.marketSvc.serialize()); }

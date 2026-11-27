@@ -15,7 +15,7 @@
 9. **RNG**: seeded sfc32 held server-side; not a CSPRNG — must be replaced before any paid random rewards.
 
 ## Severity: Low
-- E2E step 36 (raid clear with simulated allies) failed once in ~5 runs with 'raid cleared' false and passed on re-run. The cause is not confirmed; the loop budget was raised (600 → 1500 iterations) and the assertion now prints the dungeon state if it fails again.
+- E2E step 36 (raid clear) was flaky; root cause found: the test attacked the summoned Flame Djinns before the weakened boss, and the party wiped (the raid wipe rule worked as designed). The test now targets the boss first.
 - Guild war winner on a 0:0 Siege score is decided by the arena tie-break rule (the test war ran only 3 s, so no objective play happened). Guild kick/transfer/disband are implemented but not covered by an automated test. The artifact guild is single-player (members and rival guilds are simulated).
 - Wedding guests online must be in the plaza and near the aisle to receive cake; there is no RSVP/invitation list, scheduled booking or wedding photo.
 - Membership bonuses read the wall clock (not the injected test clock).

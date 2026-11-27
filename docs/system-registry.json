@@ -1,12 +1,12 @@
 {
- "generated": "2026-11-27T16:29:08.244Z",
+ "generated": "2026-11-27T16:47:31.786Z",
  "total": 581,
  "counts": {
-  "COMPLETE": 472,
-  "PARTIAL": 56,
+  "COMPLETE": 485,
+  "PARTIAL": 52,
   "NOT_STARTED": 31,
   "BLOCKED": 8,
-  "TESTING": 11,
+  "TESTING": 2,
   "SIMULATED": 3
  },
  "systems": [
@@ -214,8 +214,8 @@
    "id": "L026",
    "name": "Lantern Level (original equivalent)",
    "section": "Progression",
-   "status": "PARTIAL",
-   "evidence": "Extended Mastery levels after Ascension 3; no milestone cosmetics",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -526,8 +526,8 @@
    "id": "L065",
    "name": "Loot Distribution",
    "section": "Combat",
-   "status": "PARTIAL",
-   "evidence": "top-contributor loot ownership + party EXP share; no need/greed",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2014,8 +2014,8 @@
    "id": "L251",
    "name": "World Announcement",
    "section": "World boss",
-   "status": "TESTING",
-   "evidence": "world notices",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2150,16 +2150,16 @@
    "id": "L268",
    "name": "Automatic Loot",
    "section": "Auto play",
-   "status": "TESTING",
-   "evidence": "auto-loot setting",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 39",
    "mode": "artifact+online"
   },
   {
    "id": "L269",
    "name": "Auto Play Rewards",
    "section": "Auto play",
-   "status": "PARTIAL",
-   "evidence": "rewards identical to manual; no offline auto play",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 39",
    "mode": "artifact+online"
   },
   {
@@ -2390,24 +2390,24 @@
    "id": "L298",
    "name": "Best Seller",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "Best Sellers tab (24h sales)",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L299",
    "name": "Price Trend",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "reference price from history",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
    "id": "L300",
    "name": "Item Price Chart",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "exchange price chart",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2462,8 +2462,8 @@
    "id": "L307",
    "name": "Buy Now",
    "section": "Market",
-   "status": "TESTING",
-   "evidence": "buy-now",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -2582,8 +2582,8 @@
    "id": "L322",
    "name": "Price History",
    "section": "Exchange",
-   "status": "TESTING",
-   "evidence": "exchange history",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts",
    "mode": "artifact+online"
   },
   {
@@ -3750,8 +3750,8 @@
    "id": "L468",
    "name": "Event Reminder",
    "section": "UI",
-   "status": "TESTING",
-   "evidence": "login toast: event time left + unclaimed membership dailies",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 39",
    "mode": "artifact+online"
   },
   {
@@ -3814,8 +3814,8 @@
    "id": "L476",
    "name": "Enhancement Result Reveal",
    "section": "UI",
-   "status": "TESTING",
-   "evidence": "refine toast + SFX",
+   "status": "COMPLETE",
+   "evidence": "e2e: tests/e2e/artifact.e2e.mjs step 39",
    "mode": "artifact+online"
   },
   {
@@ -4255,7 +4255,7 @@
    "name": "Loot and reward",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "weighted drops, ownership timer; no need/greed/filters",
+   "evidence": "weighted drops, ownership timer, need/greed party rolls for rare+ items; no loot filters",
    "mode": "artifact+online"
   },
   {
@@ -4271,7 +4271,7 @@
    "name": "Equipment",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "13 slots, durability + repair/Tinker Kit; no equipment presets/transmog",
+   "evidence": "13 slots, durability + repair/Tinker Kit, 3 equipment presets; no transmog",
    "mode": "artifact+online"
   },
   {
@@ -4350,8 +4350,8 @@
    "id": "S31",
    "name": "Official auto play and offline system",
    "section": "Expanded requirement",
-   "status": "PARTIAL",
-   "evidence": "online auto-battle; no offline auto-play",
+   "status": "COMPLETE",
+   "evidence": "unit: packages/game-core/test/coverage.test.ts; e2e: tests/e2e/artifact.e2e.mjs step 37; e2e: tests/e2e/artifact.e2e.mjs step 39 — auto-battle (combat, skills, potions, auto-loot, auto-repair, bag-full stop) + offline auto-play (30%, 8 h cap)",
    "mode": "artifact+online"
   },
   {
@@ -4359,7 +4359,7 @@
    "name": "Gathering and professions",
    "section": "Expanded requirement",
    "status": "PARTIAL",
-   "evidence": "4 gathering types, 9 professions/19 recipes; no tool durability/timed queue",
+   "evidence": "4 gathering types with tool durability, 9 professions/19 recipes; no timed crafting queue",
    "mode": "artifact+online"
   },
   {
